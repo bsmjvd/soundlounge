@@ -1,0 +1,21 @@
+name = "soundlounge-worker"
+main = "src/index.ts"
+compatibility_date = "2024-10-22"
+compatibility_flags = ["nodejs_compat"]
+
+[durable_objects]
+bindings = [
+  { name = "ROOM_DO", class_name = "RoomDurableObject" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDurableObject"]
+
+[vars]
+R2_PUBLIC_URL_PREFIX = "https://r2.soundlounge.app"
+
+# R2 bucket binding for direct upload verification or metadata
+# [[r2_buckets]]
+# binding = "AUDIO_BUCKET"
+# bucket_name = "soundlounge-audio"
