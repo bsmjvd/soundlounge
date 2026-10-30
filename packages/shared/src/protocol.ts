@@ -70,6 +70,7 @@ export const NtpResponseSchema = z.object({
   probeGroupId: z.number(),
   probeGroupIndex: z.number(),
 });
+export type NtpResponse = z.infer<typeof NtpResponseSchema>;
 
 export const ScheduledPlaySchema = z.object({
   type: z.literal("SCHEDULED_PLAY"),

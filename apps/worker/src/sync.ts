@@ -1,11 +1,8 @@
 import {
   DEFAULT_BARRIER_DELAY_MS,
-  type NtpResponseSchema,
+  type NtpResponse,
   type ClientAction,
 } from "@soundlounge/shared";
-import { z } from "zod";
-
-export type NtpResponse = z.infer<typeof NtpResponseSchema>;
 
 export function createNtpResponse(
   req: { t0: number; probeGroupId: number; probeGroupIndex: number },
