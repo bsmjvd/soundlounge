@@ -3,7 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --background: #07090e;
+  --background: #080f14;
+  --surface: #0d181e;
+  --surface-raised: #112027;
+  --border: #1a2c35;
+  --accent-cyan: #00e5c9;
+  --accent-coral: #f43f5e;
   --foreground: #f8fafc;
 }
 
@@ -20,7 +25,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom Sleek Scrollbars */
+/* Custom Sleek Petrol-Teal Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -31,18 +36,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 229, 201, 0.15);
   border-radius: 999px;
   backdrop-filter: blur(8px);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(0, 229, 201, 0.35);
 }
 
 /* Range input styling for volume and scrubbers */
 input[type="range"] {
-  accent-color: #38bdf8;
+  accent-color: #00e5c9;
   cursor: pointer;
 }
 
@@ -51,25 +56,53 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+  transform: scale(1.25);
+  box-shadow: 0 0 14px rgba(0, 229, 201, 0.7);
+}
+
+/* 3D Perspective for Coverflow Carousel */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Soft Neumorphic Inset Shadow for Petrol Dashboard */
+.petrol-card {
+  background: #0d181e;
+  border: 1px solid #1a2c35;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.petrol-card-interactive {
+  background: #0d181e;
+  border: 1px solid #1a2c35;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.petrol-card-interactive:hover {
+  background: #112027;
+  border-color: #243c49;
+  box-shadow: 0 12px 35px -8px rgba(0, 229, 201, 0.12);
 }
 
 /* Vinyl record grooves simulation */
 .vinyl-grooves {
   background: radial-gradient(
     circle at center,
-    #0f1115 0%,
-    #0f1115 28%,
-    #171920 29%,
-    #0a0b0e 38%,
-    #181a22 47%,
-    #0a0b0e 55%,
-    #181a22 66%,
-    #0a0b0e 75%,
-    #181a22 84%,
-    #0a0b0e 95%,
-    #161820 100%
+    #0c1419 0%,
+    #0c1419 28%,
+    #132026 29%,
+    #070d10 38%,
+    #17262e 47%,
+    #070d10 55%,
+    #17262e 66%,
+    #070d10 75%,
+    #17262e 84%,
+    #070d10 95%,
+    #132026 100%
   );
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.7);
 }

@@ -58,7 +58,7 @@ export function AmbientBackground({ currentTrack, isPlaying }: AmbientBackground
   }, [currentTrack?.id, currentTrack?.coverUrl, activeAura]);
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-[#07080b]">
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-[#080f14]">
       {/* 1. Fading Previous Track Aura */}
       {prevAura && isCrossFading && (
         <div
@@ -81,8 +81,8 @@ export function AmbientBackground({ currentTrack, isPlaying }: AmbientBackground
       )}
 
       {/* 3. Smooth Radial & Vertical Darkening Scrims (Guarantees zero harsh edges) */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#07080b]/60 to-[#07080b]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#07080b]/30 via-[#07080b]/75 to-[#07080b]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#080f14]/60 to-[#080f14]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#080f14]/30 via-[#080f14]/80 to-[#080f14]" />
     </div>
   );
 }

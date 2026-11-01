@@ -2,26 +2,39 @@
 
 import React from "react";
 import {
+  Home,
+  Mic2,
+  Disc,
+  LayoutGrid,
   Radio,
-  Search,
-  ListMusic,
+  Headphones,
   Heart,
-  Library,
   History,
-  Music2,
+  ListMusic,
+  DownloadCloud,
   Users,
-  Wifi,
+  Music2,
   Share2,
   Play,
-  RotateCcw,
+  Wifi,
   Sparkles,
-  Command,
 } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
 import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { TrackArtwork } from "./TrackArtwork";
 
-export type NavTab = "search" | "queue" | "liked" | "playlists" | "history";
+export type NavTab =
+  | "home"
+  | "artists"
+  | "albums"
+  | "genres"
+  | "radio"
+  | "podcasts"
+  | "liked"
+  | "history"
+  | "queue"
+  | "downloaded"
+  | "search";
 
 interface NavigationSidebarProps {
   activeTab: NavTab;
@@ -30,7 +43,6 @@ interface NavigationSidebarProps {
   onModeChange: (mode: PlaybackMode) => void;
   queueCount: number;
   likedCount: number;
-  playlistsCount: number;
   historyCount: number;
   roomId: string;
   participantsCount: number;
@@ -49,7 +61,6 @@ export function NavigationSidebar({
   onModeChange,
   queueCount,
   likedCount,
-  playlistsCount,
   historyCount,
   roomId,
   participantsCount,
@@ -67,35 +78,43 @@ export function NavigationSidebar({
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  const navItems: { id: NavTab; label: string; icon: React.ReactNode; count?: number }[] = [
-    {
-      id: "search",
-      label: "Discover & Search",
-      icon: <Search className="w-4 h-4" />,
-    },
-    {
-      id: "queue",
-      label: "Playing Queue",
-      icon: <ListMusic className="w-4 h-4" />,
-      count: queueCount,
-    },
+  const mainNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
+    { id: "home", label: "Home (خانه)", icon: <Home className="w-4 h-4" /> },
+    { id: "artists", label: "Artists (خواننده)", icon: <Mic2 className="w-4 h-4" /> },
+    { id: "albums", label: "Albums (آلبوم)", icon: <Disc className="w-4 h-4" /> },
+    { id: "genres", label: "Genres (ژانر)", icon: <LayoutGrid className="w-4 h-4" /> },
+    { id: "radio", label: "Radio (رادیو)", icon: <Radio className="w-4 h-4" /> },
+    { id: "podcasts", label: "Podcasts (پادکست)", icon: <Headphones className="w-4 h-4" /> },
+  ];
+
+  const libraryNavItems: {
+    id: NavTab;
+    label: string;
+    icon: React.ReactNode;
+    count?: number;
+  }[] = [
     {
       id: "liked",
-      label: "Liked Songs",
+      label: "Favorites (علاقه‌مندی‌ها)",
       icon: <Heart className="w-4 h-4" />,
       count: likedCount,
     },
     {
-      id: "playlists",
-      label: "Playlists",
-      icon: <Library className="w-4 h-4" />,
-      count: playlistsCount,
-    },
-    {
       id: "history",
-      label: "Recent History",
+      label: "Recently Played (تازه پخش شده)",
       icon: <History className="w-4 h-4" />,
       count: historyCount,
+    },
+    {
+      id: "queue",
+      label: "Playing Queue (صف پخش)",
+      icon: <ListMusic className="w-4 h-4" />,
+      count: queueCount,
+    },
+    {
+      id: "downloaded",
+      label: "Downloaded (دانلود شده)",
+      icon: <DownloadCloud className="w-4 h-4" />,
     },
   ];
 
@@ -111,32 +130,41 @@ export function NavigationSidebar({
 
       {/* Main Persistent Sidebar */}
       <aside
-        className={`fixed md:sticky top-0 left-0 bottom-0 z-50 md:z-30 w-64 bg-[#0a0c12]/95 md:bg-[#0a0c12]/80 backdrop-blur-2xl border-r border-[#151821] flex flex-col justify-between py-5 px-4 transition-transform duration-300 ${
+        className={`fixed md:sticky top-0 left-0 bottom-0 z-50 md:z-30 w-64 bg-[#081014] border-r border-[#15232c] flex flex-col justify-between py-5 px-3.5 transition-transform duration-300 ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        } h-screen`}
+        } h-screen overflow-y-auto`}
       >
-        <div className="space-y-6">
-          {/* Logo & Product Identity */}
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-400 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-              <Radio className="w-5 h-5 text-white" />
+        <div className="space-y-5">
+          {/* Brand Logo with Cyan Soundwave */}
+          <div
+            onClick={() => onTabChange("home")}
+            className="flex items-center gap-3 px-2 cursor-pointer group"
+          >
+            <div className="flex items-center gap-0.5 h-6">
+              <span className="w-1 h-3.5 bg-[#00e5c9] rounded-full group-hover:h-5 transition-all" />
+              <span className="w-1 h-5 bg-[#00e5c9] rounded-full group-hover:h-3 transition-all" />
+              <span className="w-1 h-6 bg-[#00e5c9] rounded-full group-hover:h-6 transition-all" />
+              <span className="w-1 h-4 bg-[#00e5c9] rounded-full group-hover:h-5 transition-all" />
+              <span className="w-1 h-2.5 bg-[#00e5c9] rounded-full group-hover:h-4 transition-all" />
             </div>
-            <div>
+            <div className="truncate">
               <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
                 Soundlounge
               </h1>
-              <p className="text-[11px] text-[#636b80] font-medium">Studio Audio Streaming</p>
+              <p className="text-[10px] text-[#637785] font-medium tracking-wide">
+                Studio Streaming
+              </p>
             </div>
           </div>
 
-          {/* Mode Switcher Segmented Control */}
-          <div className="p-1 rounded-xl bg-[#0f121a] border border-[#1a1e2b] flex items-center">
+          {/* Mode Segmented Control: Solo vs Sync Lounge */}
+          <div className="p-1 rounded-xl bg-[#0d181e] border border-[#1b2c35] flex items-center">
             <button
               onClick={() => onModeChange("solo")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 mode === "solo"
-                  ? "bg-[#1f2536] text-white shadow-sm"
-                  : "text-[#7a8299] hover:text-white"
+                  ? "bg-[#182833] text-white shadow-sm"
+                  : "text-[#697d8a] hover:text-white"
               }`}
             >
               <Music2 className="w-3.5 h-3.5" />
@@ -146,8 +174,8 @@ export function NavigationSidebar({
               onClick={() => onModeChange("synced")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 mode === "synced"
-                  ? "bg-sky-600 text-white shadow-sm shadow-sky-600/30"
-                  : "text-[#7a8299] hover:text-white"
+                  ? "bg-[#00e5c9] text-[#081014] font-semibold shadow-sm shadow-[#00e5c9]/30"
+                  : "text-[#697d8a] hover:text-white"
               }`}
             >
               <Users className="w-3.5 h-3.5" />
@@ -155,12 +183,35 @@ export function NavigationSidebar({
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="space-y-1">
-            <div className="px-2 pb-1.5 text-[10px] font-semibold tracking-wider uppercase text-[#4e5569]">
-              Library
-            </div>
-            {navItems.map((item) => {
+          {/* 1. Main Navigation Items */}
+          <nav className="space-y-0.5">
+            {mainNavItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onTabChange(item.id);
+                    onCloseMobile?.();
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-[#0f1f28] text-[#00e5c9] font-semibold border-l-2 border-[#00e5c9]"
+                      : "text-[#7b8f9d] hover:text-white hover:bg-[#0c1820]"
+                  }`}
+                >
+                  <span className={isActive ? "text-[#00e5c9]" : "text-[#586e7c]"}>
+                    {item.icon}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* 2. Personal Library Section */}
+          <nav className="space-y-0.5 pt-2 border-t border-[#13222a]">
+            {libraryNavItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
@@ -171,22 +222,22 @@ export function NavigationSidebar({
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                     isActive
-                      ? "bg-[#181d2a] text-white font-semibold"
-                      : "text-[#8890a5] hover:text-white hover:bg-[#121622]"
+                      ? "bg-[#0f1f28] text-[#00e5c9] font-semibold border-l-2 border-[#00e5c9]"
+                      : "text-[#7b8f9d] hover:text-white hover:bg-[#0c1820]"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className={isActive ? "text-indigo-400" : "text-[#6b738a]"}>
+                  <div className="flex items-center gap-3 truncate">
+                    <span className={isActive ? "text-[#00e5c9]" : "text-[#586e7c]"}>
                       {item.icon}
                     </span>
-                    <span>{item.label}</span>
+                    <span className="truncate">{item.label}</span>
                   </div>
                   {item.count !== undefined && item.count > 0 && (
                     <span
                       className={`text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded-md ${
                         isActive
-                          ? "bg-indigo-500/20 text-indigo-300"
-                          : "bg-[#141724] text-[#6b738a]"
+                          ? "bg-[#00e5c9]/20 text-[#00e5c9]"
+                          : "bg-[#122028] text-[#637684]"
                       }`}
                     >
                       {item.count}
@@ -197,12 +248,12 @@ export function NavigationSidebar({
             })}
           </nav>
 
-          {/* Sync Lounge Room Status Card (Visible when in Synced Mode) */}
+          {/* Sync Lounge Room Status Card (when in Synced Mode) */}
           {mode === "synced" && (
-            <div className="p-3 rounded-xl bg-[#0e121c] border border-[#1c2233] space-y-2.5">
+            <div className="p-3 rounded-xl bg-[#0c1820] border border-[#1a2d38] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-sky-400 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                <span className="text-[11px] font-semibold text-[#00e5c9] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00e5c9] animate-pulse" />
                   Room: {roomId}
                 </span>
                 <span className="text-[10px] font-mono tabular-nums text-emerald-400 flex items-center gap-1">
@@ -210,15 +261,14 @@ export function NavigationSidebar({
                   {pingMs}ms
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs text-[#80889f]">
-                <span>{participantsCount} online in room</span>
+              <div className="flex items-center justify-between text-xs text-[#7d909d]">
+                <span>{participantsCount} online</span>
                 <button
                   onClick={onOpenInvite}
-                  aria-label="Invite friends to room"
-                  className="flex items-center gap-1 text-[11px] font-medium text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                  aria-label="Invite friends"
+                  className="text-[11px] font-medium text-[#00e5c9] hover:underline cursor-pointer"
                 >
-                  <Share2 className="w-3 h-3" />
-                  Invite
+                  Invite Friends
                 </button>
               </div>
             </div>
@@ -226,7 +276,7 @@ export function NavigationSidebar({
 
           {/* Continue Listening Mini Card */}
           {lastSession && (
-            <div className="p-2.5 rounded-xl bg-[#0e111a] border border-[#191e2b] flex items-center justify-between gap-2.5 group hover:border-[#262c3e] transition-colors">
+            <div className="p-2.5 rounded-xl bg-[#0c171e] border border-[#192b35] flex items-center justify-between gap-2.5 group hover:border-[#00e5c9]/40 transition-colors">
               <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
                 <TrackArtwork
                   coverUrl={lastSession.track.coverUrl}
@@ -239,7 +289,7 @@ export function NavigationSidebar({
                   <p className="text-[11px] font-semibold text-white truncate">
                     {lastSession.track.title}
                   </p>
-                  <p className="text-[10px] text-[#717990] font-mono tabular-nums">
+                  <p className="text-[10px] text-[#667a88] font-mono tabular-nums">
                     Resume {formatTime(lastSession.positionMs)}
                   </p>
                 </div>
@@ -247,7 +297,7 @@ export function NavigationSidebar({
               <button
                 onClick={() => onResumeSession(lastSession)}
                 title="Resume playback"
-                className="w-7 h-7 rounded-lg bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform flex-shrink-0 cursor-pointer shadow-sm"
+                className="w-7 h-7 rounded-lg bg-[#00e5c9] text-[#081014] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform flex-shrink-0 cursor-pointer shadow-sm"
               >
                 <Play className="w-3 h-3 fill-current ml-0.5" />
               </button>
@@ -255,25 +305,21 @@ export function NavigationSidebar({
           )}
         </div>
 
-        {/* Bottom Keyboard Shortcuts Indicator */}
-        <div className="pt-4 border-t border-[#151821] px-2 text-[11px] text-[#555d72] space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span>Play / Pause</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-[#131622] border border-[#1f2434] text-[10px] font-mono text-[#8a92a6]">
-              Space
-            </kbd>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Search</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-[#131622] border border-[#1f2434] text-[10px] font-mono text-[#8a92a6]">
-              ⌘K
-            </kbd>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Studio Mode</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-[#131622] border border-[#1f2434] text-[10px] font-mono text-[#8a92a6]">
-              F
-            </kbd>
+        {/* Bottom Actions: Download Application + Keyboard Shortcuts */}
+        <div className="pt-3 border-t border-[#13222a] space-y-2">
+          {/* Download App Action */}
+          <button
+            onClick={() => alert("Soundlounge Desktop & Mobile client is ready for install.")}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#0c171e] hover:bg-[#12222b] border border-[#192b35] text-xs font-semibold text-[#8ca0ae] hover:text-[#00e5c9] transition-colors cursor-pointer"
+          >
+            <DownloadCloud className="w-4 h-4 text-[#00e5c9]" />
+            <span>Download App (دانلود اپلیکیشن)</span>
+          </button>
+
+          {/* Keyboard Shortcuts */}
+          <div className="px-2 pt-1 text-[10px] text-[#556976] flex items-center justify-between">
+            <span>Play/Pause: Space</span>
+            <span>Studio: F</span>
           </div>
         </div>
       </aside>
