@@ -487,6 +487,7 @@ export default function SoundloungeApp() {
                   onAddAlbumToQueue={handleAddAlbumToQueue}
                   currentTrack={activeTrack}
                   isPlaying={playerState.status === "playing"}
+                  onSelectAlbum={(alb) => setSelectedAlbum(alb)}
                 />
               ) : (
                 <>
@@ -555,6 +556,7 @@ export default function SoundloungeApp() {
                         roomId={roomId}
                         initialQuery={searchQuery}
                         onQueryChange={setSearchQuery}
+                        onSelectAlbum={(album) => setSelectedAlbum(album)}
                       />
                     </div>
                   )}

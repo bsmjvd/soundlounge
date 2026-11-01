@@ -11,10 +11,12 @@ import {
   Users,
   Clock,
   Sparkles,
-  Volume2,
+  ArrowRight,
+  Info,
 } from "lucide-react";
 import type { Album, Track } from "@soundlounge/shared";
 import { TrackArtwork } from "./TrackArtwork";
+import { getDisambiguationCounterparts } from "../lib/services/metadataService";
 
 interface AlbumDetailViewProps {
   album: Album;
@@ -25,6 +27,8 @@ interface AlbumDetailViewProps {
   onAddAlbumToQueue: (tracks: Track[]) => void;
   currentTrack: Track | null;
   isPlaying: boolean;
+  onSelectAlbum?: (album: Album) => void;
+  onSelectActor?: (actor: string) => void;
 }
 
 export function AlbumDetailView({
@@ -36,6 +40,8 @@ export function AlbumDetailView({
   onAddAlbumToQueue,
   currentTrack,
   isPlaying,
+  onSelectAlbum,
+  onSelectActor,
 }: AlbumDetailViewProps) {
   const formatTime = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
@@ -46,16 +52,72 @@ export function AlbumDetailView({
 
   const isCurrentTrack = (trackId: string) => currentTrack?.id === trackId;
 
+  // Find disambiguation counterparts for identical or easily confused releases
+  const disambiguationCounterparts = getDisambiguationCounterparts(album.id);
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      {/* Back Button */}
-      <button
-        onClick={onBack}
-        className="inline-flex items-center gap-2 text-xs font-semibold text-[#8c94aa] hover:text-white transition-colors cursor-pointer group"
-      >
-        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-        <span>Back to Browsing</span>
-      </button>
+      {/* Top Bar Navigation */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#8c94aa] hover:text-white transition-colors cursor-pointer group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>Back to Albums Directory</span>
+        </button>
+
+        <span className="text-[11px] font-mono text-[#586379]">ID: {album.id}</span>
+      </div>
+
+      {/* Disambiguation Switcher Banner (Milestone 3 Requirement) */}
+      {disambiguationCounterparts.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-[#10141f] to-amber-500/5 p-4 backdrop-blur-md shadow-lg shadow-black/40">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 shrink-0">
+                <Info className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-amber-200">
+                  Looking for another release named &ldquo;{album.title}&rdquo;?
+                </p>
+                <p className="text-[11px] text-amber-300/70">
+                  Soundlounge detected {disambiguationCounterparts.length} distinct release{disambiguationCounterparts.length > 1 ? "s" : ""} sharing this title or artist across eras.
+                </p>
+              </div>
+            </div>
+
+            {/* Counterpart Switcher Chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              {disambiguationCounterparts.map((cp) => (
+                <button
+                  key={cp.id}
+                  onClick={() => onSelectAlbum?.(cp)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#141b2b] hover:bg-[#1e273d] text-white border border-[#232f48] hover:border-amber-400/50 text-xs font-medium transition-all group cursor-pointer shadow-sm"
+                  title={`Switch to ${cp.title} (${cp.releaseYear}) - ${cp.disambiguationLabel}`}
+                >
+                  {cp.type === "movie_soundtrack" ? (
+                    <Clapperboard className="w-3.5 h-3.5 text-amber-400" />
+                  ) : (
+                    <Disc3 className="w-3.5 h-3.5 text-[#00e5c9]" />
+                  )}
+                  <span className="font-semibold text-white group-hover:text-amber-200 transition-colors">
+                    {cp.title}
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/40 text-[#a0aec0] font-mono">
+                    {cp.releaseYear}
+                  </span>
+                  <span className="text-[11px] text-[#718096] max-w-[150px] truncate hidden sm:inline">
+                    {cp.primaryArtist}
+                  </span>
+                  <ArrowRight className="w-3 h-3 text-amber-400/70 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Album / Movie Soundtrack Hero Card */}
       <div className="relative rounded-2xl bg-gradient-to-b from-[#111622]/90 to-[#0c0e17]/95 border border-[#1d2333] p-6 lg:p-8 overflow-hidden shadow-2xl backdrop-blur-xl">
@@ -90,7 +152,7 @@ export function AlbumDetailView({
 
           {/* Album & Movie Metadata */}
           <div className="flex-1 min-w-0 text-center md:text-left space-y-3">
-            {/* Disambiguation Badges */}
+            {/* Badges & Entity Classification */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#00e5c9]/15 text-[#00e5c9] border border-[#00e5c9]/30">
                 {album.type === "movie_soundtrack" ? (
@@ -110,7 +172,7 @@ export function AlbumDetailView({
                 {album.releaseYear}
               </span>
 
-              {album.genres.slice(0, 2).map((g) => (
+              {album.genres.slice(0, 3).map((g) => (
                 <span
                   key={g}
                   className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#141824] text-[#8c94aa] border border-[#1f2637]"
@@ -120,7 +182,7 @@ export function AlbumDetailView({
               ))}
             </div>
 
-            {/* Title */}
+            {/* Title & Disambiguation Description */}
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
                 {album.title}
@@ -130,20 +192,32 @@ export function AlbumDetailView({
               </p>
             </div>
 
-            {/* Movie Star Cast & Credits if Bollywood / Film */}
+            {/* Movie Star Cast & Directors (if Movie Soundtrack) */}
             {album.movieDetails && (
-              <div className="bg-[#0b0e14]/60 border border-[#1b2230] rounded-xl p-3 text-xs space-y-1.5 text-[#9ba5b9] max-w-xl">
+              <div className="bg-[#0b0e14]/70 border border-[#1b2230] rounded-xl p-3 text-xs space-y-2 text-[#9ba5b9] max-w-xl text-left">
                 {album.movieDetails.starCast.length > 0 && (
-                  <p className="flex items-center gap-2">
-                    <Users className="w-3.5 h-3.5 text-[#00e5c9] shrink-0" />
-                    <span className="text-[#64748b]">Starring:</span>
-                    <strong className="text-white font-medium">
-                      {album.movieDetails.starCast.join(", ")}
-                    </strong>
-                  </p>
+                  <div>
+                    <span className="text-[#64748b] text-[11px] flex items-center gap-1.5 mb-1.5">
+                      <Users className="w-3.5 h-3.5 text-[#00e5c9] shrink-0" />
+                      <span>Star Cast:</span>
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {album.movieDetails.starCast.map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => onSelectActor?.(star)}
+                          className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#131926] hover:bg-[#1e273d] text-white border border-[#222d42] hover:border-[#00e5c9]/50 text-[11px] transition-colors cursor-pointer"
+                          title={`Find soundtracks starring ${star}`}
+                        >
+                          {star}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
+
                 {album.movieDetails.musicDirectors.length > 0 && (
-                  <p className="flex items-center gap-2">
+                  <p className="flex items-center gap-2 pt-0.5">
                     <Music className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                     <span className="text-[#64748b]">Music Director:</span>
                     <strong className="text-white font-medium">
@@ -151,13 +225,12 @@ export function AlbumDetailView({
                     </strong>
                   </p>
                 )}
-                {album.movieDetails.lyricists && (
+
+                {album.movieDetails.lyricists && album.movieDetails.lyricists.length > 0 && (
                   <p className="flex items-center gap-2 text-[11px]">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span className="text-[#64748b]">Lyrics:</span>
-                    <span className="text-[#cbd5e1]">
-                      {album.movieDetails.lyricists.join(", ")}
-                    </span>
+                    <span className="text-[#cbd5e1]">{album.movieDetails.lyricists.join(", ")}</span>
                   </p>
                 )}
               </div>
@@ -171,6 +244,8 @@ export function AlbumDetailView({
                 <Clock className="w-3.5 h-3.5" />
                 {Math.round((album.totalDurationMs || 1200000) / 60000)} mins
               </span>
+              <span>•</span>
+              <span className="text-[#a0aec0]">{album.primaryArtist}</span>
             </div>
 
             {/* Action Buttons */}
@@ -200,11 +275,9 @@ export function AlbumDetailView({
         <div className="flex items-center justify-between px-1">
           <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
             <Disc3 className="w-4 h-4 text-[#00e5c9]" />
-            <span>Original Tracklist</span>
+            <span>Complete Original Tracklist</span>
           </h2>
-          <span className="text-xs text-[#64748b]">
-            Track order as released originally
-          </span>
+          <span className="text-xs text-[#64748b]">Accurate sequence as originally released</span>
         </div>
 
         <div className="rounded-xl border border-[#171c28] bg-[#090b10] overflow-hidden divide-y divide-[#121620]">
@@ -214,14 +287,18 @@ export function AlbumDetailView({
             return (
               <div
                 key={track.id}
-                className={`group grid grid-cols-[40px_1fr_80px_90px] items-center px-4 py-3 transition-colors ${
+                className={`group grid grid-cols-[44px_1fr_80px_90px] items-center px-4 py-3 transition-colors ${
                   active ? "bg-[#111724]" : "hover:bg-[#0e121b]"
                 }`}
               >
-                {/* Track Number / Play Indicator */}
+                {/* Track Number / Equalizer Indicator */}
                 <div className="text-xs font-mono text-[#586379] flex items-center">
                   {active && isPlaying ? (
-                    <Volume2 className="w-4 h-4 text-[#00e5c9] animate-pulse" />
+                    <div className="flex items-end gap-0.5 h-3.5 w-4 justify-center" title="Now Playing">
+                      <span className="w-1 bg-[#00e5c9] rounded-full animate-bounce h-3" />
+                      <span className="w-1 bg-[#00e5c9] rounded-full animate-pulse h-3.5" />
+                      <span className="w-1 bg-[#00e5c9] rounded-full animate-bounce h-2" />
+                    </div>
                   ) : (
                     <>
                       <span className="group-hover:hidden">{idx + 1}</span>
@@ -248,9 +325,7 @@ export function AlbumDetailView({
                   <div className="truncate">
                     <p
                       className={`text-xs font-semibold truncate transition-colors ${
-                        active
-                          ? "text-[#00e5c9]"
-                          : "text-white group-hover:text-cyan-300"
+                        active ? "text-[#00e5c9]" : "text-white group-hover:text-cyan-300"
                       }`}
                     >
                       {track.title}

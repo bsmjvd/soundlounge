@@ -17,8 +17,12 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Disc3,
+  Clapperboard,
+  Users,
 } from "lucide-react";
-import type { Track } from "@soundlounge/shared";
+import type { Track, Album } from "@soundlounge/shared";
+import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import { useLibraryStore } from "../lib/store/useLibraryStore";
 import { TrackArtwork } from "./TrackArtwork";
 
@@ -30,6 +34,7 @@ interface MusicIngestionProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
   initialQuery?: string;
   onQueryChange?: (query: string) => void;
+  onSelectAlbum?: (album: Album) => void;
 }
 
 const DISCOVERY_TAGS = [
@@ -53,12 +58,28 @@ export function MusicIngestion({
   searchInputRef: externalSearchRef,
   initialQuery = "",
   onQueryChange,
+  onSelectAlbum,
 }: MusicIngestionProps) {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
+
+  // Matching disambiguated albums from catalog
+  const matchingAlbums = React.useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q || q.length < 2) return [];
+    return ALBUMS_CATALOG.filter((alb) => {
+      const matchTitle = alb.title.toLowerCase().includes(q) || q.includes(alb.title.toLowerCase());
+      const matchArtist = alb.primaryArtist.toLowerCase().includes(q);
+      const matchSingers = alb.featuredSingers.some((s) => s.toLowerCase().includes(q));
+      const matchCast = alb.movieDetails?.starCast.some((star) => star.toLowerCase().includes(q));
+      const matchMovie = alb.movieDetails?.movieTitle?.toLowerCase().includes(q);
+      const matchDisambig = alb.disambiguationLabel?.toLowerCase().includes(q);
+      return matchTitle || matchArtist || matchSingers || matchCast || matchMovie || matchDisambig;
+    });
+  }, [searchQuery]);
 
   // Pagination & Sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -370,6 +391,65 @@ export function MusicIngestion({
           <p className="text-xs text-[#8da0ad] font-medium">
             Searching tracks, artists, and audio for &ldquo;{searchQuery}&rdquo;...
           </p>
+        </div>
+      )}
+
+      {/* Matching Disambiguated Albums & Movie Soundtracks */}
+      {matchingAlbums.length > 0 && (
+        <div className="space-y-3 p-4 rounded-2xl bg-gradient-to-r from-[#0d1620] via-[#0b131a] to-[#0e1922] border border-[#1b2d39]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+              <Disc3 className="w-4 h-4 text-[#00e5c9]" />
+              <span>Matching Soundtracks & Albums ({matchingAlbums.length})</span>
+            </div>
+            <span className="text-[11px] text-[#718593]">Disambiguated by release year & cast</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {matchingAlbums.map((album) => (
+              <div
+                key={album.id}
+                onClick={() => onSelectAlbum?.(album)}
+                className="group p-3 rounded-xl bg-[#081014] hover:bg-[#101e28] border border-[#162734] hover:border-[#00e5c9]/50 transition-all cursor-pointer flex items-center gap-3"
+              >
+                <TrackArtwork
+                  coverUrl={album.coverUrl}
+                  trackId={album.id}
+                  title={album.title}
+                  className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                  iconClassName="w-6 h-6"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-[#00e5c9]/15 text-[#00e5c9]">
+                      {album.type === "movie_soundtrack" ? (
+                        <>
+                          <Clapperboard className="w-2.5 h-2.5" />
+                          <span>Movie</span>
+                        </>
+                      ) : (
+                        <>
+                          <Disc3 className="w-2.5 h-2.5" />
+                          <span>Album</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-[#718593] font-mono">{album.releaseYear}</span>
+                  </div>
+                  <p className="text-xs font-bold text-white group-hover:text-[#00e5c9] transition-colors truncate">
+                    {album.title}
+                  </p>
+                  <p className="text-[11px] text-[#8ca0ad] truncate">{album.disambiguationLabel}</p>
+                  {album.movieDetails?.starCast && (
+                    <p className="text-[10px] text-[#5c707d] truncate">
+                      Cast: {album.movieDetails.starCast.slice(0, 2).join(", ")}
+                    </p>
+                  )}
+                </div>
+                <ArrowRight className="w-4 h-4 text-[#5c707d] group-hover:text-[#00e5c9] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
