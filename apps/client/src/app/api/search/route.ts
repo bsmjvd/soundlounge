@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Innertube } from "youtubei.js";
-import { extractYouTubeVideoId, parseYouTubeDuration } from "@/lib/youtubeUtils";
+import {
+  extractYouTubeVideoId,
+  parseYouTubeDuration,
+  isLikelySong,
+} from "@/lib/youtubeUtils";
 import type { Track } from "@soundlounge/shared";
 
-// Innertube singleton for search (using default desktop client so SearchHeader parses cleanly)
+// Innertube singleton for search
 let innertubePromise: Promise<Innertube> | null = null;
 async function getSearchInnertube(): Promise<Innertube> {
   if (!innertubePromise) {
@@ -26,7 +30,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ tracks: [] });
   }
 
-  // 1. Check if user pasted a direct YouTube link or video ID
+  // 1. Direct YouTube link or video ID
   const directVideoId = extractYouTubeVideoId(query);
   if (directVideoId) {
     try {
@@ -52,15 +56,65 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 2. Perform YouTube Innertube search
-  try {
-    const yt = await getSearchInnertube();
-    const results = await yt.search(query, { type: "video" });
+  const yt = await getSearchInnertube();
 
+  // 2. Search YouTube Music catalog specifically for songs (no movies, trailers, or full films)
+  try {
+    const musicResults = await yt.music.search(query, { type: "song" });
+    const songs = musicResults.songs?.contents || [];
+
+    if (songs.length > 0) {
+      const tracks: Track[] = songs.slice(0, 20).map((song: any) => {
+        const id = song.id;
+        const title = song.title || "Song";
+        const artist =
+          Array.isArray(song.artists) && song.artists.length > 0
+            ? song.artists
+                .map((a: any) => a.name)
+                .filter(Boolean)
+                .join(", ")
+            : song.author || "Unknown Artist";
+
+        const durationMs =
+          parseYouTubeDuration(song.duration?.seconds) ||
+          parseYouTubeDuration(song.duration?.text) ||
+          210000;
+
+        const coverUrl =
+          song.thumbnail?.[0]?.url ||
+          song.thumbnails?.[0]?.url ||
+          `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+        return {
+          id: `yt_${id}`,
+          title,
+          artist,
+          durationMs,
+          url: `/api/stream/youtube?id=${id}`,
+          source: "youtube",
+          coverUrl,
+        };
+      });
+
+      return NextResponse.json({ tracks });
+    }
+  } catch (musicErr) {
+    console.warn("YouTube Music search returned no direct songs, trying filtered search:", musicErr);
+  }
+
+  // 3. Fallback: general YouTube search with strict music filtering (strips movies, full films, trailers)
+  try {
+    const results = await yt.search(query, { type: "video" });
     if (results.videos && results.videos.length > 0) {
-      const tracks: Track[] = results.videos.slice(0, 15).map((video: any) => {
+      const musicOnlyVideos = results.videos.filter((video: any) => {
+        const title = video.title?.text || "";
+        const durationSec = video.duration?.seconds || 0;
+        return isLikelySong(title, durationSec);
+      });
+
+      const tracks: Track[] = musicOnlyVideos.slice(0, 15).map((video: any) => {
         const id = video.id;
-        const title = video.title?.text || "YouTube Track";
+        const title = video.title?.text || "Song";
         const artist = video.author?.name || "YouTube";
         const durationSec = video.duration?.seconds || 0;
 
@@ -78,7 +132,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ tracks });
     }
   } catch (err) {
-    console.error("YouTube Innertube search failed:", err);
+    console.error("YouTube search error:", err);
   }
 
   return NextResponse.json({ tracks: [] });
