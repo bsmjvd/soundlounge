@@ -23,28 +23,28 @@ export interface FeaturedMix {
 
 const FEATURED_MIXES: FeaturedMix[] = [
   {
-    id: "yt_mix_azadi",
-    title: "Woman, Life, Freedom (زن زندگی آزادی)",
-    artist: "DJ Fere (دی جی فری)",
-    coverUrl: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=700&auto=format&fit=crop&q=80",
+    id: "yt_mix_synthwave",
+    title: "Neon Cyber Synthwave",
+    artist: "Retro Sunset Drive Sessions",
+    coverUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=700&auto=format&fit=crop&q=80",
     durationMs: 340000,
-    tag: "Tribute Remix",
+    tag: "Synthwave",
   },
   {
-    id: "yt_mix_tranceform",
-    title: "Trance Form (ترنس فرم)",
-    artist: "DJ Real G (دی جی ریل جی)",
-    coverUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=700&auto=format&fit=crop&q=80",
+    id: "yt_mix_deephouse",
+    title: "Deep House & Vocal Sessions",
+    artist: "Ibiza Club Sunset Mix",
+    coverUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=700&auto=format&fit=crop&q=80",
     durationMs: 420000,
-    tag: "Cyber Electro",
+    tag: "Deep House",
   },
   {
-    id: "yt_mix_rhythmotism",
-    title: "Rhythmotism (ریتموتیزم)",
-    artist: "Club Vocal Electro Mix",
-    coverUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=700&auto=format&fit=crop&q=80",
+    id: "yt_mix_lofi",
+    title: "Lo-Fi Beats to Relax & Code",
+    artist: "Midnight Chillhop Radio",
+    coverUrl: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=700&auto=format&fit=crop&q=80",
     durationMs: 310000,
-    tag: "Neon Vocal Bounce",
+    tag: "Lo-Fi Lounge",
   },
 ];
 

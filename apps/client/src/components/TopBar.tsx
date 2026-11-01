@@ -1,20 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Mail,
   Users,
   Wifi,
   Share2,
   X,
-  Loader2,
+  UploadCloud,
   Menu,
+  Music2,
 } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
-import type { Track } from "@soundlounge/shared";
 
 interface TopBarProps {
   mode: PlaybackMode;
@@ -29,6 +28,7 @@ interface TopBarProps {
   setSearchQuery: (query: string) => void;
   onNavBack?: () => void;
   onNavForward?: () => void;
+  onOpenUpload?: () => void;
 }
 
 export function TopBar({
@@ -44,6 +44,7 @@ export function TopBar({
   setSearchQuery,
   onNavBack,
   onNavForward,
+  onOpenUpload,
 }: TopBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,7 +112,7 @@ export function TopBar({
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search song, artist, or podcast... (جستجو آهنگ، خواننده و یا پادکست)"
+            placeholder="Search songs, artists, or podcasts..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -139,53 +140,42 @@ export function TopBar({
           </div>
         </form>
 
-        {/* Right: Notifications, Sync Status, & User Profile Pill */}
+        {/* Right: Real Soundlounge Actions (Upload Audio, Mode Switch, Room Sync) */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Notifications Icon */}
-          <button
-            title="Notifications"
-            className="hidden sm:flex p-2 rounded-full bg-[#0d181e] hover:bg-[#15252f] border border-[#1c2e38] text-[#7d8f9c] hover:text-white transition-colors cursor-pointer"
-          >
-            <Mail className="w-4 h-4" />
-          </button>
+          {onOpenUpload && (
+            <button
+              onClick={onOpenUpload}
+              title="Upload Audio to Cloud"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0d181e] hover:bg-[#14232c] border border-[#1c2e38] text-xs font-medium text-[#7d8f9c] hover:text-[#00e5c9] transition-colors cursor-pointer"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Upload Audio</span>
+            </button>
+          )}
 
-          {/* Sync Lounge Pill */}
+          {/* Sync Lounge Status Pill */}
           {mode === "synced" ? (
-            <div className="flex items-center gap-2 bg-[#0e1920] border border-[#1a323e] px-2.5 py-1 rounded-full text-xs">
+            <div className="flex items-center gap-2 bg-[#0e1920] border border-[#1a323e] px-3 py-1.5 rounded-full text-xs">
               <span className="w-2 h-2 rounded-full bg-[#00e5c9] animate-pulse" />
               <span className="text-[#8da0ad] font-mono tabular-nums">{pingMs}ms</span>
               <button
                 onClick={onOpenInvite}
                 title="Invite to Room"
-                className="text-[#00e5c9] hover:underline cursor-pointer"
+                className="text-[#00e5c9] font-medium hover:underline cursor-pointer flex items-center gap-1"
               >
-                Invite
+                <Share2 className="w-3 h-3" />
+                <span>Invite</span>
               </button>
             </div>
           ) : (
             <button
               onClick={() => onModeChange("synced")}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0d181e] hover:bg-[#14232c] border border-[#1c2e38] text-xs font-medium text-[#7d8f9c] hover:text-[#00e5c9] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0d181e] hover:bg-[#14232c] border border-[#1c2e38] text-xs font-medium text-[#7d8f9c] hover:text-[#00e5c9] transition-colors cursor-pointer"
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Sync Lounge</span>
+              <span className="hidden sm:inline">Sync Lounge</span>
             </button>
           )}
-
-          {/* User Profile Pill (as seen in the reference: Masoud Honarvar / Avatar) */}
-          <div className="flex items-center gap-2.5 pl-2 pr-3 py-1 rounded-full bg-[#0d181e] border border-[#1c2e38] shadow-sm select-none">
-            <div className="relative w-7 h-7 rounded-full overflow-hidden border border-[#00e5c9]/40 bg-[#162731]">
-              <img
-                src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80"
-                alt="User Avatar"
-                className="w-full h-full object-cover"
-              />
-              <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-[#00e5c9] border border-[#081014]" />
-            </div>
-            <span className="text-xs font-semibold text-white hidden sm:inline-block max-w-[100px] truncate">
-              Masoud H.
-            </span>
-          </div>
         </div>
       </div>
     </header>

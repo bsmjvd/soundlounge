@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Mic2, Play, Users } from "lucide-react";
+import { Users, Play } from "lucide-react";
 
 interface RecentArtistsGridProps {
   onSelectArtist: (artistName: string) => void;
@@ -10,53 +10,53 @@ interface RecentArtistsGridProps {
 export interface ArtistProfile {
   id: string;
   name: string;
-  nameFa: string;
+  genre: string;
   avatarUrl: string;
   followers: string;
 }
 
 const ARTISTS: ArtistProfile[] = [
   {
-    id: "art_chavoshi",
-    name: "Mohsen Chavoshi",
-    nameFa: "محسن چاوشی",
+    id: "art_weeknd",
+    name: "The Weeknd",
+    genre: "R&B / Pop",
+    avatarUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80",
+    followers: "115M",
+  },
+  {
+    id: "art_sidhu",
+    name: "Sidhu Moose Wala",
+    genre: "Punjabi Hip-Hop",
+    avatarUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80",
+    followers: "24M",
+  },
+  {
+    id: "art_daftpunk",
+    name: "Daft Punk",
+    genre: "Electronic / House",
+    avatarUrl: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&auto=format&fit=crop&q=80",
+    followers: "18M",
+  },
+  {
+    id: "art_billie",
+    name: "Billie Eilish",
+    genre: "Alt Pop",
+    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+    followers: "98M",
+  },
+  {
+    id: "art_kendrick",
+    name: "Kendrick Lamar",
+    genre: "Hip-Hop",
     avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-    followers: "1.2M",
+    followers: "72M",
   },
   {
-    id: "art_haamim",
-    name: "Haamim",
-    nameFa: "حامیم",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-    followers: "890K",
-  },
-  {
-    id: "art_shajarian",
-    name: "Homayoun Shajarian",
-    nameFa: "همایون شجریان",
-    avatarUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80",
-    followers: "1.8M",
-  },
-  {
-    id: "art_yeganeh",
-    name: "Mohsen Yeganeh",
-    nameFa: "محسن یگانه",
-    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80",
-    followers: "950K",
-  },
-  {
-    id: "art_sadeghi",
-    name: "Reza Sadeghi",
-    nameFa: "رضا صادقی",
-    avatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
-    followers: "720K",
-  },
-  {
-    id: "art_mahyar",
-    name: "Mahyar",
-    nameFa: "مهیار",
-    avatarUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&auto=format&fit=crop&q=80",
-    followers: "640K",
+    id: "art_dualipa",
+    name: "Dua Lipa",
+    genre: "Dance Pop",
+    avatarUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&auto=format&fit=crop&q=80",
+    followers: "84M",
   },
 ];
 
@@ -67,7 +67,7 @@ export function RecentArtistsGrid({ onSelectArtist }: RecentArtistsGridProps) {
       <div className="flex items-center justify-between px-1">
         <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
           <Users className="w-4 h-4 text-[#00e5c9]" />
-          <span>Popular Artists (هنرمندان اخیر)</span>
+          <span>Popular Artists</span>
         </h3>
         <span className="text-[11px] text-[#697c88]">Top Trending</span>
       </div>
@@ -103,7 +103,7 @@ export function RecentArtistsGrid({ onSelectArtist }: RecentArtistsGridProps) {
                 {artist.name}
               </p>
               <p className="text-[10px] text-[#718490] truncate drop-shadow">
-                {artist.nameFa}
+                {artist.genre}
               </p>
             </div>
           </div>

@@ -79,12 +79,12 @@ export function NavigationSidebar({
   };
 
   const mainNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: "home", label: "Home (خانه)", icon: <Home className="w-4 h-4" /> },
-    { id: "artists", label: "Artists (خواننده)", icon: <Mic2 className="w-4 h-4" /> },
-    { id: "albums", label: "Albums (آلبوم)", icon: <Disc className="w-4 h-4" /> },
-    { id: "genres", label: "Genres (ژانر)", icon: <LayoutGrid className="w-4 h-4" /> },
-    { id: "radio", label: "Radio (رادیو)", icon: <Radio className="w-4 h-4" /> },
-    { id: "podcasts", label: "Podcasts (پادکست)", icon: <Headphones className="w-4 h-4" /> },
+    { id: "home", label: "Home", icon: <Home className="w-4 h-4" /> },
+    { id: "artists", label: "Artists", icon: <Mic2 className="w-4 h-4" /> },
+    { id: "albums", label: "Albums", icon: <Disc className="w-4 h-4" /> },
+    { id: "genres", label: "Genres", icon: <LayoutGrid className="w-4 h-4" /> },
+    { id: "radio", label: "Radio", icon: <Radio className="w-4 h-4" /> },
+    { id: "podcasts", label: "Podcasts", icon: <Headphones className="w-4 h-4" /> },
   ];
 
   const libraryNavItems: {
@@ -95,25 +95,25 @@ export function NavigationSidebar({
   }[] = [
     {
       id: "liked",
-      label: "Favorites (علاقه‌مندی‌ها)",
+      label: "Favorites",
       icon: <Heart className="w-4 h-4" />,
       count: likedCount,
     },
     {
       id: "history",
-      label: "Recently Played (تازه پخش شده)",
+      label: "Recently Played",
       icon: <History className="w-4 h-4" />,
       count: historyCount,
     },
     {
       id: "queue",
-      label: "Playing Queue (صف پخش)",
+      label: "Playing Queue",
       icon: <ListMusic className="w-4 h-4" />,
       count: queueCount,
     },
     {
       id: "downloaded",
-      label: "Downloaded (دانلود شده)",
+      label: "Downloaded",
       icon: <DownloadCloud className="w-4 h-4" />,
     },
   ];
@@ -313,7 +313,7 @@ export function NavigationSidebar({
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#0c171e] hover:bg-[#12222b] border border-[#192b35] text-xs font-semibold text-[#8ca0ae] hover:text-[#00e5c9] transition-colors cursor-pointer"
           >
             <DownloadCloud className="w-4 h-4 text-[#00e5c9]" />
-            <span>Download App (دانلود اپلیکیشن)</span>
+            <span>Download Desktop App</span>
           </button>
 
           {/* Keyboard Shortcuts */}

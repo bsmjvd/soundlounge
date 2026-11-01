@@ -34,52 +34,52 @@ export interface WeeklySongItem {
 
 const WEEKLY_SONGS: WeeklySongItem[] = [
   {
-    id: "yt_yekio_daram",
-    title: "Yekio Daram (یکیو دارم)",
-    artist: "Haamim (حامیم)",
-    streams: "234K",
-    durationMs: 261000,
+    id: "yt_34Na4j8AVgA",
+    title: "Starboy",
+    artist: "The Weeknd ft. Daft Punk",
+    streams: "845K",
+    durationMs: 230000,
+    coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80",
+  },
+  {
+    id: "yt_4PfE2aB_sH0",
+    title: "295",
+    artist: "Sidhu Moose Wala",
+    streams: "920K",
+    durationMs: 270000,
+    coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80",
+  },
+  {
+    id: "yt_fHI8X480mxo",
+    title: "Blinding Lights",
+    artist: "The Weeknd",
+    streams: "1.2M",
+    durationMs: 200000,
+    coverUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&auto=format&fit=crop&q=80",
+  },
+  {
+    id: "yt_5NV6Rdv1a3I",
+    title: "Get Lucky",
+    artist: "Daft Punk ft. Pharrell Williams",
+    streams: "670K",
+    durationMs: 248000,
+    coverUrl: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&auto=format&fit=crop&q=80",
+  },
+  {
+    id: "yt_TUVcZfQe-Kw",
+    title: "Levitating",
+    artist: "Dua Lipa",
+    streams: "780K",
+    durationMs: 203000,
+    coverUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&auto=format&fit=crop&q=80",
+  },
+  {
+    id: "yt_V9PVRfjEBTI",
+    title: "Birds of a Feather",
+    artist: "Billie Eilish",
+    streams: "890K",
+    durationMs: 198000,
     coverUrl: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "yt_bishtar_hamishe",
-    title: "Bishtar Az Hamishe (بیشتر از همیشه)",
-    artist: "Mahyar (مهیار)",
-    streams: "435K",
-    durationMs: 225000,
-    coverUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "yt_ghashang_man",
-    title: "Ghashang-e Man (قشنگ من)",
-    artist: "Mohsen Chavoshi (محسن چاوشی)",
-    streams: "134K",
-    durationMs: 210000,
-    coverUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "yt_zendegim_sookht",
-    title: "Zendegim Sookht (زندگیم سوخت)",
-    artist: "Mohsen Yeganeh (محسن یگانه)",
-    streams: "109K",
-    durationMs: 243000,
-    coverUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "yt_aseman_abri",
-    title: "Aseman-e Abri (آسمان ابری)",
-    artist: "Homayoun Shajarian (همایون شجریان)",
-    streams: "176K",
-    durationMs: 265000,
-    coverUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "yt_bemooni_baram",
-    title: "Bemooni Baram (بمونی برام)",
-    artist: "Reza Sadeghi (رضا صادقی)",
-    streams: "77K",
-    durationMs: 236000,
-    coverUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80",
   },
 ];
 
@@ -117,7 +117,7 @@ export function WeeklyTopSongs({
       <div className="flex items-center justify-between pb-2 border-b border-[#16252e]">
         <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-[#00e5c9]" />
-          <span>This Week&apos;s Music (موسیقی های این هفته)</span>
+          <span>Weekly Top Charts</span>
         </h3>
         <span className="text-[11px] text-[#697c88]">Weekly Top Charts</span>
       </div>

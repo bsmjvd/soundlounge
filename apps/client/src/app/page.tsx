@@ -370,7 +370,7 @@ export default function SoundloungeApp() {
         {/* Right Stage: Top Bar + Content Canvas */}
         <div className="flex-1 min-w-0 flex flex-col justify-between pb-28">
           <div>
-            {/* Top Bar with History Arrows, Pill Search, Profile */}
+            {/* Top Bar with History Arrows, Pill Search, Real Controls */}
             <TopBar
               mode={playerState.mode}
               onModeChange={handleModeChange}
@@ -388,6 +388,7 @@ export default function SoundloungeApp() {
               }}
               onNavBack={handleNavBack}
               onNavForward={handleNavForward}
+              onOpenUpload={() => setActiveTab("search")}
             />
 
             {/* Stage Canvas */}
@@ -522,7 +523,7 @@ export default function SoundloungeApp() {
                 <div className="max-w-4xl mx-auto space-y-6">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white tracking-tight">
-                      Browse Artists (خواننده)
+                      Browse Artists
                     </h2>
                     <span className="text-xs text-[#718492]">Featured Vocalists & Producers</span>
                   </div>
@@ -543,7 +544,7 @@ export default function SoundloungeApp() {
                 activeTab === "downloaded") && (
                 <div className="max-w-4xl mx-auto py-12 text-center rounded-2xl bg-[#0d181e] border border-[#1a2c35] space-y-3">
                   <h3 className="text-base font-bold text-white capitalize">
-                    {activeTab} Channel (کانال {activeTab})
+                    {activeTab} Channel
                   </h3>
                   <p className="text-xs text-[#718492] max-w-md mx-auto">
                     Live curated stream and playlist collection for {activeTab}. Click below to explore top weekly songs or search any track.
