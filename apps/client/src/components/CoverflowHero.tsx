@@ -31,7 +31,7 @@ const FEATURED_ITEMS: FeaturedHeroItem[] = [
     source: "youtube",
   },
   {
-    id: "yt_4PfE2aB_sH0",
+    id: "yt_QYvfY4MtLAI",
     title: "295",
     artist: "Sidhu Moose Wala",
     coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80",
@@ -39,7 +39,7 @@ const FEATURED_ITEMS: FeaturedHeroItem[] = [
     source: "youtube",
   },
   {
-    id: "yt_fHI8X480mxo",
+    id: "yt_fHI8X4OXluQ",
     title: "Blinding Lights",
     artist: "The Weeknd",
     coverUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",

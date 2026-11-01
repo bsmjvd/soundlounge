@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Ytdl, chooseFormat } from "@distube/ytdl-core";
+import { Innertube } from "youtubei.js";
 
 interface CachedFormat {
   url: string;
@@ -11,13 +12,84 @@ interface CachedFormat {
 const formatCache = new Map<string, CachedFormat>();
 const ytdl = new Ytdl();
 
-async function getAudioStreamUrl(videoId: string): Promise<CachedFormat> {
-  const cached = formatCache.get(videoId);
+let innertubePromise: Promise<Innertube> | null = null;
+async function getInnertube(): Promise<Innertube> {
+  if (!innertubePromise) {
+    innertubePromise = Innertube.create({
+      retrieve_player: false,
+      generate_session_locally: true,
+    }).catch((err) => {
+      innertubePromise = null;
+      throw err;
+    });
+  }
+  return innertubePromise;
+}
+
+/**
+ * Resolves a given query or synthetic slug to an authentic YouTube video ID.
+ */
+async function resolveToValidVideoId(input: string): Promise<string> {
+  const cleanId = input.replace(/^yt_/, "").trim();
+  // Valid 11-char YouTube ID check
+  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
+    return cleanId;
+  }
+
+  // Turn slugs like "TumItnaJo" or "WoAjnabee_TheTrain" into natural search query
+  const searchQuery = cleanId
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[_\-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  try {
+    const yt = await getInnertube();
+    const search = await yt.search(searchQuery);
+    const first = search.videos?.[0] as any;
+    if (first && first.id) {
+      return String(first.id);
+    }
+  } catch (err) {
+    console.warn("Failed to resolve fallback video query:", searchQuery, err);
+  }
+
+  return cleanId;
+}
+
+async function getAudioStreamUrl(videoIdInput: string): Promise<CachedFormat> {
+  const cached = formatCache.get(videoIdInput);
   if (cached && cached.expiresAt > Date.now()) {
     return cached;
   }
 
-  const info = await ytdl.getInfo(videoId);
+  let videoId = await resolveToValidVideoId(videoIdInput);
+
+  let info: any;
+  try {
+    info = await ytdl.getInfo(videoId);
+  } catch (initialErr) {
+    // If ytdl failed on videoId (e.g. video was unavailable or region-locked), search alternative
+    console.warn(`ytdl failed for ${videoId}, searching fallback:`, initialErr);
+    try {
+      const yt = await getInnertube();
+      const searchQuery = videoIdInput
+        .replace(/^yt_/, "")
+        .replace(/([A-Z])/g, " $1")
+        .replace(/[_\-]+/g, " ")
+        .trim();
+      const search = await yt.search(searchQuery);
+      const altVideo = (search.videos as any[])?.find((v) => v && v.id && v.id !== videoId);
+      if (altVideo && altVideo.id) {
+        videoId = String(altVideo.id);
+        info = await ytdl.getInfo(videoId);
+      } else {
+        throw initialErr;
+      }
+    } catch {
+      throw initialErr;
+    }
+  }
 
   // Prefer audio/mp4 (AAC) for universal browser support, fallback to audio/webm (Opus)
   const mp4Format = chooseFormat(info.formats, {
@@ -51,6 +123,7 @@ async function getAudioStreamUrl(videoId: string): Promise<CachedFormat> {
     expiresAt,
   };
 
+  formatCache.set(videoIdInput, result);
   formatCache.set(videoId, result);
   return result;
 }

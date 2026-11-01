@@ -54,6 +54,11 @@ describe("Intelligent Similar Tracks Recommendation Engine", () => {
   it("recommends a Ghazal peer (Mehdi Hassan / Ghulam Ali / Pankaj Udhas) when Ghazal is playing and artist tracks are exhausted", async () => {
     // Exclude all Jagjit Singh tracks so same-artist is exhausted
     const allJagjitIds = [
+      "yt_Ju6kNKaBOQ8",
+      "yt_tEomN5_KjW0",
+      "yt_42_K6J30o30",
+      "yt_P_nLgM1VqF0",
+      "yt_49rS29FwU_o",
       "yt_TumItnaJo",
       "yt_HoshwalonKo",
       "yt_ChithiNaKoi",

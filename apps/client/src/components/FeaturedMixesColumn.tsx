@@ -23,7 +23,7 @@ export interface FeaturedMix {
 
 const FEATURED_MIXES: FeaturedMix[] = [
   {
-    id: "yt_mix_synthwave",
+    id: "yt_PQ20sKYGjYU",
     title: "Neon Cyber Synthwave",
     artist: "Retro Sunset Drive Sessions",
     coverUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=700&auto=format&fit=crop&q=80",
@@ -31,7 +31,7 @@ const FEATURED_MIXES: FeaturedMix[] = [
     tag: "Synthwave",
   },
   {
-    id: "yt_mix_deephouse",
+    id: "yt_m_GoB8SFOeM",
     title: "Deep House & Vocal Sessions",
     artist: "Ibiza Club Sunset Mix",
     coverUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=700&auto=format&fit=crop&q=80",
@@ -39,7 +39,7 @@ const FEATURED_MIXES: FeaturedMix[] = [
     tag: "Deep House",
   },
   {
-    id: "yt_mix_lofi",
+    id: "yt_rFZHOHl-L8A",
     title: "Lo-Fi Beats to Relax & Code",
     artist: "Midnight Chillhop Radio",
     coverUrl: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=700&auto=format&fit=crop&q=80",

@@ -79,6 +79,26 @@ export class SoloPlayer {
             this.onEndedCallback();
           }
         });
+
+        this.audioElement.addEventListener("waiting", () => {
+          if (this.state.status === "playing") {
+            this.state.status = "buffering";
+            this.emitState();
+          }
+        });
+
+        this.audioElement.addEventListener("canplay", () => {
+          if (this.state.status === "buffering") {
+            this.state.status = "playing";
+            this.emitState();
+          }
+        });
+
+        this.audioElement.addEventListener("error", () => {
+          console.warn("SoloPlayer: HTMLAudioElement error:", this.audioElement?.error);
+          this.state.status = "idle";
+          this.emitState();
+        });
       } catch {
         // Fallback to simulated audio in headless / non-DOM environments
         this.audioElement = null;
@@ -148,15 +168,28 @@ export class SoloPlayer {
     this.state.status = "playing";
 
     if (this.audioElement) {
-      if (this.audioElement.src !== track.url) {
+      const currentSrc = this.audioElement.src;
+      const targetUrl =
+        track.url.startsWith("http://") || track.url.startsWith("https://")
+          ? track.url
+          : typeof window !== "undefined"
+          ? `${window.location.origin}${track.url}`
+          : track.url;
+
+      if (currentSrc !== targetUrl) {
         this.audioElement.src = track.url;
+        this.audioElement.load();
       }
-      this.audioElement.currentTime = positionMs / 1000;
+
+      if (positionMs > 0) {
+        this.audioElement.currentTime = positionMs / 1000;
+      }
       this.audioElement.volume = this.state.volume;
+
       try {
         await this.audioElement.play();
-      } catch {
-        // Autoplay policy or error
+      } catch (err: any) {
+        console.warn("SoloPlayer: play() rejected or interrupted:", err?.message || err);
       }
     }
 

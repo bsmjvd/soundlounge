@@ -42,7 +42,7 @@ const WEEKLY_SONGS: WeeklySongItem[] = [
     coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80",
   },
   {
-    id: "yt_4PfE2aB_sH0",
+    id: "yt_QYvfY4MtLAI",
     title: "295",
     artist: "Sidhu Moose Wala",
     streams: "920K",
@@ -50,7 +50,7 @@ const WEEKLY_SONGS: WeeklySongItem[] = [
     coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80",
   },
   {
-    id: "yt_fHI8X480mxo",
+    id: "yt_fHI8X4OXluQ",
     title: "Blinding Lights",
     artist: "The Weeknd",
     streams: "1.2M",
