@@ -195,6 +195,49 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Missing track identifier (id, title, or q required)", { status: 400 });
   }
 
+  // 1. If an external stream proxy (e.g. residential tunnel or dedicated proxy) is configured, route through it
+  const streamProxy = process.env.STREAM_PROXY_URL || process.env.NEXT_PUBLIC_STREAM_PROXY_URL;
+  if (streamProxy) {
+    try {
+      const targetUrl = new URL("/api/stream/youtube", streamProxy);
+      targetUrl.search = searchParams.toString();
+
+      const upstreamHeaders: Record<string, string> = {
+        "User-Agent": req.headers.get("user-agent") || "Mozilla/5.0",
+      };
+      const rangeHeader = req.headers.get("range");
+      if (rangeHeader) {
+        upstreamHeaders["Range"] = rangeHeader;
+      }
+
+      const proxyRes = await fetch(targetUrl.toString(), {
+        headers: upstreamHeaders,
+      });
+
+      if (proxyRes.ok || proxyRes.status === 206) {
+        const responseHeaders = new Headers();
+        const contentType = proxyRes.headers.get("content-type") || "audio/mp4";
+        responseHeaders.set("Content-Type", contentType);
+        responseHeaders.set("Accept-Ranges", "bytes");
+        responseHeaders.set("Cache-Control", "public, max-age=3600");
+
+        const contentRange = proxyRes.headers.get("content-range");
+        if (contentRange) responseHeaders.set("Content-Range", contentRange);
+
+        const contentLength = proxyRes.headers.get("content-length");
+        if (contentLength) responseHeaders.set("Content-Length", contentLength);
+
+        return new Response(proxyRes.body, {
+          status: proxyRes.status,
+          headers: responseHeaders,
+        });
+      }
+    } catch (proxyErr) {
+      console.warn("Stream proxy failed, falling back to direct extraction:", proxyErr);
+    }
+  }
+
+  // 2. Direct internal extraction fallback
   try {
     const streamInfo = await getAudioStreamUrl(videoId, title, artist, query);
     const rangeHeader = req.headers.get("range");
