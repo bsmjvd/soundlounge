@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { Header } from "../components/Header";
+import { AmbientBackground } from "../components/AmbientBackground";
+import { NowPlayingHero } from "../components/NowPlayingHero";
 import { MusicIngestion } from "../components/MusicIngestion";
 import { QueueView } from "../components/QueueView";
 import { LibraryView } from "../components/LibraryView";
@@ -253,7 +255,13 @@ export default function SoundloungeApp() {
   const activeTrack = playerState.currentTrack || queue[currentIndex] || null;
 
   return (
-    <div className="min-h-screen bg-[#0b0d13] text-[#f3f4f6] pb-28">
+    <div className="min-h-screen bg-[#0b0d13] text-[#f3f4f6] pb-28 relative">
+      {/* Full-bleed Ambient Blurred Song Backdrop */}
+      <AmbientBackground
+        currentTrack={activeTrack}
+        isPlaying={playerState.status === "playing"}
+      />
+
       {/* Header Bar */}
       <Header
         mode={playerState.mode}
@@ -266,6 +274,20 @@ export default function SoundloungeApp() {
 
       {/* Main Grid View */}
       <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        {/* Dynamic Now Playing Banner & Hero */}
+        <NowPlayingHero
+          currentTrack={activeTrack}
+          status={playerState.status}
+          positionMs={playerState.positionMs}
+          durationMs={playerState.durationMs}
+          mode={playerState.mode}
+          pingMs={sync.pingMs}
+          isLiked={activeTrack ? isLiked(activeTrack.id) : false}
+          onToggleLike={(t) => toggleLike(t)}
+          onTogglePlay={handleTogglePlay}
+          onNext={handleNext}
+        />
+
         {/* Direct Search & Music Ingestion */}
         <MusicIngestion
           onAddTrack={handleAddTrack}
