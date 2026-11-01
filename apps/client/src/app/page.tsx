@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Header } from "../components/Header";
 import { AmbientBackground } from "../components/AmbientBackground";
 import { NowPlayingHero } from "../components/NowPlayingHero";
@@ -11,6 +11,7 @@ import { PlayerBar } from "../components/PlayerBar";
 import { InviteModal } from "../components/InviteModal";
 import { AccessDenied } from "../components/AccessDenied";
 import { StudioImmersiveModal } from "../components/StudioImmersiveModal";
+import { NavigationSidebar, type NavTab } from "../components/NavigationSidebar";
 
 import {
   AudioEngineCoordinator,
@@ -34,7 +35,9 @@ function getCoordinator(): AudioEngineCoordinator {
 export default function SoundloungeApp() {
   const coordinator = getCoordinator();
 
-  // Read URL query params on mount for room and invite
+  // Navigation and Modal State
+  const [activeTab, setActiveTab] = useState<NavTab>("search");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [roomId, setRoomId] = useState("lounge-main");
   const [inviteToken, setInviteToken] = useState<string | undefined>(undefined);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -67,7 +70,6 @@ export default function SoundloungeApp() {
 
   // Stores
   const { queue, currentIndex } = useQueueStore();
-  const queueActions = useQueueStore.getState();
 
   const {
     likedTracks,
@@ -283,7 +285,7 @@ export default function SoundloungeApp() {
 
   if (playerState.mode === "synced" && sync.isAccessDenied) {
     return (
-      <div className="min-h-screen bg-[#0b0d13]">
+      <div className="min-h-screen bg-[#07080b]">
         <Header
           mode={playerState.mode}
           onModeChange={handleModeChange}
@@ -304,79 +306,141 @@ export default function SoundloungeApp() {
   const activeTrack = playerState.currentTrack || queue[currentIndex] || null;
 
   return (
-    <div className="min-h-screen bg-[#080a0f] text-[#f3f4f6] pb-28 relative overflow-x-hidden">
-      {/* Full-bleed Ambient Blurred Song Backdrop */}
+    <div className="min-h-screen bg-[#07080b] text-[#f3f4f6] relative overflow-x-hidden selection:bg-indigo-600/30 selection:text-white">
+      {/* Full-bleed Ambient Blurred Song Aura (Zero Seams, Zero Breaks) */}
       <AmbientBackground
         currentTrack={activeTrack}
         isPlaying={playerState.status === "playing"}
       />
 
-      {/* Main Foreground UI */}
-      <div className="relative z-10">
-        {/* Header Bar */}
-        <Header
+      {/* Main Studio Shell: Two-Column Flex Layout */}
+      <div className="relative z-10 flex min-h-screen">
+        {/* Left Persistent Navigation Sidebar */}
+        <NavigationSidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
           mode={playerState.mode}
           onModeChange={handleModeChange}
+          queueCount={queue.length}
+          likedCount={likedTracks.length}
+          playlistsCount={playlists.length}
+          historyCount={history.length}
           roomId={roomId}
           participantsCount={sync.participantsCount}
           pingMs={sync.pingMs}
           onOpenInvite={() => setIsInviteOpen(true)}
+          lastSession={lastSession}
+          onResumeSession={handleResumeSession}
+          isOpenMobile={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
 
-        {/* Main Grid View */}
-        <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-          {/* Dynamic Now Playing Banner & Hero */}
-          <NowPlayingHero
-            currentTrack={activeTrack}
-            status={playerState.status}
-            positionMs={playerState.positionMs}
-            durationMs={playerState.durationMs}
-            mode={playerState.mode}
-            pingMs={sync.pingMs}
-            isLiked={activeTrack ? isLiked(activeTrack.id) : false}
-            onToggleLike={(t) => toggleLike(t)}
-            onTogglePlay={handleTogglePlay}
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            onSeek={handleSeek}
-            onOpenStudio={() => setIsStudioOpen(true)}
-          />
-
-          {/* Direct Search & Music Ingestion */}
-          <MusicIngestion
-            onAddTrack={handleAddTrack}
-            onPlayDirect={handlePlaySingleTrack}
-            roomId={roomId}
-          />
-
-          {/* 2-Column Split: Collaborative Queue & On-Device Library */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <QueueView
-              queue={queue}
-              currentIndex={currentIndex}
-              onPlayTrack={handlePlayQueueTrack}
-              onRemoveTrack={handleRemoveTrack}
-              onPlayNext={handlePlayNext}
-              onClearQueue={handleClearQueue}
-              onSavePlaylist={handleSaveQueueAsPlaylist}
+        {/* Right Main Content Stage */}
+        <div className="flex-1 min-w-0 flex flex-col justify-between pb-28">
+          <div>
+            {/* Top Stage Bar */}
+            <Header
+              mode={playerState.mode}
+              onModeChange={handleModeChange}
+              roomId={roomId}
+              participantsCount={sync.participantsCount}
+              pingMs={sync.pingMs}
+              onOpenInvite={() => setIsInviteOpen(true)}
+              onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
             />
 
-            <LibraryView
-              likedTracks={likedTracks}
-              playlists={playlists}
-              history={history}
-              lastSession={lastSession}
-              onPlayTrack={handlePlaySingleTrack}
-              onPlayPlaylist={handlePlayPlaylist}
-              onCreatePlaylist={createPlaylist}
-              onDeletePlaylist={deletePlaylist}
-              onResumeSession={handleResumeSession}
-            />
+            {/* Stage Canvas */}
+            <main className="max-w-5xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+              {/* Cinematic Now Playing Hero Banner */}
+              <NowPlayingHero
+                currentTrack={activeTrack}
+                status={playerState.status}
+                positionMs={playerState.positionMs}
+                durationMs={playerState.durationMs}
+                mode={playerState.mode}
+                pingMs={sync.pingMs}
+                isLiked={activeTrack ? isLiked(activeTrack.id) : false}
+                onToggleLike={(t) => toggleLike(t)}
+                onTogglePlay={handleTogglePlay}
+                onNext={handleNext}
+                onPrevious={handlePrevious}
+                onSeek={handleSeek}
+                onOpenStudio={() => setIsStudioOpen(true)}
+              />
+
+              {/* Dynamic Tab Stage View */}
+              <div className="pt-2">
+                {activeTab === "search" && (
+                  <MusicIngestion
+                    onAddTrack={handleAddTrack}
+                    onPlayDirect={handlePlaySingleTrack}
+                    roomId={roomId}
+                  />
+                )}
+
+                {activeTab === "queue" && (
+                  <QueueView
+                    queue={queue}
+                    currentIndex={currentIndex}
+                    onPlayTrack={handlePlayQueueTrack}
+                    onRemoveTrack={handleRemoveTrack}
+                    onPlayNext={handlePlayNext}
+                    onClearQueue={handleClearQueue}
+                    onSavePlaylist={handleSaveQueueAsPlaylist}
+                  />
+                )}
+
+                {activeTab === "liked" && (
+                  <LibraryView
+                    likedTracks={likedTracks}
+                    playlists={playlists}
+                    history={history}
+                    lastSession={lastSession}
+                    onPlayTrack={handlePlaySingleTrack}
+                    onPlayPlaylist={handlePlayPlaylist}
+                    onCreatePlaylist={createPlaylist}
+                    onDeletePlaylist={deletePlaylist}
+                    onResumeSession={handleResumeSession}
+                    activeSection="liked"
+                  />
+                )}
+
+                {activeTab === "playlists" && (
+                  <LibraryView
+                    likedTracks={likedTracks}
+                    playlists={playlists}
+                    history={history}
+                    lastSession={lastSession}
+                    onPlayTrack={handlePlaySingleTrack}
+                    onPlayPlaylist={handlePlayPlaylist}
+                    onCreatePlaylist={createPlaylist}
+                    onDeletePlaylist={deletePlaylist}
+                    onResumeSession={handleResumeSession}
+                    activeSection="playlists"
+                  />
+                )}
+
+                {activeTab === "history" && (
+                  <LibraryView
+                    likedTracks={likedTracks}
+                    playlists={playlists}
+                    history={history}
+                    lastSession={lastSession}
+                    onPlayTrack={handlePlaySingleTrack}
+                    onPlayPlaylist={handlePlayPlaylist}
+                    onCreatePlaylist={createPlaylist}
+                    onDeletePlaylist={deletePlaylist}
+                    onResumeSession={handleResumeSession}
+                    activeSection="history"
+                  />
+                )}
+              </div>
+            </main>
           </div>
-        </main>
+        </div>
       </div>
 
-      {/* Persistent Bottom Audio Player Bar */}
+      {/* Persistent Bottom Edge-to-Edge Audio Player Bar */}
       <div className="relative z-20">
         <PlayerBar
           currentTrack={activeTrack}
@@ -393,6 +457,7 @@ export default function SoundloungeApp() {
           onNext={handleNext}
           onPrevious={handlePrevious}
           onVolumeChange={(v) => coordinator.setVolume(v)}
+          onOpenStudio={() => setIsStudioOpen(true)}
         />
       </div>
 
@@ -404,7 +469,7 @@ export default function SoundloungeApp() {
         inviteToken={inviteToken}
       />
 
-      {/* Immersive Studio Modal (Studio Experience) */}
+      {/* Fullscreen Immersive Studio Player */}
       <StudioImmersiveModal
         isOpen={isStudioOpen}
         onClose={() => setIsStudioOpen(false)}

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Radio, Users, Wifi, Share2, Music2 } from "lucide-react";
+import { Radio, Users, Wifi, Share2, Music2, Menu } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   participantsCount: number;
   pingMs: number;
   onOpenInvite: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
 export function Header({
@@ -20,31 +21,44 @@ export function Header({
   participantsCount,
   pingMs,
   onOpenInvite,
+  onToggleMobileMenu,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/40 backdrop-blur-2xl px-6 py-3.5 shadow-lg">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand */}
+    <header className="sticky top-0 z-30 w-full border-b border-[#141724] bg-[#07090e]/80 backdrop-blur-xl px-4 sm:px-6 py-3 transition-colors">
+      <div className="flex items-center justify-between">
+        {/* Left: Mobile Menu Trigger + Brand for small screens */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Radio className="w-5 h-5 text-white" />
+          {onToggleMobileMenu && (
+            <button
+              onClick={onToggleMobileMenu}
+              className="md:hidden p-2 text-[#7d869e] hover:text-white rounded-lg hover:bg-[#121520] transition-colors cursor-pointer"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+
+          <div className="flex items-center gap-2.5 md:hidden">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-sky-400 flex items-center justify-center shadow-md shadow-indigo-600/30">
+              <Radio className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-bold text-white tracking-tight">Soundlounge</span>
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-gray-100 to-sky-200 bg-clip-text text-transparent">
-              Soundlounge
-            </h1>
-            <p className="text-xs text-gray-400">Precision Sync & Solo Streamer</p>
+
+          <div className="hidden md:flex items-center gap-2 text-xs text-[#636c82]">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Studio Engine Connected</span>
           </div>
         </div>
 
-        {/* Mode Switcher Pill */}
-        <div className="flex items-center bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/10">
+        {/* Center: Mode Segmented Control (Solo vs Synced) */}
+        <div className="hidden sm:flex items-center p-1 rounded-xl bg-[#0d1017] border border-[#181d2a]">
           <button
             onClick={() => onModeChange("solo")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               mode === "solo"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
-                : "text-gray-400 hover:text-white"
+                ? "bg-[#1d2334] text-white shadow-sm"
+                : "text-[#6b738a] hover:text-white"
             }`}
           >
             <Music2 className="w-3.5 h-3.5" />
@@ -52,10 +66,10 @@ export function Header({
           </button>
           <button
             onClick={() => onModeChange("synced")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               mode === "synced"
-                ? "bg-sky-500 text-white shadow-md shadow-sky-500/30"
-                : "text-gray-400 hover:text-white"
+                ? "bg-sky-600 text-white shadow-sm shadow-sky-600/30"
+                : "text-[#6b738a] hover:text-white"
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -63,32 +77,32 @@ export function Header({
           </button>
         </div>
 
-        {/* Sync Room Status Indicators */}
-        <div className="flex items-center gap-3">
-          {mode === "synced" && (
+        {/* Right: Room status & Invite Button */}
+        <div className="flex items-center gap-2.5">
+          {mode === "synced" ? (
             <>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs backdrop-blur-md">
-                <Wifi className={`w-3.5 h-3.5 ${pingMs < 40 ? "text-emerald-400" : "text-amber-400"}`} />
-                <span className="text-gray-300 font-mono tabular-nums">{pingMs}ms</span>
+              <div className="flex items-center gap-2 bg-[#0e121c] border border-[#1b2234] px-2.5 py-1 rounded-lg text-xs">
+                <Wifi className={`w-3 h-3 ${pingMs < 40 ? "text-emerald-400" : "text-amber-400"}`} />
+                <span className="text-[#8e97af] font-mono tabular-nums">{pingMs}ms</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs backdrop-blur-md">
-                <Users className="w-3.5 h-3.5 text-sky-400" />
-                <span className="text-gray-300 font-medium">{participantsCount} online</span>
+
+              <div className="hidden sm:flex items-center gap-1.5 bg-[#0e121c] border border-[#1b2234] px-2.5 py-1 rounded-lg text-xs text-[#8e97af]">
+                <Users className="w-3 h-3 text-sky-400" />
+                <span>{participantsCount} online</span>
               </div>
+
               <button
                 onClick={onOpenInvite}
                 aria-label="Invite friends to room"
-                className="flex items-center gap-1.5 bg-indigo-600/25 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
               >
-                <Share2 className="w-3.5 h-3.5" />
-                Invite Friends
+                <Share2 className="w-3 h-3" />
+                <span>Invite</span>
               </button>
             </>
-          )}
-
-          {mode === "solo" && (
-            <div className="text-xs text-gray-500 hidden sm:block">
-              Instant playback · No network delay
+          ) : (
+            <div className="text-xs text-[#636c82] hidden sm:block">
+              Solo Listening · Edge Native
             </div>
           )}
         </div>

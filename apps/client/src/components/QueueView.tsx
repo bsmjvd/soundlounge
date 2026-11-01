@@ -7,12 +7,12 @@ import {
   Trash2,
   ArrowRight,
   BookmarkPlus,
-  Music,
-  Youtube,
-  UploadCloud,
-  Check,
+  Music2,
+  X,
+  Volume2,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
+import { TrackArtwork } from "./TrackArtwork";
 
 interface QueueViewProps {
   queue: Track[];
@@ -43,17 +43,6 @@ export function QueueView({
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  const getSourceIcon = (source: Track["source"]) => {
-    switch (source) {
-      case "youtube":
-        return <Youtube className="w-3 h-3 text-rose-400" />;
-      case "soundcloud":
-        return <Music className="w-3 h-3 text-amber-400" />;
-      default:
-        return <UploadCloud className="w-3 h-3 text-sky-400" />;
-    }
-  };
-
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (playlistName.trim()) {
@@ -64,162 +53,173 @@ export function QueueView({
   };
 
   return (
-    <div className="bg-[#131722]/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl flex flex-col justify-between">
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400 shadow-sm shadow-sky-500/20">
-              <ListMusic className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white tracking-tight">
-                Playing Queue
-              </h2>
-              <p className="text-[10px] text-gray-400">{queue.length} track{queue.length !== 1 ? "s" : ""} scheduled</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {queue.length > 0 && (
-              <>
-                <button
-                  onClick={() => setShowSaveModal(true)}
-                  aria-label="Save queue as playlist"
-                  className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
-                >
-                  <BookmarkPlus className="w-3.5 h-3.5 text-indigo-400" />
-                  Save
-                </button>
-                <button
-                  onClick={onClearQueue}
-                  aria-label="Clear all songs from queue"
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-rose-400 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Clear
-                </button>
-              </>
-            )}
-          </div>
+    <div className="space-y-4">
+      {/* Queue Header & Action Bar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <ListMusic className="w-4 h-4 text-indigo-400" />
+            Playing Queue
+          </h2>
+          <p className="text-xs text-[#636c82] mt-0.5">
+            {queue.length} track{queue.length !== 1 ? "s" : ""} scheduled
+          </p>
         </div>
 
-        {showSaveModal && (
-          <form onSubmit={handleSaveSubmit} className="mb-4 bg-black/60 p-2.5 rounded-2xl border border-indigo-500/40 flex gap-2 backdrop-blur-md">
-            <input
-              type="text"
-              placeholder="Name this playlist..."
-              value={playlistName}
-              onChange={(e) => setPlaylistName(e.target.value)}
-              autoFocus
-              className="flex-1 bg-transparent border-none text-xs text-white placeholder-gray-500 outline-none px-2"
-            />
+        {queue.length > 0 && (
+          <div className="flex items-center gap-2">
             <button
-              type="submit"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+              onClick={() => setShowSaveModal(true)}
+              className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-white px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
             >
-              Save
+              <BookmarkPlus className="w-3.5 h-3.5 text-indigo-400" />
+              Save Playlist
             </button>
             <button
-              type="button"
-              onClick={() => setShowSaveModal(false)}
-              className="text-gray-400 hover:text-white px-2.5 py-1.5 text-xs transition-colors cursor-pointer"
+              onClick={onClearQueue}
+              className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-rose-400 px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
             >
-              Cancel
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear
             </button>
-          </form>
-        )}
-
-        {queue.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center space-y-2.5">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-500">
-              <ListMusic className="w-6 h-6" />
-            </div>
-            <p className="text-xs text-gray-300 font-semibold">Queue is empty</p>
-            <p className="text-[11px] text-gray-500 max-w-xs leading-relaxed">
-              Search for any track or upload audio above to start queuing songs for you and your friends.
-            </p>
           </div>
-        ) : (
-          <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+        )}
+      </div>
+
+      {/* Save Queue Modal Inline Form */}
+      {showSaveModal && (
+        <form
+          onSubmit={handleSaveSubmit}
+          className="p-3 rounded-xl bg-[#0e111a] border border-indigo-500/40 flex items-center gap-2"
+        >
+          <input
+            type="text"
+            placeholder="Name your new playlist..."
+            value={playlistName}
+            onChange={(e) => setPlaylistName(e.target.value)}
+            autoFocus
+            className="flex-1 bg-transparent text-xs text-white placeholder-[#586073] outline-none px-2"
+          />
+          <button
+            type="submit"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSaveModal(false)}
+            className="p-1 text-[#666f85] hover:text-white rounded-md cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </form>
+      )}
+
+      {/* Queue Data Table */}
+      {queue.length > 0 ? (
+        <div className="rounded-xl border border-[#171a25] bg-[#090b10] overflow-hidden">
+          {/* Table Header */}
+          <div className="grid grid-cols-[36px_1fr_80px_100px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
+            <span>#</span>
+            <span>Title & Artist</span>
+            <span className="text-right">Duration</span>
+            <span className="text-right pr-2">Actions</span>
+          </div>
+
+          {/* Table Rows */}
+          <div className="divide-y divide-[#12151f]">
             {queue.map((track, idx) => {
-              const isCurrent = idx === currentIndex;
+              const isPlaying = idx === currentIndex;
+
               return (
                 <div
-                  key={`${track.id}-${idx}`}
-                  className={`group flex items-center justify-between p-2.5 rounded-2xl transition-all duration-200 border ${
-                    isCurrent
-                      ? "bg-indigo-950/40 border-indigo-500/40 text-white shadow-lg shadow-indigo-950/30 ring-1 ring-indigo-500/20"
-                      : "bg-white/[0.02] border-transparent hover:border-white/10 hover:bg-white/5 text-gray-300"
+                  key={`${track.id}_${idx}`}
+                  className={`group grid grid-cols-[36px_1fr_80px_100px] items-center px-4 py-2.5 transition-colors ${
+                    isPlaying ? "bg-[#111522]" : "hover:bg-[#10131d]"
                   }`}
                 >
-                  <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0 pr-2">
-                    <span className="text-[11px] font-mono tabular-nums text-gray-500 w-4 text-center">
-                      {isCurrent ? (
-                        <span className="w-2 h-2 rounded-full bg-indigo-400 inline-block animate-ping" />
-                      ) : (
-                        idx + 1
-                      )}
-                    </span>
-
-                    {/* Track Cover Thumbnail */}
-                    <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 relative overflow-hidden flex-shrink-0 shadow-sm">
-                      {track.coverUrl ? (
-                        <img
-                          src={track.coverUrl}
-                          alt={track.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          {getSourceIcon(track.source)}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="truncate flex-1 min-w-0">
-                      <p className={`text-xs font-semibold truncate ${isCurrent ? "text-indigo-200" : "text-white group-hover:text-sky-300"} transition-colors`}>
-                        {track.title}
-                      </p>
-                      <p className="text-[11px] text-gray-400 truncate mt-0.5">{track.artist}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5 flex-shrink-0">
-                    <span className="text-[11px] font-mono tabular-nums text-gray-400">
-                      {formatTime(track.durationMs)}
-                    </span>
-
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {!isCurrent && (
+                  {/* Status / Index */}
+                  <div className="text-xs font-mono text-[#586073]">
+                    {isPlaying ? (
+                      <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                    ) : (
+                      <>
+                        <span className="group-hover:hidden">{idx + 1}</span>
                         <button
                           onClick={() => onPlayTrack(track, idx)}
-                          title="Play now"
-                          className="p-1.5 rounded-lg bg-white/10 hover:bg-white text-white hover:text-black transition-all cursor-pointer"
+                          className="hidden group-hover:inline-flex text-white hover:text-indigo-400 cursor-pointer"
+                          title="Play Track"
                         >
                           <Play className="w-3.5 h-3.5 fill-current" />
                         </button>
-                      )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Artwork & Info */}
+                  <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
+                    <TrackArtwork
+                      coverUrl={track.coverUrl}
+                      trackId={track.id}
+                      title={track.title}
+                      className="w-10 h-10 rounded-lg"
+                      iconClassName="w-4 h-4"
+                    />
+                    <div className="truncate">
+                      <p
+                        className={`text-xs font-semibold truncate transition-colors ${
+                          isPlaying
+                            ? "text-emerald-400"
+                            : "text-white group-hover:text-sky-300"
+                        }`}
+                      >
+                        {track.title}
+                      </p>
+                      <p className="text-[11px] text-[#71788d] truncate mt-0.5">
+                        {track.artist}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Duration */}
+                  <div className="text-right text-xs font-mono tabular-nums text-[#71788d]">
+                    {formatTime(track.durationMs)}
+                  </div>
+
+                  {/* Row Actions */}
+                  <div className="flex items-center justify-end gap-1">
+                    {!isPlaying && (
                       <button
                         onClick={() => onPlayNext(track)}
-                        title="Play next"
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-sky-400 hover:text-white transition-all cursor-pointer"
+                        title="Move to Play Next"
+                        className="p-1.5 rounded-lg text-[#586073] hover:text-sky-300 transition-colors cursor-pointer"
                       >
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => onRemoveTrack(track.id)}
-                        title="Remove from queue"
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-gray-400 hover:text-rose-400 transition-all cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    )}
+                    <button
+                      onClick={() => onRemoveTrack(track.id)}
+                      title="Remove from Queue"
+                      className="p-1.5 rounded-lg text-[#586073] hover:text-rose-400 transition-colors cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="text-center py-16 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">
+          <ListMusic className="w-8 h-8 text-[#363d50] mx-auto" />
+          <p className="text-xs text-[#8c94aa] font-medium">Your queue is empty</p>
+          <p className="text-[11px] text-[#586073]">
+            Search for songs or artists in the Discover tab to add them to your queue.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

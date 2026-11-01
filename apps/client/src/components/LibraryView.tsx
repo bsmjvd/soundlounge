@@ -3,17 +3,18 @@
 import React, { useState } from "react";
 import {
   Heart,
-  ListMusic,
+  Library,
   History,
   Play,
-  RotateCcw,
   Trash2,
   Plus,
   Music2,
-  Sparkles,
+  X,
+  Clock,
 } from "lucide-react";
 import type { Track, Playlist } from "@soundlounge/shared";
 import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
+import { TrackArtwork } from "./TrackArtwork";
 
 interface LibraryViewProps {
   likedTracks: Track[];
@@ -25,22 +26,26 @@ interface LibraryViewProps {
   onCreatePlaylist: (name: string) => void;
   onDeletePlaylist: (playlistId: string) => void;
   onResumeSession: (session: LastSessionSnapshot) => void;
+  activeSection?: "liked" | "playlists" | "history";
 }
 
 export function LibraryView({
   likedTracks,
   playlists,
   history,
-  lastSession,
   onPlayTrack,
   onPlayPlaylist,
   onCreatePlaylist,
   onDeletePlaylist,
-  onResumeSession,
+  activeSection = "liked",
 }: LibraryViewProps) {
-  const [activeTab, setActiveTab] = useState<"liked" | "playlists" | "history">("liked");
+  const [internalTab, setInternalTab] = useState<"liked" | "playlists" | "history">(activeSection);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [showCreateInput, setShowCreateInput] = useState(false);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+
+  // Sync with prop if it changes
+  const currentTab = activeSection || internalTab;
 
   const formatTime = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
@@ -58,279 +63,360 @@ export function LibraryView({
     }
   };
 
+  const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
+
   return (
-    <div className="bg-[#131722]/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4 flex flex-col justify-between">
-      <div>
-        {/* Continue Listening Hero Banner */}
-        {lastSession && (
-          <div className="mb-4 bg-gradient-to-r from-indigo-950/60 via-[#161a26] to-black/60 border border-indigo-500/30 rounded-2xl p-3.5 flex items-center justify-between shadow-lg shadow-indigo-950/20 backdrop-blur-xl">
-            <div className="flex items-center gap-3.5 overflow-hidden flex-1 min-w-0 pr-2">
-              <div className="w-11 h-11 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 flex-shrink-0 relative overflow-hidden shadow-md">
-                {lastSession.track.coverUrl ? (
-                  <img
-                    src={lastSession.track.coverUrl}
-                    alt={lastSession.track.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <RotateCcw className="w-5 h-5" />
-                )}
-              </div>
-              <div className="truncate">
-                <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold text-indigo-400">
-                  <Sparkles className="w-2.5 h-2.5" /> Continue Listening
-                </span>
-                <p className="text-xs font-semibold text-white truncate">
-                  {lastSession.track.title}
-                </p>
-                <p className="text-[11px] font-mono tabular-nums text-gray-400 truncate">
-                  Resume from {formatTime(lastSession.positionMs)}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => onResumeSession(lastSession)}
-              className="flex items-center gap-1.5 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-white/10 hover:scale-105 active:scale-95 transition-all flex-shrink-0 cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              Resume
-            </button>
-          </div>
-        )}
-
-        {/* Tabs Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab("liked")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "liked"
-                  ? "bg-rose-500/15 text-rose-300 border border-rose-500/30 shadow-sm shadow-rose-500/20"
-                  : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
-              }`}
-            >
-              <Heart className="w-3.5 h-3.5" />
-              Liked ({likedTracks.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("playlists")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "playlists"
-                  ? "bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 shadow-sm shadow-indigo-500/20"
-                  : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
-              }`}
-            >
-              <ListMusic className="w-3.5 h-3.5" />
-              Playlists ({playlists.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("history")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "history"
-                  ? "bg-sky-500/15 text-sky-300 border border-sky-500/30 shadow-sm shadow-sky-500/20"
-                  : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
-              }`}
-            >
-              <History className="w-3.5 h-3.5" />
-              History ({history.length})
-            </button>
-          </div>
-
-          {activeTab === "playlists" && (
-            <button
-              onClick={() => setShowCreateInput(true)}
-              className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New Playlist
-            </button>
-          )}
+    <div className="space-y-4">
+      {/* Tab Header if viewing library as a standalone component */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            {currentTab === "liked" && (
+              <>
+                <Heart className="w-4 h-4 text-rose-500 fill-current" />
+                Liked Songs ({likedTracks.length})
+              </>
+            )}
+            {currentTab === "playlists" && (
+              <>
+                <Library className="w-4 h-4 text-indigo-400" />
+                Playlists ({playlists.length})
+              </>
+            )}
+            {currentTab === "history" && (
+              <>
+                <History className="w-4 h-4 text-sky-400" />
+                Listening History ({history.length})
+              </>
+            )}
+          </h2>
+          <p className="text-xs text-[#636c82] mt-0.5">
+            {currentTab === "liked" && "Your personal favorite tracks saved locally"}
+            {currentTab === "playlists" && "Custom playlists and curated track collections"}
+            {currentTab === "history" && "Tracks you have listened to in Soundlounge"}
+          </p>
         </div>
 
-        {showCreateInput && activeTab === "playlists" && (
-          <form onSubmit={handleCreateSubmit} className="mb-3 flex gap-2 bg-black/50 p-2.5 rounded-2xl border border-indigo-500/40 backdrop-blur-md">
-            <input
-              type="text"
-              placeholder="New playlist title..."
-              value={newPlaylistName}
-              onChange={(e) => setNewPlaylistName(e.target.value)}
-              autoFocus
-              className="flex-1 bg-transparent border-none text-xs text-white placeholder-gray-500 outline-none px-2"
-            />
-            <button
-              type="submit"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
-            >
-              Create
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreateInput(false)}
-              className="text-gray-400 hover:text-white px-2.5 py-1.5 text-xs transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-          </form>
+        {currentTab === "playlists" && !showCreateInput && (
+          <button
+            onClick={() => setShowCreateInput(true)}
+            className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-white px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-indigo-400" />
+            New Playlist
+          </button>
         )}
+      </div>
 
-        {/* Tab Content */}
-        <div className="max-h-[340px] overflow-y-auto space-y-1.5 pr-1">
-          {activeTab === "liked" && (
-            likedTracks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-2.5">
-                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-500">
-                  <Heart className="w-6 h-6" />
-                </div>
-                <p className="text-xs text-gray-300 font-semibold">No liked songs yet</p>
-                <p className="text-[11px] text-gray-500 max-w-xs leading-relaxed">
-                  Click the heart icon on any playing track to save your favorites directly to your local browser storage.
-                </p>
+      {/* Playlist Creation Inline Form */}
+      {showCreateInput && (
+        <form
+          onSubmit={handleCreateSubmit}
+          className="p-3 rounded-xl bg-[#0e111a] border border-indigo-500/40 flex items-center gap-2"
+        >
+          <input
+            type="text"
+            placeholder="Playlist name..."
+            value={newPlaylistName}
+            onChange={(e) => setNewPlaylistName(e.target.value)}
+            autoFocus
+            className="flex-1 bg-transparent text-xs text-white placeholder-[#586073] outline-none px-2"
+          />
+          <button
+            type="submit"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+          >
+            Create
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreateInput(false)}
+            className="p-1 text-[#666f85] hover:text-white rounded-md cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </form>
+      )}
+
+      {/* 1. LIKED SONGS VIEW */}
+      {currentTab === "liked" && (
+        <>
+          {likedTracks.length > 0 ? (
+            <div className="rounded-xl border border-[#171a25] bg-[#090b10] overflow-hidden">
+              <div className="grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
+                <span>#</span>
+                <span>Title & Artist</span>
+                <span className="text-right">Duration</span>
+                <span className="text-right pr-2">Play</span>
               </div>
-            ) : (
-              likedTracks.map((track) => (
-                <div
-                  key={track.id}
-                  className="group flex items-center justify-between p-2.5 rounded-2xl bg-white/[0.02] border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-200"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0 pr-2">
-                    <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 relative overflow-hidden flex-shrink-0 shadow-sm">
-                      {track.coverUrl ? (
-                        <img
-                          src={track.coverUrl}
-                          alt={track.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          <Music2 className="w-4 h-4" />
-                        </div>
-                      )}
+              <div className="divide-y divide-[#12151f]">
+                {likedTracks.map((track, idx) => (
+                  <div
+                    key={track.id}
+                    className="group grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 hover:bg-[#10131d] transition-colors"
+                  >
+                    <div className="text-xs font-mono text-[#586073]">
+                      <span className="group-hover:hidden">{idx + 1}</span>
+                      <button
+                        onClick={() => onPlayTrack(track)}
+                        className="hidden group-hover:inline-flex text-white hover:text-indigo-400 cursor-pointer"
+                        title="Play Track"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      </button>
                     </div>
-                    <div className="truncate">
-                      <p className="text-xs font-semibold text-white truncate group-hover:text-rose-300 transition-colors">
-                        {track.title}
-                      </p>
-                      <p className="text-[11px] text-gray-400 truncate mt-0.5">{track.artist}</p>
+
+                    <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
+                      <TrackArtwork
+                        coverUrl={track.coverUrl}
+                        trackId={track.id}
+                        title={track.title}
+                        className="w-10 h-10 rounded-lg"
+                        iconClassName="w-4 h-4"
+                      />
+                      <div className="truncate">
+                        <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
+                          {track.title}
+                        </p>
+                        <p className="text-[11px] text-[#71788d] truncate mt-0.5">
+                          {track.artist}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 flex-shrink-0">
-                    <span className="text-[11px] font-mono tabular-nums text-gray-400">
+
+                    <div className="text-right text-xs font-mono tabular-nums text-[#71788d]">
                       {formatTime(track.durationMs)}
-                    </span>
-                    <button
-                      onClick={() => onPlayTrack(track)}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white text-white hover:text-black transition-all cursor-pointer"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )
-          )}
+                    </div>
 
-          {activeTab === "playlists" && (
-            playlists.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-2.5">
-                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-500">
-                  <ListMusic className="w-6 h-6" />
-                </div>
-                <p className="text-xs text-gray-300 font-semibold">No playlists created yet</p>
-                <p className="text-[11px] text-gray-500 max-w-xs leading-relaxed">
-                  Click "New Playlist" or use "Save" in the Queue view to save custom listening sets.
-                </p>
+                    <div className="flex items-center justify-end">
+                      <button
+                        onClick={() => onPlayTrack(track)}
+                        title="Play Track"
+                        className="p-1.5 rounded-lg text-[#586073] hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              playlists.map((pl) => (
+            </div>
+          ) : (
+            <div className="text-center py-16 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">
+              <Heart className="w-8 h-8 text-[#363d50] mx-auto" />
+              <p className="text-xs text-[#8c94aa] font-medium">No liked songs yet</p>
+              <p className="text-[11px] text-[#586073]">
+                Click the heart icon on any playing track or search result to save it here.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 2. PLAYLISTS VIEW */}
+      {currentTab === "playlists" && (
+        <div className="space-y-4">
+          {playlists.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {playlists.map((pl) => (
                 <div
                   key={pl.id}
-                  className="group flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 hover:bg-white/5 transition-all duration-200"
+                  className="p-4 rounded-xl border border-[#171a25] bg-[#090b10] hover:border-[#222738] transition-colors group flex flex-col justify-between"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                      <ListMusic className="w-5 h-5" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-10 h-10 rounded-lg bg-[#141722] border border-[#222738] flex items-center justify-center text-indigo-400 flex-shrink-0">
+                        <Library className="w-5 h-5" />
+                      </div>
+                      <div className="truncate">
+                        <h3 className="text-xs font-semibold text-white truncate group-hover:text-indigo-300 transition-colors">
+                          {pl.name}
+                        </h3>
+                        <p className="text-[11px] text-[#636c82] mt-0.5">
+                          {pl.tracks.length} track{pl.tracks.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{pl.name}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{pl.tracks.length} track{pl.tracks.length !== 1 ? "s" : ""}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => onPlayPlaylist(pl)}
-                      disabled={pl.tracks.length === 0}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-black text-xs font-bold shadow-md shadow-white/10 disabled:opacity-40 transition-all cursor-pointer"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      Play
-                    </button>
+
                     <button
                       onClick={() => onDeletePlaylist(pl.id)}
-                      className="p-1.5 rounded-xl hover:bg-rose-500/20 text-gray-500 hover:text-rose-400 transition-all cursor-pointer"
+                      title="Delete playlist"
+                      className="p-1.5 text-[#586073] hover:text-rose-400 rounded-md transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
-              ))
-            )
-          )}
 
-          {activeTab === "history" && (
-            history.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-2.5">
-                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-500">
-                  <History className="w-6 h-6" />
-                </div>
-                <p className="text-xs text-gray-300 font-semibold">No history recorded yet</p>
-                <p className="text-[11px] text-gray-500 max-w-xs leading-relaxed">
-                  Songs you play will automatically appear here so you can re-listen anytime.
-                </p>
-              </div>
-            ) : (
-              history.map((track, i) => (
-                <div
-                  key={`${track.id}-${i}`}
-                  className="group flex items-center justify-between p-2.5 rounded-2xl bg-white/[0.02] border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-200"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0 pr-2">
-                    <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 relative overflow-hidden flex-shrink-0 shadow-sm">
-                      {track.coverUrl ? (
-                        <img
-                          src={track.coverUrl}
-                          alt={track.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          <Music2 className="w-4 h-4" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
-                        {track.title}
-                      </p>
-                      <p className="text-[11px] text-gray-400 truncate mt-0.5">{track.artist}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2.5 flex-shrink-0">
-                    <span className="text-[11px] font-mono tabular-nums text-gray-400">
-                      {formatTime(track.durationMs)}
-                    </span>
+                  <div className="mt-4 pt-3 border-t border-[#12151f] flex items-center justify-between">
                     <button
-                      onClick={() => onPlayTrack(track)}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white text-white hover:text-black transition-all cursor-pointer"
+                      onClick={() =>
+                        setSelectedPlaylistId(selectedPlaylistId === pl.id ? null : pl.id)
+                      }
+                      className="text-[11px] text-[#71788d] hover:text-white transition-colors cursor-pointer"
                     >
-                      <Play className="w-3.5 h-3.5 fill-current" />
+                      {selectedPlaylistId === pl.id ? "Hide Tracks" : "View Tracks"}
+                    </button>
+
+                    <button
+                      onClick={() => onPlayPlaylist(pl)}
+                      disabled={pl.tracks.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white text-black text-xs font-semibold hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      Play All
                     </button>
                   </div>
                 </div>
-              ))
-            )
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">
+              <Library className="w-8 h-8 text-[#363d50] mx-auto" />
+              <p className="text-xs text-[#8c94aa] font-medium">No playlists created</p>
+              <p className="text-[11px] text-[#586073]">
+                Create a playlist or save your current queue to build your audio collection.
+              </p>
+            </div>
+          )}
+
+          {/* Expanded Playlist Tracks View */}
+          {selectedPlaylist && (
+            <div className="mt-4 rounded-xl border border-[#171a25] bg-[#090b10] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>{selectedPlaylist.name} Tracks</span>
+                  <span className="text-[10px] text-[#636c82] font-normal">
+                    ({selectedPlaylist.tracks.length})
+                  </span>
+                </h3>
+                <button
+                  onClick={() => setSelectedPlaylistId(null)}
+                  className="p-1 text-[#666f85] hover:text-white rounded-md cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {selectedPlaylist.tracks.length > 0 ? (
+                <div className="divide-y divide-[#12151f]">
+                  {selectedPlaylist.tracks.map((track, idx) => (
+                    <div
+                      key={`${track.id}_${idx}`}
+                      className="group flex items-center justify-between py-2 hover:bg-[#10131d] px-2 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
+                        <TrackArtwork
+                          coverUrl={track.coverUrl}
+                          trackId={track.id}
+                          title={track.title}
+                          className="w-9 h-9 rounded-lg"
+                          iconClassName="w-4 h-4"
+                        />
+                        <div className="truncate">
+                          <p className="text-xs font-semibold text-white truncate">
+                            {track.title}
+                          </p>
+                          <p className="text-[11px] text-[#71788d] truncate">{track.artist}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono tabular-nums text-[#71788d]">
+                          {formatTime(track.durationMs)}
+                        </span>
+                        <button
+                          onClick={() => onPlayTrack(track)}
+                          title="Play Track"
+                          className="p-1.5 rounded-lg text-[#586073] hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-[#586073] py-4 text-center">This playlist is empty.</p>
+              )}
+            </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* 3. HISTORY VIEW */}
+      {currentTab === "history" && (
+        <>
+          {history.length > 0 ? (
+            <div className="rounded-xl border border-[#171a25] bg-[#090b10] overflow-hidden">
+              <div className="grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
+                <span>#</span>
+                <span>Title & Artist</span>
+                <span className="text-right">Duration</span>
+                <span className="text-right pr-2">Replay</span>
+              </div>
+              <div className="divide-y divide-[#12151f]">
+                {history.map((track, idx) => (
+                  <div
+                    key={`${track.id}_${idx}`}
+                    className="group grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 hover:bg-[#10131d] transition-colors"
+                  >
+                    <div className="text-xs font-mono text-[#586073]">
+                      <span className="group-hover:hidden">{idx + 1}</span>
+                      <button
+                        onClick={() => onPlayTrack(track)}
+                        className="hidden group-hover:inline-flex text-white hover:text-indigo-400 cursor-pointer"
+                        title="Replay Track"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
+                      <TrackArtwork
+                        coverUrl={track.coverUrl}
+                        trackId={track.id}
+                        title={track.title}
+                        className="w-10 h-10 rounded-lg"
+                        iconClassName="w-4 h-4"
+                      />
+                      <div className="truncate">
+                        <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
+                          {track.title}
+                        </p>
+                        <p className="text-[11px] text-[#71788d] truncate mt-0.5">
+                          {track.artist}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right text-xs font-mono tabular-nums text-[#71788d]">
+                      {formatTime(track.durationMs)}
+                    </div>
+
+                    <div className="flex items-center justify-end">
+                      <button
+                        onClick={() => onPlayTrack(track)}
+                        title="Replay Track"
+                        className="p-1.5 rounded-lg text-[#586073] hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">
+              <Clock className="w-8 h-8 text-[#363d50] mx-auto" />
+              <p className="text-xs text-[#8c94aa] font-medium">No listening history yet</p>
+              <p className="text-[11px] text-[#586073]">
+                Tracks you play will be cataloged here automatically.
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

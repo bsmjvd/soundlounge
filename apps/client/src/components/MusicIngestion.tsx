@@ -11,24 +11,38 @@ import {
   Loader2,
   Music2,
   Check,
+  Heart,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import { useLibraryStore } from "../lib/store/useLibraryStore";
+import { TrackArtwork } from "./TrackArtwork";
 
 interface MusicIngestionProps {
   onAddTrack: (track: Track, playNext?: boolean) => void;
   onPlayDirect?: (track: Track) => void;
   roomId: string;
   workerHttpUrl?: string;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
+
+const DISCOVERY_TAGS = [
+  "Sidhu Moose Wala",
+  "The Weeknd",
+  "Daft Punk",
+  "A.R. Rahman",
+  "Lofi Beats",
+  "Electronic Chill",
+];
 
 export function MusicIngestion({
   onAddTrack,
   onPlayDirect,
   roomId,
   workerHttpUrl = process.env.NEXT_PUBLIC_WORKER_HTTP_URL || "http://localhost:8787",
+  searchInputRef: externalSearchRef,
 }: MusicIngestionProps) {
-  const [activeMode, setActiveMode] = useState<"search" | "upload">("search");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Track[]>([]);
@@ -37,9 +51,9 @@ export function MusicIngestion({
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const internalSearchRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = externalSearchRef || internalSearchRef;
 
   const { isLiked, toggleLike } = useLibraryStore();
 
@@ -49,7 +63,6 @@ export function MusicIngestion({
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         searchInputRef.current?.focus();
-        setActiveMode("search");
       }
       if (e.key === "Escape") {
         setSearchResults([]);
@@ -57,7 +70,7 @@ export function MusicIngestion({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [searchInputRef]);
 
   // Debounced live search
   useEffect(() => {
@@ -128,7 +141,6 @@ export function MusicIngestion({
   // Direct Audio File Upload
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
-    setUploadProgress(15);
 
     try {
       const presignRes = await fetch(`${workerHttpUrl}/api/rooms/${roomId}/upload-url`, {
@@ -156,8 +168,6 @@ export function MusicIngestion({
         }
       }
 
-      setUploadProgress(100);
-
       const track: Track = {
         id: `upl_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         title: file.name.replace(/\.[^/.]+$/, ""),
@@ -172,7 +182,6 @@ export function MusicIngestion({
       onAddTrack(track, false);
       setTimeout(() => {
         setIsUploading(false);
-        setUploadProgress(0);
       }, 500);
     } catch (err) {
       console.error("Upload error", err);
@@ -191,216 +200,202 @@ export function MusicIngestion({
   };
 
   return (
-    <div className="bg-[#131722]/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
-      {/* Top Controls: Search vs File Upload Mode */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveMode("search")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              activeMode === "search"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-gray-400 hover:text-white bg-white/5 border border-white/5"
-            }`}
-          >
-            <Search className="w-3.5 h-3.5" />
-            Direct Search
-          </button>
-          <button
-            onClick={() => setActiveMode("upload")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              activeMode === "upload"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-gray-400 hover:text-white bg-white/5 border border-white/5"
-            }`}
-          >
-            <UploadCloud className="w-3.5 h-3.5" />
-            Upload Audio
-          </button>
-        </div>
+    <div className="space-y-5">
+      {/* Search Input Bar + Quick Upload Action */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <form onSubmit={handleManualSearch} className="relative flex-1">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#5f677d]">
+            {isSearching ? (
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+            ) : (
+              <Search className="w-4 h-4" />
+            )}
+          </div>
 
-        <span className="text-[11px] text-gray-500 hidden sm:inline-block">
-          Direct search powered by YouTube & edge streaming
-        </span>
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search songs, artists, or paste a link (sidhu, weeknd, synthwave)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-11 bg-[#0c0e15] border border-[#1b202d] focus:border-indigo-500 rounded-xl pl-10 pr-24 text-xs text-white placeholder-[#586073] outline-none transition-colors"
+          />
+
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                }}
+                className="p-1 text-[#666f85] hover:text-white rounded-md cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-[#202534] bg-[#141722] px-1.5 py-0.5 text-[10px] font-mono text-[#717990]">
+              ⌘K
+            </kbd>
+          </div>
+        </form>
+
+        {/* Hidden File Input & Upload Audio Button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileUpload(file);
+          }}
+        />
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="h-11 px-4 rounded-xl bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] text-xs font-medium text-[#8c94aa] hover:text-white flex items-center justify-center gap-2 transition-colors cursor-pointer flex-shrink-0"
+        >
+          {isUploading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+          ) : (
+            <UploadCloud className="w-3.5 h-3.5" />
+          )}
+          <span>{isUploading ? "Uploading..." : "Upload Audio"}</span>
+        </button>
       </div>
 
-      {activeMode === "search" ? (
-        <div className="space-y-3">
-          {/* Main Search Bar */}
-          <form onSubmit={handleManualSearch} className="relative flex items-center">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-              {isSearching ? (
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-            </div>
+      {/* Discovery Tags (when no search query is active) */}
+      {!searchQuery && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wider uppercase text-[#4e5569]">
+            <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Popular Queries</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {DISCOVERY_TAGS.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSearchQuery(tag)}
+                className="px-3 py-1.5 rounded-lg bg-[#0d1017] hover:bg-[#161a25] border border-[#1a1f2c] text-xs text-[#828a9f] hover:text-white transition-colors cursor-pointer"
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="What do you want to play? Search songs, artists, or paste a link..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 focus:border-indigo-500 rounded-xl pl-10 pr-24 py-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all shadow-inner backdrop-blur-md"
-            />
+      {/* Track Results Table */}
+      {searchResults.length > 0 && (
+        <div className="rounded-xl border border-[#171a25] bg-[#090b10] overflow-hidden">
+          {/* Table Header */}
+          <div className="grid grid-cols-[36px_1fr_80px_130px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
+            <span>#</span>
+            <span>Title & Artist</span>
+            <span className="text-right">Duration</span>
+            <span className="text-right pr-2">Actions</span>
+          </div>
 
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSearchResults([]);
-                  }}
-                  className="p-1 text-gray-500 hover:text-white rounded-md"
+          {/* Table Rows */}
+          <div className="divide-y divide-[#12151f]">
+            {searchResults.map((track, idx) => {
+              const added = recentlyAddedId === track.id;
+              const liked = isLiked(track.id);
+
+              return (
+                <div
+                  key={track.id}
+                  className="group grid grid-cols-[36px_1fr_80px_130px] items-center px-4 py-2.5 hover:bg-[#10131d] transition-colors"
                 >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-mono text-gray-400">
-                ⌘K
-              </kbd>
-            </div>
-          </form>
+                  {/* Number / Quick Play on Hover */}
+                  <div className="text-xs font-mono text-[#586073]">
+                    <span className="group-hover:hidden">{idx + 1}</span>
+                    <button
+                      onClick={() => handleSelectTrack(track, true, false)}
+                      className="hidden group-hover:inline-flex text-white hover:text-indigo-400 cursor-pointer"
+                      title="Play Now"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                  </div>
 
-          {/* Search Results Dropdown / List */}
-          {searchResults.length > 0 && (
-            <div className="bg-black/50 border border-white/10 rounded-2xl p-2.5 max-h-[420px] overflow-y-auto space-y-1.5 shadow-2xl backdrop-blur-xl">
-              <div className="flex items-center justify-between px-3 py-1.5 text-[11px] text-gray-400 border-b border-white/10 pb-2">
-                <span className="font-semibold text-gray-300">Top Results ({searchResults.length})</span>
-                <span className="text-[10px] text-gray-400">Click to play or add to queue</span>
-              </div>
-
-              {searchResults.map((track) => {
-                const added = recentlyAddedId === track.id;
-
-                return (
-                  <div
-                    key={track.id}
-                    className="group flex items-center justify-between p-2.5 rounded-xl border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-200"
-                  >
-                    <div className="flex items-center gap-3.5 overflow-hidden flex-1 min-w-0 pr-3">
-                      <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden flex-shrink-0 shadow-md">
-                        {track.coverUrl ? (
-                          <img
-                            src={track.coverUrl}
-                            alt={track.title}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-500">
-                            <Music2 className="w-4 h-4" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="truncate">
-                        <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
-                          {track.title}
-                        </p>
-                        <p className="text-[11px] text-gray-400 truncate mt-0.5">{track.artist}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-[11px] font-mono tabular-nums text-gray-400">
-                        {formatDuration(track.durationMs)}
-                      </span>
-
-                      {added ? (
-                        <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
-                          <Check className="w-3.5 h-3.5" /> Added
-                        </span>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleSelectTrack(track, true, false)}
-                            title="Play Now"
-                            className="flex items-center gap-1.5 bg-white hover:bg-gray-100 text-black px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-md shadow-white/10 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                          >
-                            <Play className="w-3 h-3 fill-current" />
-                            Play
-                          </button>
-                          <button
-                            onClick={() => handleSelectTrack(track, false, true)}
-                            title="Play Next"
-                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-sky-400 hover:text-white transition-all cursor-pointer hover:scale-105 active:scale-95"
-                          >
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleSelectTrack(track, false, false)}
-                            title="Add to Queue"
-                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-gray-300 hover:text-white transition-all cursor-pointer hover:scale-105 active:scale-95"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
+                  {/* Artwork + Title + Artist */}
+                  <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
+                    <TrackArtwork
+                      coverUrl={track.coverUrl}
+                      trackId={track.id}
+                      title={track.title}
+                      className="w-10 h-10 rounded-lg"
+                      iconClassName="w-4 h-4"
+                    />
+                    <div className="truncate">
+                      <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
+                        {track.title}
+                      </p>
+                      <p className="text-[11px] text-[#71788d] truncate mt-0.5">
+                        {track.artist}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
 
-          {hasSearched && !isSearching && searchResults.length === 0 && searchQuery && (
-            <p className="text-center py-4 text-xs text-gray-500">
-              No matching tracks found. Try different keywords.
-            </p>
-          )}
+                  {/* Duration (font-mono tabular-nums) */}
+                  <div className="text-right text-xs font-mono tabular-nums text-[#71788d]">
+                    {formatDuration(track.durationMs)}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-1">
+                    {added ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                        <Check className="w-3 h-3" /> Added
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => toggleLike(track)}
+                          title={liked ? "Liked" : "Like Track"}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            liked
+                              ? "text-rose-500"
+                              : "text-[#586073] hover:text-white"
+                          }`}
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
+                        </button>
+                        <button
+                          onClick={() => handleSelectTrack(track, false, true)}
+                          title="Play Next"
+                          className="p-1.5 rounded-lg text-[#586073] hover:text-sky-300 transition-colors cursor-pointer"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleSelectTrack(track, false, false)}
+                          title="Add to Queue"
+                          className="p-1.5 rounded-lg text-[#586073] hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      ) : (
-        /* File Upload Mode */
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (e.dataTransfer.files?.[0]) {
-              handleFileUpload(e.dataTransfer.files[0]);
-            }
-          }}
-          className="border-2 border-dashed border-white/10 hover:border-indigo-400/50 rounded-2xl p-8 text-center cursor-pointer transition-all bg-black/40 backdrop-blur-xl group hover:bg-black/50"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="audio/*"
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files?.[0]) {
-                handleFileUpload(e.target.files[0]);
-              }
-            }}
-          />
-          {isUploading ? (
-            <div className="flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <p className="text-xs text-gray-200 font-semibold">
-                Uploading audio to edge storage... {uploadProgress}%
-              </p>
-              <div className="w-48 bg-white/10 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-indigo-500 h-full rounded-full transition-all duration-200"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2.5">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform shadow-lg shadow-indigo-500/10">
-                <UploadCloud className="w-6 h-6" />
-              </div>
-              <p className="text-xs text-gray-200 font-semibold">
-                Drag & drop audio files here, or <span className="text-indigo-400 underline">browse</span>
-              </p>
-              <p className="text-[11px] text-gray-400">
-                MP3, WAV, FLAC, AAC, M4A · Presigned direct R2 upload with zero CPU bottlenecks
-              </p>
-            </div>
-          )}
+      )}
+
+      {hasSearched && !isSearching && searchResults.length === 0 && searchQuery && (
+        <div className="text-center py-12 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">
+          <p className="text-xs text-[#8c94aa] font-medium">
+            No matching tracks found for &ldquo;{searchQuery}&rdquo;
+          </p>
+          <p className="text-[11px] text-[#586073]">
+            Try searching for song titles, artist names, or paste a direct YouTube audio link.
+          </p>
         </div>
       )}
     </div>
