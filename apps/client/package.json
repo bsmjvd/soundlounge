@@ -9,6 +9,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@distube/ytdl-core": "^5.2.0",
     "@soundlounge/shared": "workspace:*",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",

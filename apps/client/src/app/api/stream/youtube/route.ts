@@ -1,65 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Innertube, ClientType } from "youtubei.js";
+import { Ytdl, chooseFormat } from "@distube/ytdl-core";
 
-interface CachedStream {
+interface CachedFormat {
   url: string;
   mimeType: string;
   contentLength: number;
   expiresAt: number;
 }
 
-const streamCache = new Map<string, CachedStream>();
+const formatCache = new Map<string, CachedFormat>();
+const ytdl = new Ytdl();
 
-let innertubePromise: Promise<Innertube> | null = null;
-async function getInnertube(): Promise<Innertube> {
-  if (!innertubePromise) {
-    innertubePromise = Innertube.create({
-      client_type: ClientType.IOS,
-      retrieve_player: false,
-      generate_session_locally: true,
-    }).catch((err) => {
-      innertubePromise = null;
-      throw err;
-    });
-  }
-  return innertubePromise;
-}
-
-async function resolveDirectAudioUrl(videoId: string): Promise<CachedStream> {
-  const cached = streamCache.get(videoId);
+async function getAudioStreamUrl(videoId: string): Promise<CachedFormat> {
+  const cached = formatCache.get(videoId);
   if (cached && cached.expiresAt > Date.now()) {
     return cached;
   }
 
-  const yt = await getInnertube();
-  const info = await yt.getBasicInfo(videoId);
+  const info = await ytdl.getInfo(videoId);
 
-  const audioFormats = (info.streaming_data?.adaptive_formats || []).filter(
-    (f) => f.has_audio && !f.has_video && f.is_original !== false
-  );
+  // Prefer audio/mp4 (AAC) for universal browser support, fallback to audio/webm (Opus)
+  const mp4Format = chooseFormat(info.formats, {
+    filter: (f) => Boolean(f.hasAudio && !f.hasVideo && f.mimeType && f.mimeType.includes("mp4")),
+  });
 
-  const m4aFormats = audioFormats
-    .filter((f) => f.mime_type?.startsWith("audio/mp4"))
-    .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+  const chosenFormat =
+    mp4Format ||
+    chooseFormat(info.formats, {
+      filter: { hasAudio: true, hasVideo: false },
+    });
 
-  const chosenFormat = m4aFormats[0] || audioFormats[0];
-
-  if (!chosenFormat) {
-    throw new Error(`No suitable audio format found for YouTube video ${videoId}`);
-  }
-
-  let streamUrl = chosenFormat.url;
-  if (!streamUrl && (chosenFormat.signature_cipher || chosenFormat.cipher)) {
-    streamUrl = await chosenFormat.decipher(info.actions.session.player);
-  }
-
-  if (!streamUrl) {
-    throw new Error(`Unable to decipher stream URL for YouTube video ${videoId}`);
+  if (!chosenFormat || !chosenFormat.url) {
+    throw new Error(`No direct audio stream found for video ${videoId}`);
   }
 
   let expireMs = NaN;
   try {
-    expireMs = Number(new URL(streamUrl).searchParams.get("expire")) * 1000;
+    expireMs = Number(new URL(chosenFormat.url).searchParams.get("expire")) * 1000;
   } catch {}
 
   const expiresAt =
@@ -67,14 +44,14 @@ async function resolveDirectAudioUrl(videoId: string): Promise<CachedStream> {
       ? Math.min(expireMs - 60000, Date.now() + 3600000)
       : Date.now() + 3600000;
 
-  const result: CachedStream = {
-    url: streamUrl,
-    mimeType: chosenFormat.mime_type?.split(";")[0] || "audio/mp4",
-    contentLength: chosenFormat.content_length || 0,
+  const result: CachedFormat = {
+    url: chosenFormat.url,
+    mimeType: chosenFormat.mimeType?.split(";")[0] || "audio/mp4",
+    contentLength: chosenFormat.contentLength || 0,
     expiresAt,
   };
 
-  streamCache.set(videoId, result);
+  formatCache.set(videoId, result);
   return result;
 }
 
@@ -87,13 +64,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const streamInfo = await resolveDirectAudioUrl(videoId);
+    const streamInfo = await getAudioStreamUrl(videoId);
     const rangeHeader = req.headers.get("range");
 
     const upstreamHeaders: Record<string, string> = {
       "User-Agent":
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-      Referer: "https://www.youtube.com/",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     };
 
     if (rangeHeader) {
@@ -114,7 +90,9 @@ export async function GET(req: NextRequest) {
       responseHeaders.set("Content-Range", contentRange);
     }
 
-    const contentLength = upstreamRes.headers.get("content-length");
+    const contentLength =
+      upstreamRes.headers.get("content-length") ||
+      (streamInfo.contentLength ? String(streamInfo.contentLength) : null);
     if (contentLength) {
       responseHeaders.set("Content-Length", contentLength);
     }
