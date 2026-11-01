@@ -103,7 +103,7 @@ export function CoverflowHero({
       durationMs: item.durationMs,
       url: `/api/stream/youtube?id=${item.id.replace("yt_", "")}`,
       source: item.source,
-      createdAt: Date.now(),
+      createdAt: 0,
     };
     onPlayTrack(track);
   };

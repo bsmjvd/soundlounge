@@ -9,7 +9,6 @@ import {
   Plus,
   X,
   Loader2,
-  Music2,
   Check,
   Heart,
   TrendingUp,

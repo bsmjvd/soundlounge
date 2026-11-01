@@ -1,5 +1,5 @@
 import type { Track } from "@soundlounge/shared";
-import { ARTISTS_CATALOG, type ArtistProfileData } from "../data/artistsCatalog";
+import { ARTISTS_CATALOG } from "../data/artistsCatalog";
 import {
   classifyGenre,
   getPeerArtistsForArtist,
@@ -165,9 +165,9 @@ export async function findSimilarTrack(
     (process.env.NODE_ENV === "test" || !!process.env.BUN_ENV || !!process.env.VITEST);
 
   const isCustomMock =
+    typeof fetchFn === "function" &&
     typeof globalThis !== "undefined" &&
-    fetchFn !== (globalThis as any).fetch &&
-    (typeof window === "undefined" || fetchFn !== (window as any).fetch);
+    fetchFn !== globalThis.fetch;
 
   const canPerformFetch =
     !!fetchFn &&
