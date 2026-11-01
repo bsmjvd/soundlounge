@@ -112,7 +112,7 @@ export function CoverflowHero({
     <div
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className="relative w-full overflow-hidden pt-2 pb-4 select-none"
+      className="relative w-full overflow-hidden pt-2 pb-4 select-none isolate"
     >
       {/* 3D Coverflow Container */}
       <div className="relative h-64 sm:h-72 w-full flex items-center justify-center perspective-1000">

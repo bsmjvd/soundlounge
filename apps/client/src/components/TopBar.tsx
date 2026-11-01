@@ -23,6 +23,7 @@ import type { PlaybackMode } from "../lib/player";
 import type { Track, Album } from "@soundlounge/shared";
 import { ARTISTS_CATALOG, type ArtistProfileData } from "../lib/data/artistsCatalog";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
+import { TrackArtwork } from "./TrackArtwork";
 
 interface TopBarProps {
   mode: PlaybackMode;
@@ -262,7 +263,7 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#14232c] bg-[#081014]/90 backdrop-blur-xl px-4 sm:px-6 py-2.5 transition-colors">
+    <header className="sticky top-0 z-50 w-full border-b border-[#14232c] bg-[#081014] px-4 sm:px-6 py-2.5 transition-colors">
       <div className="flex items-center justify-between gap-3 sm:gap-6">
         {/* Left: Mobile Menu Trigger & History Navigation */}
         <div className="flex items-center gap-2">
@@ -345,7 +346,7 @@ export function TopBar({
           {isDropdownOpen && searchQuery.trim().length > 0 && (
             <div
               ref={dropdownRef}
-              className="absolute left-0 right-0 top-full mt-2 bg-[#0a1318]/98 backdrop-blur-2xl border border-[#192b36] rounded-2xl shadow-2xl shadow-black/85 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[75vh] flex flex-col"
+              className="absolute left-0 right-0 top-full mt-2 bg-[#0c161d] border border-[#203644] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-150 max-h-[75vh] flex flex-col"
             >
               {/* Scrollable Results Stage */}
               <div className="p-3 overflow-y-auto space-y-4 flex-1">
@@ -361,11 +362,15 @@ export function TopBar({
                         <button
                           key={artist.id}
                           onClick={() => handleSelectArtistClick(artist)}
-                          className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0e1a22] hover:bg-[#162733] border border-[#182935] hover:border-[#00e5c9]/40 transition-all text-left cursor-pointer group"
+                          className="flex items-center gap-2.5 p-2 rounded-xl bg-[#101d26] hover:bg-[#162a37] border border-[#1b313f] hover:border-[#00e5c9]/40 transition-all text-left cursor-pointer group"
                         >
                           <img
                             src={artist.avatarUrl}
                             alt={artist.name}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=80";
+                            }}
                             className="w-9 h-9 rounded-full object-cover border border-[#203440] flex-shrink-0 group-hover:scale-105 transition-transform"
                           />
                           <div className="min-w-0 flex-1">
@@ -394,11 +399,15 @@ export function TopBar({
                         <button
                           key={album.id}
                           onClick={() => handleSelectAlbumClick(album)}
-                          className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0e1a22] hover:bg-[#162733] border border-[#182935] hover:border-[#00e5c9]/40 transition-all text-left cursor-pointer group"
+                          className="flex items-center gap-2.5 p-2 rounded-xl bg-[#101d26] hover:bg-[#162a37] border border-[#1b313f] hover:border-[#00e5c9]/40 transition-all text-left cursor-pointer group"
                         >
                           <img
                             src={album.coverUrl}
                             alt={album.title}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&auto=format&fit=crop&q=80";
+                            }}
                             className="w-9 h-9 rounded-lg object-cover border border-[#203440] flex-shrink-0 group-hover:scale-105 transition-transform"
                           />
                           <div className="min-w-0 flex-1">
@@ -436,16 +445,18 @@ export function TopBar({
                         <div
                           key={track.id}
                           onClick={() => handleSelectTrackPlay(track)}
-                          className="flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-[#12222d] border border-transparent hover:border-[#1d3342] transition-colors cursor-pointer group"
+                          className="flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-[#132530] border border-transparent hover:border-[#1e3746] transition-colors cursor-pointer group"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-[#14232c] flex-shrink-0">
-                              <img
-                                src={track.coverUrl || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=80"}
-                                alt={track.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            <div className="relative flex-shrink-0">
+                              <TrackArtwork
+                                coverUrl={track.coverUrl}
+                                trackId={track.id}
+                                title={track.title}
+                                className="w-10 h-10 rounded-lg"
+                                iconClassName="w-4 h-4"
                               />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
                                 <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
                               </div>
                             </div>
