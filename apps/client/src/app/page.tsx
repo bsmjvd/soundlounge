@@ -144,8 +144,10 @@ export default function SoundloungeApp() {
     if (playerState.mode === "synced") {
       sync.sendAddTrack(track, playNext);
     } else {
-      useQueueStore.getState().addTrack(track, playNext);
-      if (queue.length === 0) {
+      const state = useQueueStore.getState();
+      const wasEmpty = state.queue.length === 0;
+      state.addTrack(track, playNext);
+      if (wasEmpty) {
         coordinator.play(track, 0);
         addToHistory(track);
       }
@@ -199,23 +201,50 @@ export default function SoundloungeApp() {
       sync.sendAddTrack(track, true);
       sync.sendPlay(track.id, 0);
     } else {
-      useQueueStore.getState().setQueue([track], 0);
+      const state = useQueueStore.getState();
+      const existingIdx = state.queue.findIndex((t) => t.id === track.id);
+
+      if (existingIdx !== -1) {
+        // Track already exists in queue; switch to it without wiping queue
+        state.setCurrentIndex(existingIdx);
+      } else if (state.queue.length > 0) {
+        // Track not in queue, but user has an active queue:
+        // Insert right after current track and play it, preserving the rest of the queue
+        const insertIdx = state.currentIndex >= 0 ? state.currentIndex + 1 : 0;
+        state.addTrack(track, true);
+        state.setCurrentIndex(insertIdx);
+      } else {
+        // Queue was empty: initialize queue with this track
+        state.setQueue([track], 0);
+      }
       coordinator.play(track, 0);
-      // Automatically queue similar tracks matching artist or genre
-      ensureSimilarQueued(track, history);
     }
   };
 
   const handlePlayArtistAll = (tracks: Track[]) => {
     if (tracks.length === 0) return;
     useQueueStore.getState().setQueue(tracks, 0);
-    handlePlaySingleTrack(tracks[0]);
+    addToHistory(tracks[0]);
+    if (playerState.mode === "synced") {
+      sync.sendClearQueue();
+      tracks.forEach((t) => sync.sendAddTrack(t));
+      sync.sendPlay(tracks[0].id, 0);
+    } else {
+      coordinator.play(tracks[0], 0);
+    }
   };
 
   const handlePlayAlbum = (tracks: Track[]) => {
     if (tracks.length === 0) return;
     useQueueStore.getState().setQueue(tracks, 0);
-    handlePlaySingleTrack(tracks[0]);
+    addToHistory(tracks[0]);
+    if (playerState.mode === "synced") {
+      sync.sendClearQueue();
+      tracks.forEach((t) => sync.sendAddTrack(t));
+      sync.sendPlay(tracks[0].id, 0);
+    } else {
+      coordinator.play(tracks[0], 0);
+    }
   };
 
   const handleAddAlbumToQueue = (tracks: Track[]) => {
@@ -259,7 +288,17 @@ export default function SoundloungeApp() {
       sync.sendAddTrack(session.track, true);
       sync.sendPlay(session.track.id, session.positionMs);
     } else {
-      useQueueStore.getState().setQueue([session.track], 0);
+      const state = useQueueStore.getState();
+      const existingIdx = state.queue.findIndex((t) => t.id === session.track.id);
+      if (existingIdx !== -1) {
+        state.setCurrentIndex(existingIdx);
+      } else if (state.queue.length > 0) {
+        const insertIdx = state.currentIndex >= 0 ? state.currentIndex + 1 : 0;
+        state.addTrack(session.track, true);
+        state.setCurrentIndex(insertIdx);
+      } else {
+        state.setQueue([session.track], 0);
+      }
       coordinator.play(session.track, session.positionMs);
     }
   };
@@ -313,11 +352,12 @@ export default function SoundloungeApp() {
     }
   };
 
-  // Autonomous continuous similarity queuing:
-  // When a track is playing and the queue is nearing completion, queue similar tracks
+  // Autonomous similarity queuing:
+  // ONLY trigger when the current track is playing, autoplay is ON, and there is NO song next to it (tracksAhead <= 0)
   useEffect(() => {
+    const tracksAhead = queue.length - 1 - currentIndex;
     const cur = playerState.currentTrack || queue[currentIndex];
-    if (cur && playerState.status === "playing" && isAutoplayEnabled) {
+    if (cur && playerState.status === "playing" && isAutoplayEnabled && tracksAhead <= 0) {
       ensureSimilarQueued(cur, history);
     }
   }, [playerState.currentTrack?.id, playerState.status, queue.length, currentIndex, isAutoplayEnabled]);

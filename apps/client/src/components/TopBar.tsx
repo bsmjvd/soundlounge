@@ -40,7 +40,7 @@ interface TopBarProps {
   onNavForward?: () => void;
   onOpenUpload?: () => void;
   onPlayTrack?: (track: Track) => void;
-  onAddTrack?: (track: Track) => void;
+  onAddTrack?: (track: Track, playNext?: boolean) => void;
   onSelectArtist?: (artist: ArtistProfileData) => void;
   onSelectAlbum?: (album: Album) => void;
 }
@@ -110,10 +110,7 @@ export function TopBar({
     const q = searchQuery.toLowerCase().trim();
     if (!q || q.length < 2) return [];
     return ARTISTS_CATALOG.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) ||
-        a.genre.toLowerCase().includes(q) ||
-        a.region.toLowerCase().includes(q)
+      (a) => a.name.toLowerCase().includes(q) || a.genre.toLowerCase().includes(q) || a.region.toLowerCase().includes(q)
     ).slice(0, 3);
   }, [searchQuery]);
 
@@ -123,8 +120,7 @@ export function TopBar({
     return ALBUMS_CATALOG.filter(
       (alb) =>
         alb.title.toLowerCase().includes(q) ||
-        (alb.movieDetails?.movieTitle &&
-          alb.movieDetails.movieTitle.toLowerCase().includes(q)) ||
+        (alb.movieDetails?.movieTitle && alb.movieDetails.movieTitle.toLowerCase().includes(q)) ||
         (alb.primaryArtist && alb.primaryArtist.toLowerCase().includes(q))
     ).slice(0, 3);
   }, [searchQuery]);
@@ -137,11 +133,7 @@ export function TopBar({
 
     for (const artist of ARTISTS_CATALOG) {
       for (const t of artist.topTracks) {
-        if (
-          (t.title.toLowerCase().includes(q) ||
-            t.artist.toLowerCase().includes(q)) &&
-          !seenIds.has(t.id)
-        ) {
+        if ((t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)) && !seenIds.has(t.id)) {
           seenIds.add(t.id);
           tracks.push(t);
           if (tracks.length >= 3) break;
@@ -152,11 +144,7 @@ export function TopBar({
 
     for (const album of ALBUMS_CATALOG) {
       for (const t of album.tracks) {
-        if (
-          (t.title.toLowerCase().includes(q) ||
-            t.artist.toLowerCase().includes(q)) &&
-          !seenIds.has(t.id)
-        ) {
+        if ((t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q)) && !seenIds.has(t.id)) {
           seenIds.add(t.id);
           tracks.push(t);
           if (tracks.length >= 4) break;
@@ -211,10 +199,7 @@ export function TopBar({
     return list;
   }, [matchingLocalTracks, liveTracks]);
 
-  const hasAnyResults =
-    matchingArtists.length > 0 ||
-    matchingAlbums.length > 0 ||
-    displayedTracks.length > 0;
+  const hasAnyResults = matchingArtists.length > 0 || matchingAlbums.length > 0 || displayedTracks.length > 0;
 
   const handleSelectTrackPlay = (track: Track) => {
     if (onPlayTrack) {
@@ -223,10 +208,10 @@ export function TopBar({
     setIsDropdownOpen(false);
   };
 
-  const handleAddTrackQueue = (e: React.MouseEvent, track: Track) => {
+  const handleAddTrackQueue = (e: React.MouseEvent, track: Track, playNext: boolean = false) => {
     e.stopPropagation();
     if (onAddTrack) {
-      onAddTrack(track);
+      onAddTrack(track, playNext);
       setAddedTrackId(track.id);
       setTimeout(() => setAddedTrackId(null), 1500);
     }
@@ -378,9 +363,7 @@ export function TopBar({
                             <p className="text-xs font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
                               {artist.name}
                             </p>
-                            <p className="text-[10px] text-[#718492] truncate capitalize">
-                              {artist.genre}
-                            </p>
+                            <p className="text-[10px] text-[#718492] truncate capitalize">{artist.genre}</p>
                           </div>
                         </button>
                       ))}
@@ -416,7 +399,8 @@ export function TopBar({
                               {album.title}
                             </p>
                             <p className="text-[10px] text-[#718492] truncate">
-                              {album.releaseYear} · {album.movieDetails?.movieTitle || album.primaryArtist || "Original"}
+                              {album.releaseYear} ·{" "}
+                              {album.movieDetails?.movieTitle || album.primaryArtist || "Original"}
                             </p>
                           </div>
                         </button>
@@ -466,9 +450,7 @@ export function TopBar({
                               <p className="text-xs font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
                                 {track.title}
                               </p>
-                              <p className="text-[11px] text-[#718492] truncate">
-                                {track.artist}
-                              </p>
+                              <p className="text-[11px] text-[#718492] truncate">{track.artist}</p>
                             </div>
                           </div>
 
@@ -478,7 +460,15 @@ export function TopBar({
                             </span>
 
                             <button
-                              onClick={(e) => handleAddTrackQueue(e, track)}
+                              onClick={(e) => handleAddTrackQueue(e, track, true)}
+                              title="Play Next"
+                              className="p-1.5 text-[#5c707d] hover:text-[#00e5c9] rounded-lg hover:bg-[#1a2d39] transition-colors cursor-pointer"
+                            >
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={(e) => handleAddTrackQueue(e, track, false)}
                               title="Add to Playing Queue"
                               className="p-1.5 text-[#5c707d] hover:text-white rounded-lg hover:bg-[#1a2d39] transition-colors cursor-pointer"
                             >
@@ -506,9 +496,7 @@ export function TopBar({
                 {/* 5. NO RESULTS STATE */}
                 {!isLoadingLive && !hasAnyResults && searchQuery.trim().length >= 2 && (
                   <div className="py-6 text-center text-[#718492] space-y-2">
-                    <p className="text-xs">
-                      No quick matches found for &ldquo;{searchQuery}&rdquo;.
-                    </p>
+                    <p className="text-xs">No quick matches found for &ldquo;{searchQuery}&rdquo;.</p>
                     <button
                       onClick={handleSearchSubmit}
                       className="inline-flex items-center gap-1.5 text-xs text-[#00e5c9] font-medium hover:underline cursor-pointer"

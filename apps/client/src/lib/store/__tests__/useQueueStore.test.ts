@@ -132,4 +132,28 @@ describe("useQueueStore", () => {
     expect(reason).toBeDefined();
     expect(reason).toContain("Sidhu Moose Wala");
   });
+
+  it("does NOT auto-queue suggestions if there is already a song next to the current track", async () => {
+    // Current track at index 0, with trackB next to it at index 1 (tracksAhead === 1)
+    useQueueStore.getState().setQueue([trackA, trackB], 0);
+    expect(useQueueStore.getState().queue.length).toBe(2);
+
+    const queued = await useQueueStore.getState().ensureSimilarQueued(trackA);
+    // Must return null and queue length must remain strictly 2
+    expect(queued).toBeNull();
+    expect(useQueueStore.getState().queue.length).toBe(2);
+    expect(useQueueStore.getState().queue.map((t) => t.id)).toEqual(["track_a", "track_b"]);
+  });
+
+  it("moves existing track to playNext without duplicating", () => {
+    useQueueStore.getState().setQueue([trackA, trackB, trackC], 0);
+
+    // Call addTrack with trackC and playNext=true
+    useQueueStore.getState().addTrack(trackC, true);
+
+    const queue = useQueueStore.getState().queue;
+    // trackC moved to index 1, right after trackA
+    expect(queue.map((t) => t.id)).toEqual(["track_a", "track_c", "track_b"]);
+    expect(queue.length).toBe(3);
+  });
 });

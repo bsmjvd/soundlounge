@@ -52,9 +52,9 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
       return null;
     }
 
-    // Only auto-queue if we have 1 or 0 tracks remaining ahead of the current track
+    // STRICT: Only auto-queue if there is NO song next to the current track
     const tracksAhead = state.queue.length - 1 - state.currentIndex;
-    if (tracksAhead >= 2) {
+    if (tracksAhead > 0) {
       return null;
     }
 
@@ -77,9 +77,7 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
             tNorm &&
             candNorm &&
             (tNorm === candNorm ||
-              (tNorm.length >= 4 &&
-                candNorm.length >= 4 &&
-                (tNorm.startsWith(candNorm) || candNorm.startsWith(tNorm))))
+              (tNorm.length >= 4 && candNorm.length >= 4 && (tNorm.startsWith(candNorm) || candNorm.startsWith(tNorm))))
           );
         });
 
@@ -112,17 +110,35 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
         };
       }
 
+      // If track is already in queue, move it rather than creating a duplicate
+      const existingIdx = state.queue.findIndex((t) => t.id === track.id);
+      let queueWithoutTrack = state.queue;
+      let newCurrentIndex = state.currentIndex;
+
+      if (existingIdx !== -1) {
+        if (existingIdx === state.currentIndex) {
+          // If currently playing, keep it as is
+          return state;
+        }
+        queueWithoutTrack = state.queue.filter((t) => t.id !== track.id);
+        if (existingIdx < state.currentIndex) {
+          newCurrentIndex = Math.max(0, state.currentIndex - 1);
+        }
+      }
+
       if (playNext) {
-        const insertIdx = state.currentIndex >= 0 ? state.currentIndex + 1 : 0;
-        const newQueue = [...state.queue];
+        const insertIdx = newCurrentIndex >= 0 ? newCurrentIndex + 1 : 0;
+        const newQueue = [...queueWithoutTrack];
         newQueue.splice(insertIdx, 0, track);
         return {
           queue: newQueue,
+          currentIndex: newCurrentIndex,
         };
       }
 
       return {
-        queue: [...state.queue, track],
+        queue: [...queueWithoutTrack, track],
+        currentIndex: newCurrentIndex,
       };
     });
   },
