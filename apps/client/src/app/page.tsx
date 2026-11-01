@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { TopBar } from "../components/TopBar";
 import { AmbientBackground } from "../components/AmbientBackground";
 import { CoverflowHero } from "../components/CoverflowHero";
@@ -24,11 +24,7 @@ import { type ArtistProfileData, ARTISTS_CATALOG } from "../lib/data/artistsCata
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import type { MusicGenre } from "../lib/recommendation/genreTaxonomy";
 
-import {
-  AudioEngineCoordinator,
-  type CoordinatorPlayerState,
-  type PlaybackMode,
-} from "../lib/player";
+import { AudioEngineCoordinator, type CoordinatorPlayerState, type PlaybackMode } from "../lib/player";
 import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
@@ -54,20 +50,20 @@ export default function SoundloungeApp() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [roomId, setRoomId] = useState("lounge-main");
-  const [inviteToken, setInviteToken] = useState<string | undefined>(undefined);
+  const [roomId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("room") || "lounge-main";
+    }
+    return "lounge-main";
+  });
+  const [inviteToken, setInviteToken] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("invite") || undefined;
+    }
+    return undefined;
+  });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlRoom = params.get("room");
-      const urlInvite = params.get("invite");
-      if (urlRoom) setRoomId(urlRoom);
-      if (urlInvite) setInviteToken(urlInvite);
-    }
-  }, []);
 
   const handleTabChange = (tab: NavTab) => {
     setSelectedArtist(null);
@@ -94,9 +90,7 @@ export default function SoundloungeApp() {
   };
 
   // Player state subscription
-  const [playerState, setPlayerState] = useState<CoordinatorPlayerState>(() =>
-    coordinator.getState()
-  );
+  const [playerState, setPlayerState] = useState<CoordinatorPlayerState>(() => coordinator.getState());
 
   useEffect(() => {
     return coordinator.onStateChange((state) => {
@@ -109,14 +103,8 @@ export default function SoundloungeApp() {
   }, [coordinator]);
 
   // Stores
-  const {
-    queue,
-    currentIndex,
-    isAutoplayEnabled,
-    toggleAutoplay,
-    autoQueueReasons,
-    ensureSimilarQueued,
-  } = useQueueStore();
+  const { queue, currentIndex, isAutoplayEnabled, toggleAutoplay, autoQueueReasons, ensureSimilarQueued } =
+    useQueueStore();
 
   const {
     likedTracks,
@@ -225,12 +213,8 @@ export default function SoundloungeApp() {
   };
 
   const handlePlayGenreRadio = (genre: MusicGenre) => {
-    const genreAlbums = ALBUMS_CATALOG.filter((a) =>
-      a.genres.some((g) => g.toLowerCase().includes(genre))
-    );
-    const genreArtists = ARTISTS_CATALOG.filter(
-      (a) => a.region === genre || a.genre.toLowerCase().includes(genre)
-    );
+    const genreAlbums = ALBUMS_CATALOG.filter((a) => a.genres.some((g) => g.toLowerCase().includes(genre)));
+    const genreArtists = ARTISTS_CATALOG.filter((a) => a.region === genre || a.genre.toLowerCase().includes(genre));
 
     let starterTracks: Track[] = [];
     if (genreAlbums.length > 0) {
@@ -326,13 +310,7 @@ export default function SoundloungeApp() {
     if (cur && playerState.status === "playing" && isAutoplayEnabled) {
       ensureSimilarQueued(cur, history);
     }
-  }, [
-    playerState.currentTrack?.id,
-    playerState.status,
-    queue.length,
-    currentIndex,
-    isAutoplayEnabled,
-  ]);
+  }, [playerState.currentTrack?.id, playerState.status, queue.length, currentIndex, isAutoplayEnabled]);
 
   const handlePrevious = () => {
     const prev = useQueueStore.getState().previousTrack();
@@ -359,12 +337,7 @@ export default function SoundloungeApp() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
         return;
       }
 
@@ -373,7 +346,7 @@ export default function SoundloungeApp() {
         handleTogglePlay();
       } else if (e.code === "ArrowRight" || e.key === "l" || e.key === "L") {
         e.preventDefault();
-        handleSeek(Math.min((playerState.durationMs || 0), playerState.positionMs + 5000));
+        handleSeek(Math.min(playerState.durationMs || 0, playerState.positionMs + 5000));
       } else if (e.code === "ArrowLeft" || e.key === "j" || e.key === "J") {
         e.preventDefault();
         handleSeek(Math.max(0, playerState.positionMs - 5000));
@@ -423,10 +396,7 @@ export default function SoundloungeApp() {
   return (
     <div className="min-h-screen bg-[#080f14] text-[#f3f4f6] relative overflow-x-hidden selection:bg-[#00e5c9]/30 selection:text-white">
       {/* Full-bleed Ambient Blurred Song Backdrop */}
-      <AmbientBackground
-        currentTrack={activeTrack}
-        isPlaying={playerState.status === "playing"}
-      />
+      <AmbientBackground currentTrack={activeTrack} isPlaying={playerState.status === "playing"} />
 
       {/* Main Studio Shell: Left Sidebar + Right Stage */}
       <div className="relative z-10 flex min-h-screen">
@@ -543,9 +513,7 @@ export default function SoundloungeApp() {
 
                       {/* Right Column: Popular Artists Grid (3 of 12 cols on desktop) */}
                       <div className="lg:col-span-3 order-3">
-                        <RecentArtistsGrid
-                          onSelectArtist={(artist) => setSelectedArtist(artist)}
-                        />
+                        <RecentArtistsGrid onSelectArtist={(artist) => setSelectedArtist(artist)} />
                       </div>
                     </div>
                   )}
@@ -555,9 +523,7 @@ export default function SoundloungeApp() {
                     <div className="max-w-4xl mx-auto space-y-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-lg font-bold text-white tracking-tight">
-                            Music Search & Ingestion
-                          </h2>
+                          <h2 className="text-lg font-bold text-white tracking-tight">Music Search & Ingestion</h2>
                           <p className="text-xs text-[#718492]">
                             Direct search powered by YouTube & low-latency edge audio streaming
                           </p>
@@ -669,13 +635,9 @@ export default function SoundloungeApp() {
                   )}
 
                   {/* 9. OTHER TABS (Radio, Podcasts, Downloaded) */}
-                  {(activeTab === "radio" ||
-                    activeTab === "podcasts" ||
-                    activeTab === "downloaded") && (
+                  {(activeTab === "radio" || activeTab === "podcasts" || activeTab === "downloaded") && (
                     <div className="max-w-4xl mx-auto py-12 text-center rounded-2xl bg-[#0d181e] border border-[#1a2c35] space-y-3">
-                      <h3 className="text-base font-bold text-white capitalize">
-                        {activeTab} Channel
-                      </h3>
+                      <h3 className="text-base font-bold text-white capitalize">{activeTab} Channel</h3>
                       <p className="text-xs text-[#718492] max-w-md mx-auto">
                         Live curated stream and audio channel for {activeTab}.
                       </p>

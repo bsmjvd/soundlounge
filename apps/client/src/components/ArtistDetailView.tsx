@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   Users,
-  Clock,
   Plus,
   ArrowRight,
   Heart,
@@ -63,12 +62,8 @@ export function ArtistDetailView({
 
     for (const alb of ALBUMS_CATALOG) {
       const isPrimary = alb.primaryArtist.toLowerCase().includes(artistClean);
-      const isSinger = alb.featuredSingers.some((s) =>
-        s.toLowerCase().includes(artistClean)
-      );
-      const isDirector = alb.movieDetails?.musicDirectors.some((m) =>
-        m.toLowerCase().includes(artistClean)
-      );
+      const isSinger = alb.featuredSingers.some((s) => s.toLowerCase().includes(artistClean));
+      const isDirector = alb.movieDetails?.musicDirectors.some((m) => m.toLowerCase().includes(artistClean));
 
       if (isPrimary || isSinger || isDirector) {
         if (!seenIds.has(alb.id)) {
@@ -143,25 +138,17 @@ export function ArtistDetailView({
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              {artist.name}
-            </h1>
-            <p className="text-xs text-[#6e828f] font-mono">
-              Legal / Registered Name: {artist.realName}
-            </p>
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">{artist.name}</h1>
+            <p className="text-xs text-[#6e828f] font-mono">Legal / Registered Name: {artist.realName}</p>
 
-            <p className="text-xs text-[#8c9fae] max-w-xl line-clamp-3 leading-relaxed">
-              {artist.bio}
-            </p>
+            <p className="text-xs text-[#8c9fae] max-w-xl line-clamp-3 leading-relaxed">{artist.bio}</p>
 
             <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs font-mono tabular-nums text-[#8c9fae]">
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-[#00e5c9]" />
                 <strong className="text-white">{artist.monthlyListeners}</strong> monthly listeners
               </span>
-              <span className="px-2 py-0.5 rounded bg-[#13222a] text-[#718593]">
-                {artist.genre}
-              </span>
+              <span className="px-2 py-0.5 rounded bg-[#13222a] text-[#718593]">{artist.genre}</span>
             </div>
           </div>
 
@@ -221,9 +208,7 @@ export function ArtistDetailView({
           <div className="flex items-center justify-between pb-2 border-b border-[#14232c]">
             <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
               <span>Popular Tracks by {artist.name}</span>
-              <span className="text-xs text-[#6e828f] font-normal">
-                ({artist.topTracks.length} tracks)
-              </span>
+              <span className="text-xs text-[#6e828f] font-normal">({artist.topTracks.length} tracks)</span>
             </h2>
             <span className="text-[11px] text-[#6e828f]">Direct Edge Audio</span>
           </div>
@@ -240,7 +225,6 @@ export function ArtistDetailView({
           <div className="divide-y divide-[#132129]">
             {artist.topTracks.map((track, idx) => {
               const isThisTrack = currentTrack?.id === track.id;
-              const isThisPlaying = isThisTrack && isPlaying;
               const liked = isLiked(track.id);
 
               return (
@@ -252,7 +236,15 @@ export function ArtistDetailView({
                 >
                   {/* Index / Play on Hover */}
                   <div className="text-xs font-mono text-[#5c707d]">
-                    <span className="group-hover:hidden">{idx + 1}</span>
+                    {isThisTrack && isPlaying ? (
+                      <span className="text-[#00e5c9] inline-flex items-end gap-0.5 h-3.5">
+                        <span className="w-0.5 h-2 bg-[#00e5c9] animate-pulse" />
+                        <span className="w-0.5 h-3.5 bg-[#00e5c9] animate-pulse" style={{ animationDelay: "150ms" }} />
+                        <span className="w-0.5 h-2.5 bg-[#00e5c9] animate-pulse" style={{ animationDelay: "300ms" }} />
+                      </span>
+                    ) : (
+                      <span className="group-hover:hidden">{idx + 1}</span>
+                    )}
                     <button
                       onClick={() => onPlayTrack(track)}
                       className="hidden group-hover:inline-flex text-[#00e5c9] hover:scale-110 transition-transform cursor-pointer"
@@ -274,9 +266,7 @@ export function ArtistDetailView({
                     <div className="truncate">
                       <p
                         className={`text-xs font-semibold truncate transition-colors ${
-                          isThisTrack
-                            ? "text-[#00e5c9] font-bold"
-                            : "text-white group-hover:text-[#00e5c9]"
+                          isThisTrack ? "text-[#00e5c9] font-bold" : "text-white group-hover:text-[#00e5c9]"
                         }`}
                       >
                         {track.title}
@@ -370,8 +360,12 @@ export function ArtistDetailView({
           ) : (
             <div className="py-12 text-center rounded-2xl border border-[#182b36] bg-[#0c161d] space-y-2">
               <Disc3 className="w-8 h-8 text-[#5c707d] mx-auto" />
-              <p className="text-xs font-semibold text-white">No dedicated movie soundtracks or studio albums listed yet.</p>
-              <p className="text-[11px] text-[#718492]">All available hit songs by {artist.name} can be played from Top Hits above.</p>
+              <p className="text-xs font-semibold text-white">
+                No dedicated movie soundtracks or studio albums listed yet.
+              </p>
+              <p className="text-[11px] text-[#718492]">
+                All available hit songs by {artist.name} can be played from Top Hits above.
+              </p>
             </div>
           )}
         </div>

@@ -1,21 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import {
-  Users,
-  Search,
-  Play,
-  CheckCircle2,
-  Sparkles,
-  ArrowRight,
-  Globe,
-  Music,
-} from "lucide-react";
-import {
-  ARTISTS_CATALOG,
-  type ArtistProfileData,
-  type RegionKey,
-} from "../lib/data/artistsCatalog";
+import { Users, Search, Play, CheckCircle2 } from "lucide-react";
+import { ARTISTS_CATALOG, type ArtistProfileData, type RegionKey } from "../lib/data/artistsCatalog";
 
 interface ArtistsDirectoryViewProps {
   onSelectArtist: (artist: ArtistProfileData) => void;
@@ -65,10 +52,7 @@ const REGION_TABS: { id: RegionKey; label: string }[] = [
   { id: "electronic", label: "Electronic & EDM" },
 ];
 
-export function ArtistsDirectoryView({
-  onSelectArtist,
-  onPlayArtistTopSongs,
-}: ArtistsDirectoryViewProps) {
+export function ArtistsDirectoryView({ onSelectArtist, onPlayArtistTopSongs }: ArtistsDirectoryViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLetter, setSelectedLetter] = useState("ALL");
   const [selectedRegion, setSelectedRegion] = useState<RegionKey>("all");
@@ -179,7 +163,7 @@ export function ArtistsDirectoryView({
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-white">
-            {selectedRegion === "all" ? "All Catalog Artists" : REGION_TABS.find(t => t.id === selectedRegion)?.label}
+            {selectedRegion === "all" ? "All Catalog Artists" : REGION_TABS.find((t) => t.id === selectedRegion)?.label}
           </span>
           <span className="text-xs text-[#718593]">
             ({filteredArtists.length} {filteredArtists.length === 1 ? "artist" : "artists"})
@@ -251,9 +235,7 @@ export function ArtistsDirectoryView({
                 </p>
 
                 <div className="flex items-center justify-between text-[10px] text-[#5c707d] pt-1">
-                  <span className="font-mono tabular-nums text-[#8ca0ad]">
-                    {artist.monthlyListeners} monthly
-                  </span>
+                  <span className="font-mono tabular-nums text-[#8ca0ad]">{artist.monthlyListeners} monthly</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#13242e] text-[#718593]">
                     {artist.topTracks.length} hits
                   </span>
@@ -274,7 +256,8 @@ export function ArtistsDirectoryView({
               No catalog artists found matching &ldquo;{searchQuery || selectedLetter}&rdquo;
             </p>
             <p className="text-xs text-[#718593] max-w-md mx-auto">
-              Soundlounge indexes thousands of vocalists. Try clearing filters or use the global music search to stream songs from any artist worldwide.
+              Soundlounge indexes thousands of vocalists. Try clearing filters or use the global music search to stream
+              songs from any artist worldwide.
             </p>
           </div>
 

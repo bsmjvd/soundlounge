@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Users, Play, Sparkles } from "lucide-react";
+import { Users, Play } from "lucide-react";
 import { ARTISTS_CATALOG, type RegionKey, type ArtistProfileData } from "../lib/data/artistsCatalog";
 
 interface RecentArtistsGridProps {
@@ -12,9 +12,7 @@ export function RecentArtistsGrid({ onSelectArtist }: RecentArtistsGridProps) {
   const [selectedRegion, setSelectedRegion] = useState<RegionKey>("all");
 
   const filteredArtists =
-    selectedRegion === "all"
-      ? ARTISTS_CATALOG
-      : ARTISTS_CATALOG.filter((a) => a.region === selectedRegion);
+    selectedRegion === "all" ? ARTISTS_CATALOG : ARTISTS_CATALOG.filter((a) => a.region === selectedRegion);
 
   return (
     <div className="space-y-3.5">
