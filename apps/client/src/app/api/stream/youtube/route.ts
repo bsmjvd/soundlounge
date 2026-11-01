@@ -147,7 +147,7 @@ async function getAudioStreamUrl(
 
   // Prefer audio/mp4 (AAC) for universal browser support, fallback to audio/webm (Opus)
   const mp4Format = chooseFormat(info.formats, {
-    filter: (f) => Boolean(f.hasAudio && !f.hasVideo && f.mimeType && f.mimeType.includes("mp4")),
+    filter: (f: any) => Boolean(f.hasAudio && !f.hasVideo && f.mimeType && f.mimeType.includes("mp4")),
   });
 
   const chosenFormat =

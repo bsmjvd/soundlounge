@@ -16,6 +16,7 @@ import { AccessDenied } from "../components/AccessDenied";
 import { StudioImmersiveModal } from "../components/StudioImmersiveModal";
 import { NavigationSidebar, type NavTab } from "../components/NavigationSidebar";
 import { ArtistDetailView } from "../components/ArtistDetailView";
+import { ArtistsDirectoryView } from "../components/ArtistsDirectoryView";
 import { AlbumDetailView } from "../components/AlbumDetailView";
 import { AlbumsDirectoryView } from "../components/AlbumsDirectoryView";
 import { GenreDirectoryView } from "../components/GenreDirectoryView";
@@ -489,6 +490,10 @@ export default function SoundloungeApp() {
                   onPlayTrack={handlePlaySingleTrack}
                   onAddTrack={handleAddTrack}
                   onPlayAll={handlePlayArtistAll}
+                  onSelectAlbum={(album) => {
+                    setSelectedArtist(null);
+                    setSelectedAlbum(album);
+                  }}
                   currentTrack={activeTrack}
                   isPlaying={playerState.status === "playing"}
                 />
@@ -634,15 +639,10 @@ export default function SoundloungeApp() {
 
                   {/* 6. ARTISTS DIRECT VIEW */}
                   {activeTab === "artists" && (
-                    <div className="max-w-4xl mx-auto space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-white tracking-tight">
-                          Browse Artists
-                        </h2>
-                        <span className="text-xs text-[#718492]">Featured Vocalists & Producers</span>
-                      </div>
-                      <RecentArtistsGrid
+                    <div className="max-w-6xl mx-auto">
+                      <ArtistsDirectoryView
                         onSelectArtist={(artist) => setSelectedArtist(artist)}
+                        onPlayArtistTopSongs={(artist) => handlePlayArtistAll(artist.topTracks)}
                       />
                     </div>
                   )}

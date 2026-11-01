@@ -6,6 +6,7 @@ export type MusicGenre =
   | "electronic"
   | "bollywood"
   | "rock"
+  | "retro"
   | "other";
 
 export interface GenreDefinition {
@@ -293,6 +294,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
     id: "rock",
     label: "Rock & Alternative",
     coreArtists: [
+      "train",
       "coldplay",
       "imagine dragons",
       "linkin park",
@@ -304,6 +306,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "radiohead",
     ],
     peerArtists: [
+      "Train",
       "Coldplay",
       "Imagine Dragons",
       "Linkin Park",
@@ -314,6 +317,8 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "rock",
       "alternative",
       "indie rock",
+      "hey soul sister",
+      "drops of jupiter",
       "yellow",
       "viva la vida",
       "believer",
@@ -321,6 +326,53 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "in the end",
       "bohemian rhapsody",
       "do i wanna know",
+    ],
+  },
+  retro: {
+    id: "retro",
+    label: "Golden Era & Vintage Classics",
+    coreArtists: [
+      "lata mangeshkar",
+      "lata",
+      "kishore kumar",
+      "kishore",
+      "mohammed rafi",
+      "mohd rafi",
+      "rafi",
+      "asha bhosle",
+      "asha",
+      "r.d. burman",
+      "rd burman",
+      "pancham",
+      "mukesh",
+      "manna dey",
+      "hemant kumar",
+      "geeta dutt",
+      "salil chowdhury",
+      "s.d. burman",
+      "madan mohan",
+    ],
+    peerArtists: [
+      "Lata Mangeshkar",
+      "Kishore Kumar",
+      "Mohammed Rafi",
+      "Asha Bhosle",
+      "R.D. Burman",
+    ],
+    keywords: [
+      "classic",
+      "golden era",
+      "retro",
+      "vintage",
+      "60s",
+      "70s",
+      "80s",
+      "old is gold",
+      "evergreen",
+      "kis liye maine pyaar kiya",
+      "o meri jaan maine kaha",
+      "lag ja gale",
+      "dum maro dum",
     ],
   },
   other: {
