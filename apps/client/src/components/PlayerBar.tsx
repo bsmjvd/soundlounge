@@ -146,14 +146,16 @@ export function PlayerBar({
             <button
               onClick={onPrevious}
               disabled={!currentTrack}
-              className="p-1.5 text-gray-400 hover:text-white disabled:opacity-40 transition-colors"
+              aria-label="Previous track"
+              className="p-1.5 text-gray-400 hover:text-white disabled:opacity-40 transition-all hover:scale-110 active:scale-95 cursor-pointer"
             >
               <SkipBack className="w-4 h-4" />
             </button>
             <button
               onClick={onTogglePlay}
               disabled={!currentTrack}
-              className="w-9 h-9 rounded-full bg-white hover:bg-gray-200 text-black flex items-center justify-center shadow-lg shadow-white/10 disabled:opacity-40 transition-all hover:scale-105"
+              aria-label={status === "playing" ? "Pause" : "Play"}
+              className="w-10 h-10 rounded-full bg-white hover:bg-gray-100 text-black flex items-center justify-center shadow-lg shadow-white/20 disabled:opacity-40 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
               {status === "playing" ? (
                 <Pause className="w-4 h-4 fill-current" />
@@ -164,14 +166,15 @@ export function PlayerBar({
             <button
               onClick={onNext}
               disabled={!currentTrack}
-              className="p-1.5 text-gray-400 hover:text-white disabled:opacity-40 transition-colors"
+              aria-label="Next track"
+              className="p-1.5 text-gray-400 hover:text-white disabled:opacity-40 transition-all hover:scale-110 active:scale-95 cursor-pointer"
             >
               <SkipForward className="w-4 h-4" />
             </button>
           </div>
 
           <div className="w-full flex items-center gap-2.5">
-            <span className="text-[10px] font-mono text-gray-400 w-8 text-right">
+            <span className="text-[10px] font-mono tabular-nums text-gray-400 w-8 text-right">
               {formatTime(positionMs)}
             </span>
             <div className="relative flex-1 group flex items-center">
@@ -182,10 +185,10 @@ export function PlayerBar({
                 value={positionMs}
                 onChange={(e) => onSeek(Number(e.target.value))}
                 disabled={!currentTrack}
-                className="w-full h-1 bg-[#1f2638] rounded-lg appearance-none cursor-pointer group-hover:h-1.5 transition-all"
+                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer group-hover:h-1.5 transition-all"
               />
             </div>
-            <span className="text-[10px] font-mono text-gray-400 w-8">
+            <span className="text-[10px] font-mono tabular-nums text-gray-400 w-8">
               {formatTime(effectiveDuration)}
             </span>
           </div>
@@ -227,7 +230,7 @@ export function PlayerBar({
                 setIsMuted(false);
                 onVolumeChange(Number(e.target.value));
               }}
-              className="w-16 sm:w-24 h-1 bg-[#1f2638] rounded-lg appearance-none cursor-pointer"
+              className="w-16 sm:w-24 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
             />
           </div>
         </div>

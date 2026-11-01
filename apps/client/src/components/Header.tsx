@@ -67,17 +67,18 @@ export function Header({
         <div className="flex items-center gap-3">
           {mode === "synced" && (
             <>
-              <div className="flex items-center gap-2 bg-[#131722] border border-[#1f2638] px-3 py-1.5 rounded-lg text-xs">
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs backdrop-blur-md">
                 <Wifi className={`w-3.5 h-3.5 ${pingMs < 40 ? "text-emerald-400" : "text-amber-400"}`} />
-                <span className="text-gray-300 font-mono">{pingMs}ms</span>
+                <span className="text-gray-300 font-mono tabular-nums">{pingMs}ms</span>
               </div>
-              <div className="flex items-center gap-2 bg-[#131722] border border-[#1f2638] px-3 py-1.5 rounded-lg text-xs">
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs backdrop-blur-md">
                 <Users className="w-3.5 h-3.5 text-sky-400" />
-                <span className="text-gray-300">{participantsCount} online</span>
+                <span className="text-gray-300 font-medium">{participantsCount} online</span>
               </div>
               <button
                 onClick={onOpenInvite}
-                className="flex items-center gap-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                aria-label="Invite friends to room"
+                className="flex items-center gap-1.5 bg-indigo-600/25 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
               >
                 <Share2 className="w-3.5 h-3.5" />
                 Invite Friends

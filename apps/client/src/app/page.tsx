@@ -288,6 +288,8 @@ export default function SoundloungeApp() {
             onToggleLike={(t) => toggleLike(t)}
             onTogglePlay={handleTogglePlay}
             onNext={handleNext}
+            onPrevious={handlePrevious}
+            onSeek={handleSeek}
           />
 
           {/* Direct Search & Music Ingestion */}

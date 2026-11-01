@@ -27,52 +27,56 @@ export function InviteModal({ isOpen, onClose, roomId, inviteToken }: InviteModa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-[#131722] border border-[#1f2638] rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+      <div className="bg-[#121622]/95 border border-white/10 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-5 backdrop-blur-2xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-400">
-              <Link2 className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400 shadow-md shadow-sky-500/20">
+              <Link2 className="w-5 h-5" />
             </div>
-            <h3 className="text-sm font-bold text-white">Invite Friends to Sync Lounge</h3>
+            <div>
+              <h3 className="text-sm font-bold text-white">Invite to Sync Lounge</h3>
+              <p className="text-[11px] text-gray-400">Share instant sub-30ms listening session</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-[#1f2638]"
+            aria-label="Close invite modal"
+            className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <p className="text-xs text-gray-400">
-          Anyone with this link will sync audio playback to within 30 milliseconds using edge NTP clock synchronization.
+        <p className="text-xs text-gray-300 leading-relaxed">
+          Anyone with this private link will join your room and synchronize their audio player to within sub-30ms using precision edge NTP clock barriers.
         </p>
 
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+        <div className="space-y-2">
+          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
             Shareable Invite URL
           </label>
-          <div className="flex items-center gap-2 bg-[#0b0d13] border border-[#1f2638] rounded-xl p-2">
+          <div className="flex items-center gap-2 bg-black/60 border border-white/10 rounded-2xl p-2 shadow-inner">
             <input
               type="text"
               readOnly
               value={inviteUrl}
-              className="bg-transparent border-none text-xs text-gray-300 w-full outline-none px-1"
+              className="bg-transparent border-none text-xs text-gray-200 w-full outline-none px-2 font-mono"
             />
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0 transition-colors"
+              className="flex items-center gap-1.5 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? "Copied!" : "Copy"}
             </button>
           </div>
         </div>
 
         {inviteToken && (
-          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 text-xs text-emerald-400">
-            <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-            <span>Private room security token embedded automatically.</span>
+          <div className="flex items-center gap-2.5 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl p-3 text-xs text-emerald-300">
+            <ShieldCheck className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+            <span>Private room access key is securely embedded in the link.</span>
           </div>
         )}
       </div>
