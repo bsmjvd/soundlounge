@@ -8,12 +8,14 @@ export const TrackSchema = z.object({
   title: z.string(),
   artist: z.string().default("Unknown Artist"),
   durationMs: z.number().nonnegative(),
-  url: z.string().url(),
+  url: z.string(),
   source: TrackSourceSchema,
-  coverUrl: z.string().url().optional(),
+  coverUrl: z.string().optional(),
   r2Key: z.string().optional(),
   uploader: z.string().optional(),
   createdAt: z.number().optional(),
+  views: z.number().optional(),
+  viewsFormatted: z.string().optional(),
 });
 export type Track = z.infer<typeof TrackSchema>;
 
