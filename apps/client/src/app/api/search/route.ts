@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Innertube } from "youtubei.js";
-import {
-  extractYouTubeVideoId,
-  parseYouTubeDuration,
-  isLikelySong,
-} from "@/lib/youtubeUtils";
+import { extractYouTubeVideoId, parseYouTubeDuration } from "@/lib/youtubeUtils";
 import type { Track } from "@soundlounge/shared";
 
 // Innertube singleton for search
@@ -58,10 +54,31 @@ function formatViews(views: number): string {
 }
 
 const RECORD_LABELS = [
-  "sony music", "t-series", "yrf", "zee music", "tips", "saregama", "speed records",
-  "universal music", "eros now", "aditya music", "think music", "lahari", "geet mp3",
-  "white hill", "juke dock", "warner music", "times music", "venus", "desi music factory",
-  "vyrl", "dm - desi melodies", "vevo", "official channel", "yrf music", "tseries"
+  "sony music",
+  "t-series",
+  "yrf",
+  "zee music",
+  "tips",
+  "saregama",
+  "speed records",
+  "universal music",
+  "eros now",
+  "aditya music",
+  "think music",
+  "lahari",
+  "geet mp3",
+  "white hill",
+  "juke dock",
+  "warner music",
+  "times music",
+  "venus",
+  "desi music factory",
+  "vyrl",
+  "dm - desi melodies",
+  "vevo",
+  "official channel",
+  "yrf music",
+  "tseries",
 ];
 
 const ARTIST_DICTIONARY: { name: string; aliases: string[] }[] = [
@@ -122,11 +139,7 @@ function extractCleanTrackInfo(
   // 1. Check artist dictionary against title or author
   let detectedArtist = "";
   for (const entry of ARTIST_DICTIONARY) {
-    if (
-      entry.aliases.some(
-        (alias) => titleLower.includes(alias) || authorLower.includes(alias)
-      )
-    ) {
+    if (entry.aliases.some((alias) => titleLower.includes(alias) || authorLower.includes(alias))) {
       detectedArtist = entry.name;
       break;
     }
@@ -135,11 +148,7 @@ function extractCleanTrackInfo(
   // 2. If query was searched for an artist (e.g. 'arjit')
   if (!detectedArtist && queryLower.length >= 3) {
     for (const entry of ARTIST_DICTIONARY) {
-      if (
-        entry.aliases.some(
-          (alias) => alias.includes(queryLower) || queryLower.includes(alias)
-        )
-      ) {
+      if (entry.aliases.some((alias) => alias.includes(queryLower) || queryLower.includes(alias))) {
         if (titleLower.includes(queryLower) || titleLower.includes(entry.name.toLowerCase())) {
           detectedArtist = entry.name;
           break;
@@ -150,7 +159,7 @@ function extractCleanTrackInfo(
 
   // 3. Fallback: if not a record label, use author name
   if (!detectedArtist) {
-    detectedArtist = isLabel ? "Various Artists" : (rawAuthor || "Unknown Artist");
+    detectedArtist = isLabel ? "Various Artists" : rawAuthor || "Unknown Artist";
   }
 
   // Clean title: extract main song title before first | or • or separator
@@ -177,7 +186,7 @@ export async function GET(req: NextRequest) {
   const query = searchParams.get("q")?.trim();
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const limit = Math.min(30, Math.max(1, parseInt(searchParams.get("limit") || "10", 10)));
-  const sort = searchParams.get("sort") || "views"; // "views" | "relevance" | "duration"
+  const sort = searchParams.get("sort") || "relevance"; // "relevance" | "views" | "duration"
 
   if (!query) {
     return NextResponse.json({
@@ -239,7 +248,14 @@ export async function GET(req: NextRequest) {
 
     // 1. Parse video search results (which contain rich view counts and short view counts)
     if (videoSearch.status === "fulfilled" && videoSearch.value.videos) {
-      for (const video of videoSearch.value.videos as any[]) {
+      for (const video of videoSearch.value.videos as Array<{
+        id?: string;
+        duration?: { seconds?: number };
+        title?: { text?: string };
+        author?: { name?: string };
+        view_count?: { text?: string };
+        short_view_count?: { text?: string };
+      }>) {
         if (!video || !video.id) continue;
         const id = String(video.id);
         if (seenIds.has(id)) continue;
@@ -272,7 +288,15 @@ export async function GET(req: NextRequest) {
 
     // 2. Parse YouTube Music results
     if (songSearch.status === "fulfilled" && songSearch.value.songs?.contents) {
-      for (const song of songSearch.value.songs.contents as any[]) {
+      for (const song of songSearch.value.songs.contents as Array<{
+        id?: string;
+        title?: string;
+        artists?: Array<{ name?: string }>;
+        author?: string;
+        duration?: { seconds?: number; text?: string };
+        thumbnail?: Array<{ url?: string }>;
+        thumbnails?: Array<{ url?: string }>;
+      }>) {
         if (!song || !song.id) continue;
         const id = String(song.id);
         if (seenIds.has(id)) continue;
@@ -281,7 +305,7 @@ export async function GET(req: NextRequest) {
         const rawArtist =
           Array.isArray(song.artists) && song.artists.length > 0
             ? song.artists
-                .map((a: any) => a.name)
+                .map((a: { name?: string }) => a.name)
                 .filter(Boolean)
                 .join(", ")
             : song.author || "Unknown Artist";
@@ -294,9 +318,7 @@ export async function GET(req: NextRequest) {
         if (durSec < 50 || durSec > 720) continue;
 
         const rawCover =
-          song.thumbnail?.[0]?.url ||
-          song.thumbnails?.[0]?.url ||
-          `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+          song.thumbnail?.[0]?.url || song.thumbnails?.[0]?.url || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 
         const coverUrl = rawCover.includes("googleusercontent.com")
           ? rawCover.replace(/=w\d+-h\d+[^"]*/, "=w800-h800-l90-rj")
@@ -362,7 +384,8 @@ export async function GET(req: NextRequest) {
       totalPages,
       hasMore: startIndex + limit < totalTracks,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("Search API error:", err);
     return NextResponse.json({
       tracks: [],
@@ -370,7 +393,7 @@ export async function GET(req: NextRequest) {
       page: 1,
       totalPages: 0,
       hasMore: false,
-      error: err.message,
+      error: message,
     });
   }
 }

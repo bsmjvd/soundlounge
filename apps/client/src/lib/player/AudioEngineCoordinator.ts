@@ -1,6 +1,6 @@
 import type { Track } from "@soundlounge/shared";
-import { SoloPlayer, type SoloPlayerState } from "./SoloPlayer";
-import { SyncedPlayer, type SyncedPlayerState } from "./SyncedPlayer";
+import { SoloPlayer } from "./SoloPlayer";
+import { SyncedPlayer } from "./SyncedPlayer";
 
 export type PlaybackMode = "solo" | "synced";
 
@@ -21,12 +21,29 @@ export class AudioEngineCoordinator {
   private mode: PlaybackMode = "solo";
   private soloPlayer: SoloPlayer;
   private syncedPlayer: SyncedPlayer;
-  private volume: number = 1.0;
+  private volume: number = 0.4;
   private listeners: Set<CoordinatorStateCallback> = new Set();
 
   constructor() {
     this.soloPlayer = new SoloPlayer();
     this.syncedPlayer = new SyncedPlayer();
+
+    // Initialize with 40% volume, respecting localStorage preference if set
+    let initialVol = 0.4;
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("soundlounge_volume");
+        if (saved !== null) {
+          const parsed = parseFloat(saved);
+          if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+            initialVol = parsed;
+          }
+        }
+      } catch {}
+    }
+    this.volume = initialVol;
+    this.soloPlayer.setVolume(initialVol);
+    this.syncedPlayer.setVolume(initialVol);
 
     this.soloPlayer.onStateChange(() => {
       if (this.mode === "solo") {
@@ -41,11 +58,7 @@ export class AudioEngineCoordinator {
     });
   }
 
-  setTransportHandlers(handlers: {
-    onNext?: () => void;
-    onPrevious?: () => void;
-    onEnded?: () => void;
-  }): void {
+  setTransportHandlers(handlers: { onNext?: () => void; onPrevious?: () => void; onEnded?: () => void }): void {
     this.soloPlayer.setTransportHandlers(handlers);
   }
 
@@ -104,8 +117,10 @@ export class AudioEngineCoordinator {
 
   async play(track: Track, positionMs: number = 0): Promise<void> {
     if (this.mode === "solo") {
+      this.syncedPlayer.pause();
       await this.soloPlayer.play(track, positionMs);
     } else {
+      this.soloPlayer.pause();
       // In synced mode, playing locally without server barrier schedules immediate barrier
       this.syncedPlayer.schedulePlay(track, Date.now() + 50, positionMs);
     }
@@ -134,6 +149,11 @@ export class AudioEngineCoordinator {
     this.volume = Math.max(0, Math.min(1, volume));
     this.soloPlayer.setVolume(this.volume);
     this.syncedPlayer.setVolume(this.volume);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("soundlounge_volume", String(this.volume));
+      } catch {}
+    }
     this.emitState();
   }
 

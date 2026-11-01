@@ -29,8 +29,8 @@ export class SyncedPlayer {
   private ntpOffsetMs: number = 0;
   private rttMs: number = 0;
   private audioElement: HTMLAudioElement | null = null;
-  private scheduledTimer: any = null;
-  private driftCheckInterval: any = null;
+  private scheduledTimer: ReturnType<typeof setTimeout> | null = null;
+  private driftCheckInterval: ReturnType<typeof setInterval> | null = null;
   private serverEpochStartTime: number = 0;
   private initialPlayPositionMs: number = 0;
 
@@ -39,7 +39,7 @@ export class SyncedPlayer {
     currentTrack: null,
     positionMs: 0,
     durationMs: 0,
-    volume: 1.0,
+    volume: 0.4,
     ntpOffsetMs: 0,
     rttMs: 0,
   };
@@ -54,6 +54,7 @@ export class SyncedPlayer {
       try {
         this.audioElement = new Audio();
         this.audioElement.preload = "auto";
+        this.audioElement.volume = this.state.volume;
 
         this.audioElement.addEventListener("timeupdate", () => {
           if (this.audioElement) {
@@ -158,13 +159,17 @@ export class SyncedPlayer {
       this.state.positionMs = plan.startPositionMs;
 
       if (this.audioElement) {
+        try {
+          this.audioElement.pause();
+        } catch {}
+
         const currentSrc = this.audioElement.src;
         const targetUrl =
           playUrl.startsWith("http://") || playUrl.startsWith("https://")
             ? playUrl
             : typeof window !== "undefined"
-            ? `${window.location.origin}${playUrl}`
-            : playUrl;
+              ? `${window.location.origin}${playUrl}`
+              : playUrl;
 
         if (currentSrc !== targetUrl) {
           this.audioElement.src = playUrl;
@@ -184,13 +189,17 @@ export class SyncedPlayer {
     } else {
       this.state.status = "buffering";
       if (this.audioElement) {
+        try {
+          this.audioElement.pause();
+        } catch {}
+
         const currentSrc = this.audioElement.src;
         const targetUrl =
           playUrl.startsWith("http://") || playUrl.startsWith("https://")
             ? playUrl
             : typeof window !== "undefined"
-            ? `${window.location.origin}${playUrl}`
-            : playUrl;
+              ? `${window.location.origin}${playUrl}`
+              : playUrl;
         if (currentSrc !== targetUrl) {
           this.audioElement.src = playUrl;
           this.audioElement.currentTime = plan.startPositionMs / 1000;
@@ -200,6 +209,19 @@ export class SyncedPlayer {
       this.emitState();
       this.scheduledTimer = setTimeout(execute, plan.delayMs);
     }
+  }
+
+  pause(): void {
+    if (this.scheduledTimer) {
+      clearTimeout(this.scheduledTimer);
+      this.scheduledTimer = null;
+    }
+    this.stopDriftMonitor();
+    this.state.status = "paused";
+    if (this.audioElement) {
+      this.audioElement.pause();
+    }
+    this.emitState();
   }
 
   schedulePause(serverTimeToExecute: number, positionMs: number): void {

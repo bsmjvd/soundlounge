@@ -30,13 +30,23 @@ import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
 import type { Track, Playlist, Album } from "@soundlounge/shared";
 
-// Singleton coordinator instance for the browser tab
+// Singleton coordinator instance for the browser tab, preserved on window across fast refresh
 let coordinatorSingleton: AudioEngineCoordinator | null = null;
 function getCoordinator(): AudioEngineCoordinator {
   if (!coordinatorSingleton) {
-    coordinatorSingleton = new AudioEngineCoordinator();
+    if (typeof window !== "undefined") {
+      const winWithCoord = window as unknown as { __soundlounge_coordinator__?: AudioEngineCoordinator };
+      if (winWithCoord.__soundlounge_coordinator__) {
+        coordinatorSingleton = winWithCoord.__soundlounge_coordinator__;
+      } else {
+        coordinatorSingleton = new AudioEngineCoordinator();
+        winWithCoord.__soundlounge_coordinator__ = coordinatorSingleton;
+      }
+    } else {
+      coordinatorSingleton = new AudioEngineCoordinator();
+    }
   }
-  return coordinatorSingleton;
+  return coordinatorSingleton ?? new AudioEngineCoordinator();
 }
 
 export default function SoundloungeApp() {

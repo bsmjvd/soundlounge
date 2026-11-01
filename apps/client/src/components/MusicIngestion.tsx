@@ -64,7 +64,7 @@ export function MusicIngestion({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalTracks, setTotalTracks] = useState(0);
-  const [sortBy, setSortBy] = useState<"views" | "relevance" | "duration">("views");
+  const [sortBy, setSortBy] = useState<"views" | "relevance" | "duration">("relevance");
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -102,11 +102,7 @@ export function MusicIngestion({
   }, [searchInputRef]);
 
   // Execute Search query with page and sort options
-  const executeSearch = async (
-    query: string,
-    page: number = 1,
-    sort: "views" | "relevance" | "duration" = sortBy
-  ) => {
+  const executeSearch = async (query: string, page: number = 1, sort: "views" | "relevance" | "duration" = sortBy) => {
     const clean = query.trim();
     if (!clean || clean.length < 1) {
       setSearchResults([]);
@@ -124,7 +120,7 @@ export function MusicIngestion({
       if (res.ok) {
         const data = await res.json();
         setSearchResults(data.tracks || []);
-        setTotalTracks(data.totalTracks || (data.tracks?.length || 0));
+        setTotalTracks(data.totalTracks || data.tracks?.length || 0);
         setTotalPages(data.totalPages || 1);
         setCurrentPage(data.page || page);
       }
@@ -263,7 +259,7 @@ export function MusicIngestion({
     const pages: number[] = [];
     const maxVisible = 5;
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
+    const end = Math.min(totalPages, start + maxVisible - 1);
 
     if (end - start + 1 < maxVisible) {
       start = Math.max(1, end - maxVisible + 1);
@@ -281,11 +277,7 @@ export function MusicIngestion({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <form onSubmit={handleManualSearch} className="relative flex-1">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#5c707d]">
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 animate-spin text-[#00e5c9]" />
-            ) : (
-              <Search className="w-4 h-4" />
-            )}
+            {isSearching ? <Loader2 className="w-4 h-4 animate-spin text-[#00e5c9]" /> : <Search className="w-4 h-4" />}
           </div>
 
           <input
@@ -385,9 +377,7 @@ export function MusicIngestion({
       {searchResults.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-white">
-              Search Results:
-            </span>
+            <span className="text-xs font-semibold text-white">Search Results:</span>
             <span className="text-xs text-[#718593]">
               Found <strong className="text-[#00e5c9]">{totalTracks}</strong> authentic tracks
             </span>
@@ -395,21 +385,7 @@ export function MusicIngestion({
 
           {/* Sort Filter Tabs */}
           <div className="flex items-center gap-1.5 bg-[#0b1419] p-1 rounded-xl border border-[#182a36]">
-            <span className="text-[10px] text-[#5c707d] uppercase tracking-wider px-2 font-semibold">
-              Sort:
-            </span>
-
-            <button
-              onClick={() => handleSortChange("views")}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                sortBy === "views"
-                  ? "bg-[#00e5c9] text-[#081014] font-semibold shadow-sm"
-                  : "text-[#7d909d] hover:text-white hover:bg-[#12222b]"
-              }`}
-            >
-              <Flame className="w-3 h-3" />
-              <span>Most Popular (Views)</span>
-            </button>
+            <span className="text-[10px] text-[#5c707d] uppercase tracking-wider px-2 font-semibold">Sort:</span>
 
             <button
               onClick={() => handleSortChange("relevance")}
@@ -421,6 +397,18 @@ export function MusicIngestion({
             >
               <Sparkles className="w-3 h-3" />
               <span>Most Relevant</span>
+            </button>
+
+            <button
+              onClick={() => handleSortChange("views")}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                sortBy === "views"
+                  ? "bg-[#00e5c9] text-[#081014] font-semibold shadow-sm"
+                  : "text-[#7d909d] hover:text-white hover:bg-[#12222b]"
+              }`}
+            >
+              <Flame className="w-3 h-3" />
+              <span>Most Popular (Views)</span>
             </button>
 
             <button
@@ -487,9 +475,7 @@ export function MusicIngestion({
                       <p className="text-xs font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
                         {track.title}
                       </p>
-                      <p className="text-[11px] text-[#718593] truncate mt-0.5">
-                        {track.artist}
-                      </p>
+                      <p className="text-[11px] text-[#718593] truncate mt-0.5">{track.artist}</p>
                     </div>
                   </div>
 
@@ -518,9 +504,7 @@ export function MusicIngestion({
                           onClick={() => toggleLike(track)}
                           title={liked ? "Liked" : "Like Track"}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            liked
-                              ? "text-[#f43f5e]"
-                              : "text-[#5c707d] hover:text-white"
+                            liked ? "text-[#f43f5e]" : "text-[#5c707d] hover:text-white"
                           }`}
                         >
                           <Heart className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
@@ -551,7 +535,8 @@ export function MusicIngestion({
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#091217] border-t border-[#162732]">
               <span className="text-xs text-[#718593]">
-                Page <strong className="text-white">{currentPage}</strong> of <strong className="text-white">{totalPages}</strong> ({totalTracks} total tracks)
+                Page <strong className="text-white">{currentPage}</strong> of{" "}
+                <strong className="text-white">{totalPages}</strong> ({totalTracks} total tracks)
               </span>
 
               <div className="flex items-center gap-1.5">
@@ -598,9 +583,7 @@ export function MusicIngestion({
       {/* Empty State when no results found */}
       {hasSearched && !isSearching && searchResults.length === 0 && searchQuery && (
         <div className="text-center py-12 rounded-2xl border border-[#182b36] bg-[#0c161d] space-y-2">
-          <p className="text-xs text-[#8da0ad] font-medium">
-            No matching tracks found for &ldquo;{searchQuery}&rdquo;
-          </p>
+          <p className="text-xs text-[#8da0ad] font-medium">No matching tracks found for &ldquo;{searchQuery}&rdquo;</p>
           <p className="text-[11px] text-[#5c707d]">
             Try searching for song titles, artist names, or paste a direct YouTube audio link.
           </p>

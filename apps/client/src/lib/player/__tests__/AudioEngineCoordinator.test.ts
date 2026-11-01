@@ -21,14 +21,27 @@ describe("AudioEngineCoordinator", () => {
     const state = coordinator.getState();
     expect(state.mode).toBe("solo");
     expect(state.status).toBe("idle");
-    expect(state.volume).toBe(1.0);
+    expect(state.volume).toBe(0.4);
   });
 
-  it("handles play and pause in solo mode", async () => {
+  it("handles play and pause in solo mode without simultaneous playback", async () => {
+    const secondTrack: Track = {
+      id: "track_coord_2",
+      title: "Second Track",
+      artist: "Second Artist",
+      durationMs: 180000,
+      url: "https://cdn.soundlounge.audio/second.mp3",
+      source: "upload",
+    };
+
     await coordinator.play(sampleTrack, 2000);
     expect(coordinator.getState().status).toBe("playing");
     expect(coordinator.getState().currentTrack?.id).toBe("track_coord_1");
-    expect(coordinator.getState().positionMs).toBe(2000);
+
+    // Playing another track replaces current playback and stops the previous one
+    await coordinator.play(secondTrack, 0);
+    expect(coordinator.getState().status).toBe("playing");
+    expect(coordinator.getState().currentTrack?.id).toBe("track_coord_2");
 
     coordinator.pause();
     expect(coordinator.getState().status).toBe("paused");

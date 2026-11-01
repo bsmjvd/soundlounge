@@ -10,6 +10,10 @@ export interface SoloPlayerState {
 
 export type StateChangeCallback = (state: SoloPlayerState) => void;
 
+interface WindowWithAudio {
+  __soundlounge_active_audio__?: HTMLAudioElement | null;
+}
+
 export class SoloPlayer {
   private audioElement: HTMLAudioElement | null = null;
   private state: SoloPlayerState = {
@@ -17,10 +21,10 @@ export class SoloPlayer {
     currentTrack: null,
     positionMs: 0,
     durationMs: 0,
-    volume: 1.0,
+    volume: 0.4,
   };
   private listeners: Set<StateChangeCallback> = new Set();
-  private timeUpdateInterval: any = null;
+  private timeUpdateInterval: ReturnType<typeof setInterval> | null = null;
   private onNextCallback?: () => void;
   private onPreviousCallback?: () => void;
   private onEndedCallback?: () => void;
@@ -29,11 +33,7 @@ export class SoloPlayer {
     this.initAudioElement();
   }
 
-  setTransportHandlers(handlers: {
-    onNext?: () => void;
-    onPrevious?: () => void;
-    onEnded?: () => void;
-  }): void {
+  setTransportHandlers(handlers: { onNext?: () => void; onPrevious?: () => void; onEnded?: () => void }): void {
     this.onNextCallback = handlers.onNext;
     this.onPreviousCallback = handlers.onPrevious;
     this.onEndedCallback = handlers.onEnded;
@@ -42,8 +42,18 @@ export class SoloPlayer {
   private initAudioElement() {
     if (typeof window !== "undefined" && typeof Audio !== "undefined") {
       try {
+        const win = window as unknown as WindowWithAudio;
+        if (win.__soundlounge_active_audio__) {
+          try {
+            win.__soundlounge_active_audio__.pause();
+            win.__soundlounge_active_audio__.src = "";
+          } catch {}
+        }
+
         this.audioElement = new Audio();
         this.audioElement.preload = "auto";
+        this.audioElement.volume = this.state.volume;
+        win.__soundlounge_active_audio__ = this.audioElement;
 
         this.audioElement.addEventListener("playing", () => {
           this.state.status = "playing";
@@ -168,6 +178,33 @@ export class SoloPlayer {
     this.state.status = "playing";
 
     if (this.audioElement) {
+      // 1. Immediately pause before any URL switch to strictly prevent simultaneous audio
+      try {
+        this.audioElement.pause();
+      } catch {}
+
+      // 2. Halt any other rogue audio elements across the document
+      if (typeof window !== "undefined") {
+        const win = window as unknown as WindowWithAudio;
+        if (win.__soundlounge_active_audio__ && win.__soundlounge_active_audio__ !== this.audioElement) {
+          try {
+            win.__soundlounge_active_audio__.pause();
+            win.__soundlounge_active_audio__.src = "";
+          } catch {}
+          win.__soundlounge_active_audio__ = this.audioElement;
+        }
+        if (typeof document !== "undefined") {
+          document.querySelectorAll("audio").forEach((el) => {
+            if (el !== this.audioElement) {
+              try {
+                el.pause();
+                el.currentTime = 0;
+              } catch {}
+            }
+          });
+        }
+      }
+
       // Append title and artist to youtube stream URL for instant YouTube search accuracy
       let playUrl = track.url;
       if (playUrl.startsWith("/api/stream/youtube")) {
@@ -181,8 +218,8 @@ export class SoloPlayer {
         playUrl.startsWith("http://") || playUrl.startsWith("https://")
           ? playUrl
           : typeof window !== "undefined"
-          ? `${window.location.origin}${playUrl}`
-          : playUrl;
+            ? `${window.location.origin}${playUrl}`
+            : playUrl;
 
       if (currentSrc !== targetUrl) {
         this.audioElement.src = playUrl;
@@ -196,8 +233,9 @@ export class SoloPlayer {
 
       try {
         await this.audioElement.play();
-      } catch (err: any) {
-        console.warn("SoloPlayer: play() rejected or interrupted:", err?.message || err);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn("SoloPlayer: play() rejected or interrupted:", message);
       }
     }
 
@@ -250,13 +288,19 @@ export class SoloPlayer {
       this.audioElement.src = "";
       this.audioElement = null;
     }
+    if (typeof window !== "undefined") {
+      const win = window as unknown as WindowWithAudio;
+      if (win.__soundlounge_active_audio__ === this.audioElement) {
+        win.__soundlounge_active_audio__ = null;
+      }
+    }
     this.listeners.clear();
     this.state = {
       status: "idle",
       currentTrack: null,
       positionMs: 0,
       durationMs: 0,
-      volume: 1.0,
+      volume: 0.4,
     };
   }
 }

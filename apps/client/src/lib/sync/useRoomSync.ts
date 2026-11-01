@@ -5,12 +5,15 @@ import {
   PRIVATE_ROOM_CLOSE_CODE,
   ServerActionSchema,
   type ClientAction,
-  type ServerAction,
   type Track,
 } from "@soundlounge/shared";
 import { NtpSyncEngine, type BestNtpOffsetResult } from "./ntpClient";
 import { AudioEngineCoordinator } from "../player";
 import { useQueueStore } from "../store/useQueueStore";
+
+interface ExtendedWebSocket extends WebSocket {
+  _probeInterval?: ReturnType<typeof setInterval>;
+}
 
 export interface UseRoomSyncOptions {
   roomId: string;
@@ -42,7 +45,7 @@ export function useRoomSync({
   useEffect(() => {
     if (!roomId) return;
 
-    let tokenParam = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "";
+    const tokenParam = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "";
     const wsEndpoint = `${serverWsUrl.replace(/^http/, "ws")}/api/rooms/${roomId}/websocket${tokenParam}`;
 
     let socket: WebSocket;
@@ -77,7 +80,7 @@ export function useRoomSync({
           ntpEngine.startProbeSequence();
         }
       }, 30000);
-      (socket as any)._probeInterval = probeInterval;
+      (socket as ExtendedWebSocket)._probeInterval = probeInterval;
     };
 
     socket.onmessage = (event) => {
@@ -94,47 +97,48 @@ export function useRoomSync({
 
           case "ROOM_STATE": {
             setParticipantsCount(action.participantsCount);
-            useQueueStore.getState().setQueue(action.queue);
+            if (coordinator.getMode() === "synced") {
+              useQueueStore.getState().setQueue(action.queue);
 
-            const syncedPlayer = coordinator.getSyncedPlayer();
-            if (action.state.status === "playing" && action.state.currentTrackId) {
-              const current = action.queue.find((t) => t.id === action.state.currentTrackId);
-              if (current) {
-                syncedPlayer.schedulePlay(
-                  current,
-                  action.state.serverEpochStartTime,
-                  action.state.positionMs
-                );
+              const syncedPlayer = coordinator.getSyncedPlayer();
+              if (action.state.status === "playing" && action.state.currentTrackId) {
+                const current = action.queue.find((t) => t.id === action.state.currentTrackId);
+                if (current) {
+                  syncedPlayer.schedulePlay(current, action.state.serverEpochStartTime, action.state.positionMs);
+                }
+              } else if (action.state.status === "paused") {
+                syncedPlayer.schedulePause(Date.now(), action.state.positionMs);
               }
-            } else if (action.state.status === "paused") {
-              syncedPlayer.schedulePause(Date.now(), action.state.positionMs);
             }
             break;
           }
 
           case "QUEUE_UPDATED":
-            useQueueStore.getState().setQueue(action.queue);
+            if (coordinator.getMode() === "synced") {
+              useQueueStore.getState().setQueue(action.queue);
+            }
             break;
 
           case "SCHEDULED_PLAY": {
+            if (coordinator.getMode() !== "synced") break;
             const queue = useQueueStore.getState().queue;
             const track = queue.find((t) => t.id === action.trackId);
             if (track) {
-              coordinator.getSyncedPlayer().schedulePlay(
-                track,
-                action.serverTimeToExecute,
-                action.positionMs
-              );
+              coordinator.getSyncedPlayer().schedulePlay(track, action.serverTimeToExecute, action.positionMs);
             }
             break;
           }
 
           case "SCHEDULED_PAUSE":
-            coordinator.getSyncedPlayer().schedulePause(action.serverTimeToExecute, action.positionMs);
+            if (coordinator.getMode() === "synced") {
+              coordinator.getSyncedPlayer().schedulePause(action.serverTimeToExecute, action.positionMs);
+            }
             break;
 
           case "SCHEDULED_SEEK":
-            coordinator.getSyncedPlayer().scheduleSeek(action.serverTimeToExecute, action.positionMs);
+            if (coordinator.getMode() === "synced") {
+              coordinator.getSyncedPlayer().scheduleSeek(action.serverTimeToExecute, action.positionMs);
+            }
             break;
 
           case "ERROR":
@@ -148,8 +152,9 @@ export function useRoomSync({
 
     socket.onclose = (event) => {
       setIsConnected(false);
-      if ((socket as any)._probeInterval) {
-        clearInterval((socket as any)._probeInterval);
+      const extSocket = socket as ExtendedWebSocket;
+      if (extSocket._probeInterval) {
+        clearInterval(extSocket._probeInterval);
       }
       if (event.code === PRIVATE_ROOM_CLOSE_CODE) {
         setIsAccessDenied(true);
@@ -161,8 +166,9 @@ export function useRoomSync({
     };
 
     return () => {
-      if ((socket as any)._probeInterval) {
-        clearInterval((socket as any)._probeInterval);
+      const extSocket = socketRef.current as ExtendedWebSocket | null;
+      if (extSocket?._probeInterval) {
+        clearInterval(extSocket._probeInterval);
       }
       socket.close();
       socketRef.current = null;
