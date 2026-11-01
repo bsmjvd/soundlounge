@@ -470,6 +470,10 @@ export default function SoundloungeApp() {
               onNavBack={handleNavBack}
               onNavForward={handleNavForward}
               onOpenUpload={() => setActiveTab("search")}
+              onPlayTrack={handlePlaySingleTrack}
+              onAddTrack={handleAddTrack}
+              onSelectArtist={(artist) => setSelectedArtist(artist)}
+              onSelectAlbum={(album) => setSelectedAlbum(album)}
             />
 
             {/* Stage Canvas */}
@@ -565,6 +569,8 @@ export default function SoundloungeApp() {
                         onAddTrack={handleAddTrack}
                         onPlayDirect={handlePlaySingleTrack}
                         roomId={roomId}
+                        initialQuery={searchQuery}
+                        onQueryChange={setSearchQuery}
                       />
                     </div>
                   )}

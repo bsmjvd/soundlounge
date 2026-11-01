@@ -25,6 +25,8 @@ interface MusicIngestionProps {
   roomId: string;
   workerHttpUrl?: string;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
+  initialQuery?: string;
+  onQueryChange?: (query: string) => void;
 }
 
 const DISCOVERY_TAGS = [
@@ -42,12 +44,21 @@ export function MusicIngestion({
   roomId,
   workerHttpUrl = process.env.NEXT_PUBLIC_WORKER_HTTP_URL || "http://localhost:8787",
   searchInputRef: externalSearchRef,
+  initialQuery = "",
+  onQueryChange,
 }: MusicIngestionProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
+
+  // Sync with initialQuery when it changes externally
+  useEffect(() => {
+    if (initialQuery !== undefined && initialQuery !== searchQuery) {
+      setSearchQuery(initialQuery);
+    }
+  }, [initialQuery]);
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -217,7 +228,10 @@ export function MusicIngestion({
             type="text"
             placeholder="Search songs, artists, or paste a link (sidhu, weeknd, synthwave)..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              onQueryChange?.(e.target.value);
+            }}
             className="w-full h-11 bg-[#0c0e15] border border-[#1b202d] focus:border-indigo-500 rounded-xl pl-10 pr-24 text-xs text-white placeholder-[#586073] outline-none transition-colors"
           />
 
@@ -227,6 +241,7 @@ export function MusicIngestion({
                 type="button"
                 onClick={() => {
                   setSearchQuery("");
+                  onQueryChange?.("");
                   setSearchResults([]);
                 }}
                 className="p-1 text-[#666f85] hover:text-white rounded-md cursor-pointer"
@@ -277,7 +292,10 @@ export function MusicIngestion({
             {DISCOVERY_TAGS.map((tag) => (
               <button
                 key={tag}
-                onClick={() => setSearchQuery(tag)}
+                onClick={() => {
+                  setSearchQuery(tag);
+                  onQueryChange?.(tag);
+                }}
                 className="px-3 py-1.5 rounded-lg bg-[#0d1017] hover:bg-[#161a25] border border-[#1a1f2c] text-xs text-[#828a9f] hover:text-white transition-colors cursor-pointer"
               >
                 {tag}
