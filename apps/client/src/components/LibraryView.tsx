@@ -49,7 +49,7 @@ export function LibraryView({
   };
 
   return (
-    <div className="bg-[#131722] border border-[#1f2638] rounded-2xl p-5 shadow-xl space-y-4">
+    <div className="bg-[#131722]/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
       {/* Continue Listening Banner */}
       {lastSession && (
         <div className="bg-gradient-to-r from-indigo-950/60 to-[#0b0d13] border border-indigo-500/30 rounded-xl p-3.5 flex items-center justify-between">
@@ -80,7 +80,7 @@ export function LibraryView({
       )}
 
       {/* Tabs Header */}
-      <div className="flex items-center justify-between border-b border-[#1f2638] pb-3">
+      <div className="flex items-center justify-between border-b border-white/10 pb-3">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab("liked")}

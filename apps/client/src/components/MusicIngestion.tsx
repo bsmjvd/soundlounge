@@ -191,7 +191,7 @@ export function MusicIngestion({
   };
 
   return (
-    <div className="bg-[#131722] border border-[#1f2638] rounded-2xl p-5 shadow-xl space-y-4">
+    <div className="bg-[#131722]/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
       {/* Top Controls: Search vs File Upload Mode */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export function MusicIngestion({
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               activeMode === "search"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-gray-400 hover:text-white bg-[#0b0d13]"
+                : "text-gray-400 hover:text-white bg-white/5 border border-white/5"
             }`}
           >
             <Search className="w-3.5 h-3.5" />
@@ -211,7 +211,7 @@ export function MusicIngestion({
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               activeMode === "upload"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-gray-400 hover:text-white bg-[#0b0d13]"
+                : "text-gray-400 hover:text-white bg-white/5 border border-white/5"
             }`}
           >
             <UploadCloud className="w-3.5 h-3.5" />
@@ -242,7 +242,7 @@ export function MusicIngestion({
               placeholder="What do you want to play? Search songs, artists, or paste a link..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0b0d13] border border-[#1f2638] focus:border-indigo-500 rounded-xl pl-10 pr-24 py-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all shadow-inner"
+              className="w-full bg-black/40 border border-white/10 focus:border-indigo-500 rounded-xl pl-10 pr-24 py-2.5 text-xs text-white placeholder-gray-500 outline-none transition-all shadow-inner backdrop-blur-md"
             />
 
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -258,7 +258,7 @@ export function MusicIngestion({
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-[#1f2638] bg-[#131722] px-1.5 py-0.5 text-[10px] font-mono text-gray-400">
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-mono text-gray-400">
                 ⌘K
               </kbd>
             </div>
@@ -266,8 +266,8 @@ export function MusicIngestion({
 
           {/* Search Results Dropdown / List */}
           {searchResults.length > 0 && (
-            <div className="bg-[#0b0d13] border border-[#1f2638] rounded-xl p-2 max-h-[380px] overflow-y-auto space-y-1 shadow-2xl">
-              <div className="flex items-center justify-between px-2 py-1 text-[11px] text-gray-400 border-b border-[#1f2638]/60 pb-1.5">
+            <div className="bg-black/50 border border-white/10 rounded-xl p-2 max-h-[380px] overflow-y-auto space-y-1 shadow-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between px-2 py-1 text-[11px] text-gray-400 border-b border-white/10 pb-1.5">
                 <span>Top Results ({searchResults.length})</span>
                 <span className="text-[10px] text-gray-500">Click to play or add to queue</span>
               </div>

@@ -80,10 +80,14 @@ export async function GET(req: NextRequest) {
           parseYouTubeDuration(song.duration?.text) ||
           210000;
 
-        const coverUrl =
+        const rawCover =
           song.thumbnail?.[0]?.url ||
           song.thumbnails?.[0]?.url ||
           `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+        const coverUrl = rawCover.includes("googleusercontent.com")
+          ? rawCover.replace(/=w\d+-h\d+[^"]*/, "=w800-h800-l90-rj")
+          : rawCover;
 
         return {
           id: `yt_${id}`,

@@ -54,7 +54,7 @@ export function QueueView({
   };
 
   return (
-    <div className="bg-[#131722] border border-[#1f2638] rounded-2xl p-5 shadow-xl">
+    <div className="bg-[#131722]/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <ListMusic className="w-4 h-4 text-sky-400" />
@@ -67,14 +67,14 @@ export function QueueView({
             <>
               <button
                 onClick={() => setShowSaveModal(true)}
-                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white px-2.5 py-1 rounded-md bg-[#0b0d13] border border-[#1f2638] transition-colors"
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white px-2.5 py-1 rounded-md bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
               >
                 <BookmarkPlus className="w-3.5 h-3.5 text-indigo-400" />
                 Save as Playlist
               </button>
               <button
                 onClick={onClearQueue}
-                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 px-2.5 py-1 rounded-md bg-[#0b0d13] border border-[#1f2638] transition-colors"
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 px-2.5 py-1 rounded-md bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Clear

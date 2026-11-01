@@ -7,9 +7,8 @@ import {
   SkipForward,
   Heart,
   Radio,
-  Users,
-  Music2,
   Sparkles,
+  Music2,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import type { PlaybackMode } from "../lib/player";
@@ -41,7 +40,7 @@ export function NowPlayingHero({
 }: NowPlayingHeroProps) {
   if (!currentTrack) {
     return (
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-950/40 via-[#131722] to-sky-950/30 border border-[#1f2638] p-8 shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-950/30 via-[#131722]/50 to-sky-950/20 border border-white/10 p-8 backdrop-blur-xl shadow-2xl">
         <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center sm:text-left">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium">
@@ -71,28 +70,41 @@ export function NowPlayingHero({
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  const highResCover = currentTrack.coverUrl?.replace("hqdefault.jpg", "maxresdefault.jpg") || currentTrack.coverUrl;
+  const rawId = currentTrack.id.startsWith("yt_") ? currentTrack.id.slice(3) : currentTrack.id;
+  const squareCover = currentTrack.coverUrl?.includes("googleusercontent.com")
+    ? currentTrack.coverUrl.replace(/=w\d+-h\d+[^"]*/, "=w800-h800-l90-rj")
+    : (/^[A-Za-z0-9_-]{11}$/.test(rawId)
+        ? `https://i.ytimg.com/vi/${rawId}/maxresdefault.jpg`
+        : currentTrack.coverUrl?.replace("hqdefault.jpg", "maxresdefault.jpg") || currentTrack.coverUrl);
+
+  const highResCover =
+    /^[A-Za-z0-9_-]{11}$/.test(rawId)
+      ? `https://i.ytimg.com/vi/${rawId}/maxresdefault.jpg`
+      : currentTrack.coverUrl?.replace("hqdefault.jpg", "maxresdefault.jpg") || currentTrack.coverUrl;
+
   const effectiveDuration = durationMs || currentTrack.durationMs || 1;
   const progressPercent = Math.min(100, Math.max(0, (positionMs / effectiveDuration) * 100));
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-[#1f2638] bg-[#131722]/80 backdrop-blur-xl shadow-2xl transition-all">
-      {/* Widescreen Banner Backdrop with blur & gradient overlay */}
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/30 backdrop-blur-2xl shadow-2xl transition-all duration-500">
+      {/* Subtle Inner Glow from Track Artwork */}
       {highResCover && (
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-25 filter blur-md scale-105 transition-all duration-700 pointer-events-none"
+          className="absolute inset-0 bg-cover bg-center opacity-25 filter blur-2xl scale-110 pointer-events-none transition-all duration-700"
           style={{ backgroundImage: `url(${highResCover})` }}
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0b0d13]/95 via-[#0b0d13]/80 to-[#131722]/70 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/35 to-black/20 pointer-events-none" />
 
       {/* Content Layer */}
-      <div className="relative z-10 p-6 sm:p-8 flex flex-col md:flex-row items-center gap-6">
-        {/* Cover Art Artwork */}
-        <div className="relative group w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden bg-[#0b0d13] border border-white/10 shadow-2xl flex-shrink-0">
-          {highResCover ? (
+      <div className="relative z-10 p-6 sm:p-8 flex flex-col md:flex-row items-center gap-6 sm:gap-8">
+        {/* Cover Art Artwork with Vinyl Shadow & Playing Glow */}
+        <div className={`relative group w-36 h-36 sm:w-44 sm:h-44 rounded-2xl overflow-hidden bg-black/50 border border-white/20 shadow-2xl flex-shrink-0 transition-all duration-500 ${
+          isPlaying ? "shadow-indigo-500/25 ring-2 ring-indigo-500/30" : "shadow-black/80"
+        }`}>
+          {squareCover ? (
             <img
-              src={highResCover}
+              src={squareCover}
               alt={currentTrack.title}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
@@ -107,7 +119,7 @@ export function NowPlayingHero({
             onClick={onTogglePlay}
             className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200"
           >
-            <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-xl">
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </div>
           </button>
@@ -116,45 +128,45 @@ export function NowPlayingHero({
         {/* Track Metadata & Controls */}
         <div className="flex-1 min-w-0 flex flex-col justify-between space-y-4 text-center md:text-left w-full">
           <div>
-            {/* Status Pills */}
+            {/* Status Badges */}
             <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
               {mode === "synced" ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-300 text-xs font-semibold shadow-sm shadow-sky-500/20">
                   <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
                   Synced Lounge · {pingMs}ms
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-400/30 text-indigo-300 text-xs font-semibold shadow-sm shadow-indigo-500/20">
                   <Music2 className="w-3.5 h-3.5" />
                   Solo Streaming
                 </span>
               )}
 
               {isPlaying && (
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
-                  {/* Live Equalizer Animation */}
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-medium">
+                  {/* Real-time Animated Equalizer bars */}
                   <span className="w-1 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  <span className="ml-1 text-[11px]">Live</span>
+                  <span className="w-1 h-2.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="ml-1 text-[11px] font-semibold">Playing</span>
                 </div>
               )}
             </div>
 
-            {/* Title & Artist */}
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight line-clamp-1">
+            {/* Song Title with Glowing text */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight line-clamp-1 drop-shadow-md">
               {currentTrack.title}
             </h1>
-            <p className="text-sm sm:text-base text-gray-300 font-medium line-clamp-1 mt-0.5">
+            <p className="text-sm sm:text-base text-gray-300 font-medium line-clamp-1 mt-1 drop-shadow-sm">
               {currentTrack.artist}
             </p>
           </div>
 
-          {/* Progress Bar */}
+          {/* Progress Timeline */}
           <div className="space-y-1.5">
-            <div className="w-full bg-[#1f2638] h-1.5 rounded-full overflow-hidden">
+            <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden backdrop-blur-sm">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-indigo-400 rounded-full transition-all duration-300"
+                className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-indigo-400 rounded-full transition-all duration-300 shadow-sm shadow-sky-400/50"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -168,7 +180,7 @@ export function NowPlayingHero({
           <div className="flex items-center justify-center md:justify-start gap-3 pt-1">
             <button
               onClick={onTogglePlay}
-              className="flex items-center gap-2 bg-white hover:bg-gray-200 text-black px-6 py-2.5 rounded-xl font-bold text-xs shadow-xl shadow-white/10 hover:scale-105 transition-all"
+              className="flex items-center gap-2 bg-white hover:bg-gray-100 text-black px-6 py-2.5 rounded-xl font-bold text-xs shadow-xl shadow-white/20 hover:scale-105 active:scale-95 transition-all"
             >
               {isPlaying ? (
                 <>
@@ -183,15 +195,15 @@ export function NowPlayingHero({
 
             <button
               onClick={onNext}
-              className="flex items-center gap-1.5 bg-[#1f2638] hover:bg-[#2b354d] text-white px-4 py-2.5 rounded-xl font-semibold text-xs transition-colors"
+              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/10 px-4 py-2.5 rounded-xl font-semibold text-xs transition-all hover:scale-105 active:scale-95"
             >
               <SkipForward className="w-4 h-4" /> Next
             </button>
 
             <button
               onClick={() => onToggleLike(currentTrack)}
-              className={`p-2.5 rounded-xl border border-[#1f2638] bg-[#0b0d13]/60 transition-colors ${
-                isLiked ? "text-rose-500 border-rose-500/30" : "text-gray-400 hover:text-white"
+              className={`p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all ${
+                isLiked ? "text-rose-400 border-rose-500/40" : "text-gray-400 hover:text-white"
               }`}
             >
               <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />

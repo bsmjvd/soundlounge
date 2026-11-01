@@ -255,89 +255,94 @@ export default function SoundloungeApp() {
   const activeTrack = playerState.currentTrack || queue[currentIndex] || null;
 
   return (
-    <div className="min-h-screen bg-[#0b0d13] text-[#f3f4f6] pb-28 relative">
+    <div className="min-h-screen bg-[#080a0f] text-[#f3f4f6] pb-28 relative overflow-x-hidden">
       {/* Full-bleed Ambient Blurred Song Backdrop */}
       <AmbientBackground
         currentTrack={activeTrack}
         isPlaying={playerState.status === "playing"}
       />
 
-      {/* Header Bar */}
-      <Header
-        mode={playerState.mode}
-        onModeChange={handleModeChange}
-        roomId={roomId}
-        participantsCount={sync.participantsCount}
-        pingMs={sync.pingMs}
-        onOpenInvite={() => setIsInviteOpen(true)}
-      />
+      {/* Main Foreground UI */}
+      <div className="relative z-10">
+        {/* Header Bar */}
+        <Header
+          mode={playerState.mode}
+          onModeChange={handleModeChange}
+          roomId={roomId}
+          participantsCount={sync.participantsCount}
+          pingMs={sync.pingMs}
+          onOpenInvite={() => setIsInviteOpen(true)}
+        />
 
-      {/* Main Grid View */}
-      <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {/* Dynamic Now Playing Banner & Hero */}
-        <NowPlayingHero
+        {/* Main Grid View */}
+        <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+          {/* Dynamic Now Playing Banner & Hero */}
+          <NowPlayingHero
+            currentTrack={activeTrack}
+            status={playerState.status}
+            positionMs={playerState.positionMs}
+            durationMs={playerState.durationMs}
+            mode={playerState.mode}
+            pingMs={sync.pingMs}
+            isLiked={activeTrack ? isLiked(activeTrack.id) : false}
+            onToggleLike={(t) => toggleLike(t)}
+            onTogglePlay={handleTogglePlay}
+            onNext={handleNext}
+          />
+
+          {/* Direct Search & Music Ingestion */}
+          <MusicIngestion
+            onAddTrack={handleAddTrack}
+            onPlayDirect={handlePlaySingleTrack}
+            roomId={roomId}
+          />
+
+          {/* 2-Column Split: Collaborative Queue & On-Device Library */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <QueueView
+              queue={queue}
+              currentIndex={currentIndex}
+              onPlayTrack={handlePlayQueueTrack}
+              onRemoveTrack={handleRemoveTrack}
+              onPlayNext={handlePlayNext}
+              onClearQueue={handleClearQueue}
+              onSavePlaylist={handleSaveQueueAsPlaylist}
+            />
+
+            <LibraryView
+              likedTracks={likedTracks}
+              playlists={playlists}
+              history={history}
+              lastSession={lastSession}
+              onPlayTrack={handlePlaySingleTrack}
+              onPlayPlaylist={handlePlayPlaylist}
+              onCreatePlaylist={createPlaylist}
+              onDeletePlaylist={deletePlaylist}
+              onResumeSession={handleResumeSession}
+            />
+          </div>
+        </main>
+      </div>
+
+      {/* Persistent Bottom Audio Player Bar */}
+      <div className="relative z-20">
+        <PlayerBar
           currentTrack={activeTrack}
           status={playerState.status}
           positionMs={playerState.positionMs}
           durationMs={playerState.durationMs}
+          volume={playerState.volume}
           mode={playerState.mode}
           pingMs={sync.pingMs}
           isLiked={activeTrack ? isLiked(activeTrack.id) : false}
           onToggleLike={(t) => toggleLike(t)}
           onTogglePlay={handleTogglePlay}
+          onSeek={handleSeek}
           onNext={handleNext}
+          onPrevious={handlePrevious}
+          onVolumeChange={(v) => coordinator.setVolume(v)}
         />
-
-        {/* Direct Search & Music Ingestion */}
-        <MusicIngestion
-          onAddTrack={handleAddTrack}
-          onPlayDirect={handlePlaySingleTrack}
-          roomId={roomId}
-        />
-
-        {/* 2-Column Split: Collaborative Queue & On-Device Library */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <QueueView
-            queue={queue}
-            currentIndex={currentIndex}
-            onPlayTrack={handlePlayQueueTrack}
-            onRemoveTrack={handleRemoveTrack}
-            onPlayNext={handlePlayNext}
-            onClearQueue={handleClearQueue}
-            onSavePlaylist={handleSaveQueueAsPlaylist}
-          />
-
-          <LibraryView
-            likedTracks={likedTracks}
-            playlists={playlists}
-            history={history}
-            lastSession={lastSession}
-            onPlayTrack={handlePlaySingleTrack}
-            onPlayPlaylist={handlePlayPlaylist}
-            onCreatePlaylist={createPlaylist}
-            onDeletePlaylist={deletePlaylist}
-            onResumeSession={handleResumeSession}
-          />
-        </div>
-      </main>
-
-      {/* Persistent Bottom Audio Player Bar */}
-      <PlayerBar
-        currentTrack={activeTrack}
-        status={playerState.status}
-        positionMs={playerState.positionMs}
-        durationMs={playerState.durationMs}
-        volume={playerState.volume}
-        mode={playerState.mode}
-        pingMs={sync.pingMs}
-        isLiked={activeTrack ? isLiked(activeTrack.id) : false}
-        onToggleLike={(t) => toggleLike(t)}
-        onTogglePlay={handleTogglePlay}
-        onSeek={handleSeek}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onVolumeChange={(v) => coordinator.setVolume(v)}
-      />
+      </div>
 
       {/* Share / Invite Modal */}
       <InviteModal

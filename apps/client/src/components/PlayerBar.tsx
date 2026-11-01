@@ -98,13 +98,13 @@ export function PlayerBar({
   };
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#0b0d13]/95 backdrop-blur-lg border-t border-[#1f2638] px-6 py-3">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-2xl border-t border-white/10 px-6 py-3 shadow-2xl">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Left Track Info */}
         <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
           {currentTrack ? (
             <>
-              <div className="w-12 h-12 rounded-xl bg-[#131722] border border-[#1f2638] flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+              <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
                 {currentTrack.coverUrl ? (
                   <img
                     src={currentTrack.coverUrl}

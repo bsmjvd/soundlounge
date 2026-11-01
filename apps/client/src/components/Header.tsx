@@ -22,7 +22,7 @@ export function Header({
   onOpenInvite,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#1f2638] bg-[#0b0d13]/90 backdrop-blur-md px-6 py-3.5">
+    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/40 backdrop-blur-2xl px-6 py-3.5 shadow-lg">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-3">
@@ -38,7 +38,7 @@ export function Header({
         </div>
 
         {/* Mode Switcher Pill */}
-        <div className="flex items-center bg-[#131722] p-1 rounded-xl border border-[#1f2638]">
+        <div className="flex items-center bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/10">
           <button
             onClick={() => onModeChange("solo")}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
