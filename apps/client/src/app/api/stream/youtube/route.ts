@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Ytdl, chooseFormat } from "@distube/ytdl-core";
-import { Innertube, ClientType } from "youtubei.js";
+import { Innertube } from "youtubei.js";
 
 interface CachedFormat {
   url: string;
@@ -17,7 +17,6 @@ let innertubePromise: Promise<Innertube> | null = null;
 async function getInnertube(): Promise<Innertube> {
   if (!innertubePromise) {
     innertubePromise = Innertube.create({
-      client_type: ClientType.IOS,
       retrieve_player: false,
       generate_session_locally: true,
     }).catch((err) => {
@@ -123,44 +122,6 @@ async function getAudioStreamUrl(
 
   let videoId = await resolveToValidVideoId(idInput, title, artist, q);
 
-  // 1. Primary resolver: Direct pre-signed audio resolution via Innertube iOS Client
-  // Completely avoids YouTube signature cipher & player JS download failures on Vercel data centers
-  try {
-    const yt = await getInnertube();
-    const basicInfo = await yt.getBasicInfo(videoId);
-    const audioFormats =
-      basicInfo.streaming_data?.adaptive_formats.filter((f) => f.mime_type.startsWith("audio/") && f.url) || [];
-
-    // Prefer audio/mp4 (AAC) for universal Safari/iOS/Chrome playback, fallback to audio/webm (Opus)
-    const chosen = audioFormats.find((f) => f.mime_type.includes("mp4")) || audioFormats[0];
-
-    if (chosen && chosen.url) {
-      let expireMs = NaN;
-      try {
-        expireMs = Number(new URL(chosen.url).searchParams.get("expire")) * 1000;
-      } catch {}
-
-      const expiresAt =
-        Number.isFinite(expireMs) && expireMs > 0
-          ? Math.min(expireMs - 60000, Date.now() + 3600000)
-          : Date.now() + 3600000;
-
-      const result: CachedFormat = {
-        url: chosen.url,
-        mimeType: chosen.mime_type.split(";")[0] || "audio/mp4",
-        contentLength: chosen.content_length || 0,
-        expiresAt,
-      };
-
-      formatCache.set(cacheKey, result);
-      formatCache.set(videoId, result);
-      return result;
-    }
-  } catch (innertubeErr) {
-    console.warn(`Innertube iOS resolution failed for ${videoId}, falling back to ytdl:`, innertubeErr);
-  }
-
-  // 2. Secondary fallback: @distube/ytdl-core
   let info: Awaited<ReturnType<typeof ytdl.getInfo>>;
   try {
     info = await ytdl.getInfo(videoId);
@@ -241,6 +202,7 @@ export async function GET(req: NextRequest) {
     const upstreamHeaders: Record<string, string> = {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      Referer: "https://www.youtube.com/",
     };
 
     if (rangeHeader) {
