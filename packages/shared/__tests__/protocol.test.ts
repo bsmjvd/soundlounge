@@ -67,4 +67,61 @@ describe("Soundlounge Protocol Validation", () => {
     expect(PRIVATE_ROOM_CLOSE_CODE).toBe(4003);
     expect(PROBE_GAP_MS).toBe(25);
   });
+
+  it("validates AlbumSchema with movie details and disambiguation keys", () => {
+    const { AlbumSchema, createDisambiguationKey } = require("../src/index");
+
+    // Case 1: The Train (2007) Bollywood Film
+    const train2007Key = createDisambiguationKey("The Train", 2007, "Mithoon");
+    expect(train2007Key).toBe("the_train_2007_mithoon");
+
+    const train2007Album = {
+      id: train2007Key,
+      title: "The Train",
+      releaseYear: 2007,
+      type: "movie_soundtrack",
+      disambiguationLabel: "2007 Bollywood Thriller • Mithoon, KK, Emraan Hashmi",
+      primaryArtist: "Mithoon",
+      featuredSingers: ["KK", "Shilpa Rao", "Zubeen Garg"],
+      genres: ["Bollywood", "Sufi Rock"],
+      coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+      movieDetails: {
+        movieTitle: "The Train",
+        releaseYear: 2007,
+        starCast: ["Emraan Hashmi", "Geeta Basra"],
+        musicDirectors: ["Mithoon"],
+        lyricists: ["Sayeed Quadri"],
+      },
+      tracks: [
+        {
+          id: "yt_beete_lamhein",
+          title: "Beete Lamhein",
+          artist: "KK",
+          durationMs: 312000,
+          url: "https://r2.soundlounge.app/youtube/yt_beete_lamhein.m4a",
+          source: "youtube",
+        },
+        {
+          id: "yt_wo_ajnabee",
+          title: "Wo Ajnabee",
+          artist: "Mithoon, Shilpa Rao",
+          durationMs: 345000,
+          url: "https://r2.soundlounge.app/youtube/yt_wo_ajnabee.m4a",
+          source: "youtube",
+        },
+      ],
+    };
+    expect(AlbumSchema.parse(train2007Album)).toMatchObject(train2007Album);
+
+    // Case 2: The Train (1970) Bollywood Film
+    const train1970Key = createDisambiguationKey("The Train", 1970, "RD Burman");
+    expect(train1970Key).toBe("the_train_1970_rd_burman");
+    expect(train1970Key).not.toBe(train2007Key);
+
+    // Case 3: Train (American Rock Band)
+    const trainBandKey = createDisambiguationKey("Train", 1993, "Band");
+    expect(trainBandKey).toBe("train_1993_band");
+    expect(trainBandKey).not.toBe(train2007Key);
+    expect(trainBandKey).not.toBe(train1970Key);
+  });
 });

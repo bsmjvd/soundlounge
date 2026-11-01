@@ -16,7 +16,12 @@ import { AccessDenied } from "../components/AccessDenied";
 import { StudioImmersiveModal } from "../components/StudioImmersiveModal";
 import { NavigationSidebar, type NavTab } from "../components/NavigationSidebar";
 import { ArtistDetailView } from "../components/ArtistDetailView";
+import { AlbumDetailView } from "../components/AlbumDetailView";
+import { AlbumsDirectoryView } from "../components/AlbumsDirectoryView";
+import { GenreDirectoryView } from "../components/GenreDirectoryView";
 import { type ArtistProfileData, ARTISTS_CATALOG } from "../lib/data/artistsCatalog";
+import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
+import type { MusicGenre } from "../lib/recommendation/genreTaxonomy";
 
 import {
   AudioEngineCoordinator,
@@ -26,7 +31,7 @@ import {
 import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
-import type { Track, Playlist } from "@soundlounge/shared";
+import type { Track, Playlist, Album } from "@soundlounge/shared";
 
 // Singleton coordinator instance for the browser tab
 let coordinatorSingleton: AudioEngineCoordinator | null = null;
@@ -43,6 +48,7 @@ export default function SoundloungeApp() {
   // Navigation and Modal State
   const [activeTab, setActiveTab] = useState<NavTab>("home");
   const [selectedArtist, setSelectedArtist] = useState<ArtistProfileData | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [navHistory, setNavHistory] = useState<NavTab[]>(["home"]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,6 +70,7 @@ export default function SoundloungeApp() {
 
   const handleTabChange = (tab: NavTab) => {
     setSelectedArtist(null);
+    setSelectedAlbum(null);
     setActiveTab(tab);
     setNavHistory((prev) => [...prev.slice(0, historyIndex + 1), tab]);
     setHistoryIndex((prev) => prev + 1);
@@ -204,6 +211,36 @@ export default function SoundloungeApp() {
     if (tracks.length === 0) return;
     useQueueStore.getState().setQueue(tracks, 0);
     handlePlaySingleTrack(tracks[0]);
+  };
+
+  const handlePlayAlbum = (tracks: Track[]) => {
+    if (tracks.length === 0) return;
+    useQueueStore.getState().setQueue(tracks, 0);
+    handlePlaySingleTrack(tracks[0]);
+  };
+
+  const handleAddAlbumToQueue = (tracks: Track[]) => {
+    tracks.forEach((t) => handleAddTrack(t, false));
+  };
+
+  const handlePlayGenreRadio = (genre: MusicGenre) => {
+    const genreAlbums = ALBUMS_CATALOG.filter((a) =>
+      a.genres.some((g) => g.toLowerCase().includes(genre))
+    );
+    const genreArtists = ARTISTS_CATALOG.filter(
+      (a) => a.region === genre || a.genre.toLowerCase().includes(genre)
+    );
+
+    let starterTracks: Track[] = [];
+    if (genreAlbums.length > 0) {
+      starterTracks = genreAlbums[0].tracks;
+    } else if (genreArtists.length > 0) {
+      starterTracks = genreArtists[0].topTracks;
+    }
+
+    if (starterTracks.length > 0) {
+      handlePlayAlbum(starterTracks);
+    }
   };
 
   const handlePlayPlaylist = (playlist: Playlist) => {
@@ -448,6 +485,17 @@ export default function SoundloungeApp() {
                   currentTrack={activeTrack}
                   isPlaying={playerState.status === "playing"}
                 />
+              ) : selectedAlbum ? (
+                <AlbumDetailView
+                  album={selectedAlbum}
+                  onBack={() => setSelectedAlbum(null)}
+                  onPlayTrack={handlePlaySingleTrack}
+                  onAddTrack={handleAddTrack}
+                  onPlayAlbum={handlePlayAlbum}
+                  onAddAlbumToQueue={handleAddAlbumToQueue}
+                  currentTrack={activeTrack}
+                  isPlaying={playerState.status === "playing"}
+                />
               ) : (
                 <>
                   {/* 1. CORE HOME VIEW (Exact 3-Column Dashboard from Reference) */}
@@ -590,10 +638,29 @@ export default function SoundloungeApp() {
                     </div>
                   )}
 
-                  {/* 7. OTHER TABS (Albums, Genres, Radio, Podcasts, Downloaded) */}
-                  {(activeTab === "albums" ||
-                    activeTab === "genres" ||
-                    activeTab === "radio" ||
+                  {/* 7. ALBUMS & MOVIE SOUNDTRACKS VIEW */}
+                  {activeTab === "albums" && (
+                    <div className="max-w-6xl mx-auto">
+                      <AlbumsDirectoryView
+                        onSelectAlbum={(album) => setSelectedAlbum(album)}
+                        onPlayAlbumQuick={(album) => handlePlayAlbum(album.tracks)}
+                      />
+                    </div>
+                  )}
+
+                  {/* 8. GENRE ECOSYSTEM VIEW */}
+                  {activeTab === "genres" && (
+                    <div className="max-w-6xl mx-auto">
+                      <GenreDirectoryView
+                        onPlayGenreRadio={handlePlayGenreRadio}
+                        onSelectArtist={(artist) => setSelectedArtist(artist)}
+                        onSelectAlbum={(album) => setSelectedAlbum(album)}
+                      />
+                    </div>
+                  )}
+
+                  {/* 9. OTHER TABS (Radio, Podcasts, Downloaded) */}
+                  {(activeTab === "radio" ||
                     activeTab === "podcasts" ||
                     activeTab === "downloaded") && (
                     <div className="max-w-4xl mx-auto py-12 text-center rounded-2xl bg-[#0d181e] border border-[#1a2c35] space-y-3">
@@ -601,7 +668,7 @@ export default function SoundloungeApp() {
                         {activeTab} Channel
                       </h3>
                       <p className="text-xs text-[#718492] max-w-md mx-auto">
-                        Live curated stream and playlist collection for {activeTab}. Click below to explore top weekly songs or search any track.
+                        Live curated stream and audio channel for {activeTab}.
                       </p>
                       <div className="pt-2 flex justify-center gap-3">
                         <button
@@ -609,12 +676,6 @@ export default function SoundloungeApp() {
                           className="px-4 py-2 rounded-xl bg-[#00e5c9] text-[#081014] text-xs font-semibold hover:bg-[#1cebd2] transition-colors cursor-pointer"
                         >
                           Explore Home Charts
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("search")}
-                          className="px-4 py-2 rounded-xl bg-[#13222a] border border-[#203642] text-white text-xs font-semibold hover:bg-[#1a2c35] transition-colors cursor-pointer"
-                        >
-                          Search Music
                         </button>
                       </div>
                     </div>
