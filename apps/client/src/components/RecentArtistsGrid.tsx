@@ -33,6 +33,7 @@ export function RecentArtistsGrid({ onSelectArtist }: RecentArtistsGridProps) {
           { id: "all", label: "All" },
           { id: "global", label: "Global" },
           { id: "punjabi", label: "Punjabi" },
+          { id: "ghazal", label: "Ghazal" },
           { id: "hiphop", label: "Hip-Hop" },
           { id: "electronic", label: "EDM" },
         ].map((tab) => (

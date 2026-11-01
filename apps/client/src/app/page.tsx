@@ -101,7 +101,14 @@ export default function SoundloungeApp() {
   }, [coordinator]);
 
   // Stores
-  const { queue, currentIndex } = useQueueStore();
+  const {
+    queue,
+    currentIndex,
+    isAutoplayEnabled,
+    toggleAutoplay,
+    autoQueueReasons,
+    ensureSimilarQueued,
+  } = useQueueStore();
 
   const {
     likedTracks,
@@ -188,6 +195,8 @@ export default function SoundloungeApp() {
     } else {
       useQueueStore.getState().setQueue([track], 0);
       coordinator.play(track, 0);
+      // Automatically queue similar tracks matching artist or genre
+      ensureSimilarQueued(track, history);
     }
   };
 
@@ -250,8 +259,18 @@ export default function SoundloungeApp() {
     }
   };
 
-  const handleNext = () => {
-    const next = useQueueStore.getState().nextTrack();
+  const handleNext = async () => {
+    let next = useQueueStore.getState().nextTrack();
+    if (!next && isAutoplayEnabled) {
+      const cur = playerState.currentTrack || queue[currentIndex];
+      if (cur) {
+        const autoNext = await ensureSimilarQueued(cur, history);
+        if (autoNext) {
+          next = useQueueStore.getState().nextTrack();
+        }
+      }
+    }
+
     if (next) {
       addToHistory(next);
       if (playerState.mode === "synced") {
@@ -261,6 +280,21 @@ export default function SoundloungeApp() {
       }
     }
   };
+
+  // Autonomous continuous similarity queuing:
+  // When a track is playing and the queue is nearing completion, queue similar tracks
+  useEffect(() => {
+    const cur = playerState.currentTrack || queue[currentIndex];
+    if (cur && playerState.status === "playing" && isAutoplayEnabled) {
+      ensureSimilarQueued(cur, history);
+    }
+  }, [
+    playerState.currentTrack?.id,
+    playerState.status,
+    queue.length,
+    currentIndex,
+    isAutoplayEnabled,
+  ]);
 
   const handlePrevious = () => {
     const prev = useQueueStore.getState().previousTrack();
@@ -493,6 +527,9 @@ export default function SoundloungeApp() {
                       <QueueView
                         queue={queue}
                         currentIndex={currentIndex}
+                        isAutoplayEnabled={isAutoplayEnabled}
+                        onToggleAutoplay={toggleAutoplay}
+                        autoQueueReasons={autoQueueReasons}
                         onPlayTrack={handlePlayQueueTrack}
                         onRemoveTrack={handleRemoveTrack}
                         onPlayNext={handlePlayNext}

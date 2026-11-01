@@ -1,13 +1,13 @@
 import type { Track } from "@soundlounge/shared";
 
-export type RegionKey = "all" | "global" | "punjabi" | "electronic" | "hiphop";
+export type RegionKey = "all" | "global" | "punjabi" | "electronic" | "hiphop" | "ghazal";
 
 export interface ArtistProfileData {
   id: string;
   name: string;
   realName: string;
   genre: string;
-  region: "global" | "punjabi" | "electronic" | "hiphop";
+  region: "global" | "punjabi" | "electronic" | "hiphop" | "ghazal";
   regionLabel: string;
   avatarUrl: string;
   bannerUrl: string;
@@ -536,6 +536,235 @@ export const ARTISTS_CATALOG: ArtistProfileData[] = [
         coverUrl:
           "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80",
         url: "/api/stream/youtube?id=Naina_Diljit",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+    ],
+  },
+  {
+    id: "jagjit-singh",
+    name: "Jagjit Singh",
+    realName: "Jagmohan Singh Dhiman",
+    genre: "Ghazal / Urdu Poetry",
+    region: "ghazal",
+    regionLabel: "South Asia / Ghazal",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1600&auto=format&fit=crop&q=80",
+    monthlyListeners: "8.9M",
+    bio: "Revered as 'The King of Ghazals', Jagjit Singh revolutionized the genre by making traditional Urdu poetry accessible and deeply emotive to modern listeners worldwide.",
+    topTracks: [
+      {
+        id: "yt_TumItnaJo",
+        title: "Tum Itna Jo Muskura Rahe Ho",
+        artist: "Jagjit Singh",
+        durationMs: 318000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=TumItnaJo",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_HoshwalonKo",
+        title: "Hoshwalon Ko Khabar Kya",
+        artist: "Jagjit Singh",
+        durationMs: 302000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=HoshwalonKo",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_ChithiNaKoi",
+        title: "Chitthi Na Koi Sandesh",
+        artist: "Jagjit Singh",
+        durationMs: 395000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=ChithiNaKoi",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_JhukiJhuki",
+        title: "Jhuki Jhuki Si Nazar",
+        artist: "Jagjit Singh",
+        durationMs: 284000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=JhukiJhuki",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_WohKagaz",
+        title: "Woh Kagaz Ki Kashti",
+        artist: "Jagjit Singh",
+        durationMs: 240000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=WohKagaz",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+    ],
+  },
+  {
+    id: "mehdi-hassan",
+    name: "Mehdi Hassan",
+    realName: "Mehdi Hassan Khan",
+    genre: "Classical Ghazal / Thumri",
+    region: "ghazal",
+    regionLabel: "South Asia / Ghazal",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=800&auto=format&fit=crop&q=80",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1600&auto=format&fit=crop&q=80",
+    monthlyListeners: "4.2M",
+    bio: "The 'Shahenshah-e-Ghazal' (Emperor of Ghazals), celebrated for his immaculate baritone, profound classical ornamentation, and mastery over traditional ragas.",
+    topTracks: [
+      {
+        id: "yt_RanjishHiSahi",
+        title: "Ranjish Hi Sahi",
+        artist: "Mehdi Hassan",
+        durationMs: 380000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=RanjishHiSahi",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_GulonMeinRang",
+        title: "Gulon Mein Rang Bhare",
+        artist: "Mehdi Hassan",
+        durationMs: 320000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=GulonMeinRang",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_DuniyaKisiKe",
+        title: "Duniya Kisi Ke Pyaar Mein",
+        artist: "Mehdi Hassan",
+        durationMs: 295000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=DuniyaKisiKe",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_ZindagiMeinToh",
+        title: "Zindagi Mein Toh Sabhi Pyaar",
+        artist: "Mehdi Hassan",
+        durationMs: 310000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=ZindagiMeinToh",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+    ],
+  },
+  {
+    id: "ghulam-ali",
+    name: "Ghulam Ali",
+    realName: "Ustad Ghulam Ali",
+    genre: "Ghazal / Hindustani Classical",
+    region: "ghazal",
+    regionLabel: "South Asia / Ghazal",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1600&auto=format&fit=crop&q=80",
+    monthlyListeners: "3.7M",
+    bio: "Patiala Gharana maestro renowned for seamlessly blending intricate classical sargam and taans into romantic, melancholic Ghazal renditions.",
+    topTracks: [
+      {
+        id: "yt_ChupkeChupke",
+        title: "Chupke Chupke Raat Din",
+        artist: "Ghulam Ali",
+        durationMs: 440000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=ChupkeChupke",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_HungamaHaiKyon",
+        title: "Hungama Hai Kyon Barpa",
+        artist: "Ghulam Ali",
+        durationMs: 360000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=HungamaHaiKyon",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_ApniDhunMein",
+        title: "Apni Dhun Mein Rehta Hoon",
+        artist: "Ghulam Ali",
+        durationMs: 315000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=ApniDhunMein",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+    ],
+  },
+  {
+    id: "pankaj-udhas",
+    name: "Pankaj Udhas",
+    realName: "Pankaj Udhas",
+    genre: "Ghazal / Nazm",
+    region: "ghazal",
+    regionLabel: "South Asia / Ghazal",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop&q=80",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1600&auto=format&fit=crop&q=80",
+    monthlyListeners: "5.1M",
+    bio: "Pioneering Indian ghazal singer known for his soft, melodic touch and heartfelt storytelling, achieving immortal fame with 'Chitthi Aayi Hai'.",
+    topTracks: [
+      {
+        id: "yt_ChitthiAayiHai",
+        title: "Chitthi Aayi Hai",
+        artist: "Pankaj Udhas",
+        durationMs: 430000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=ChitthiAayiHai",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_ChandiJaisaRang",
+        title: "Chandi Jaisa Rang Hai Tera",
+        artist: "Pankaj Udhas",
+        durationMs: 330000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=ChandiJaisaRang",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_AapJinkeKareeb",
+        title: "Aap Jinke Kareeb Hote Hain",
+        artist: "Pankaj Udhas",
+        durationMs: 310000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=AapJinkeKareeb",
         source: "youtube",
         createdAt: Date.now(),
       },

@@ -1,0 +1,165 @@
+import { describe, it, expect } from "bun:test";
+import { findSimilarTrack } from "../SimilarTracksEngine";
+import type { Track } from "@soundlounge/shared";
+
+describe("Intelligent Similar Tracks Recommendation Engine", () => {
+  const sidhuTrack1: Track = {
+    id: "yt_295",
+    title: "295",
+    artist: "Sidhu Moose Wala",
+    durationMs: 270000,
+    url: "/api/stream/youtube?id=295",
+    source: "youtube",
+  };
+
+  const sidhuTrack2: Track = {
+    id: "yt_TheLastRide",
+    title: "The Last Ride",
+    artist: "Sidhu Moose Wala",
+    durationMs: 260000,
+    url: "/api/stream/youtube?id=TheLastRide",
+    source: "youtube",
+  };
+
+  const jagjitTrack1: Track = {
+    id: "yt_TumItnaJo",
+    title: "Tum Itna Jo Muskura Rahe Ho",
+    artist: "Jagjit Singh",
+    durationMs: 318000,
+    url: "/api/stream/youtube?id=TumItnaJo",
+    source: "youtube",
+  };
+
+  const weekndTrack1: Track = {
+    id: "yt_fHI8X480mxo",
+    title: "Blinding Lights",
+    artist: "The Weeknd",
+    durationMs: 200000,
+    url: "/api/stream/youtube?id=fHI8X480mxo",
+    source: "youtube",
+  };
+
+  it("prioritizes another track by the same artist when available in catalog", async () => {
+    const res = await findSimilarTrack({
+      currentTrack: sidhuTrack1,
+      existingQueue: [sidhuTrack1],
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.track.artist).toContain("Sidhu Moose Wala");
+    expect(res!.track.id).not.toBe(sidhuTrack1.id);
+    expect(res!.matchType).toBe("same_artist");
+  });
+
+  it("recommends a Ghazal peer (Mehdi Hassan / Ghulam Ali / Pankaj Udhas) when Ghazal is playing and artist tracks are exhausted", async () => {
+    // Exclude all Jagjit Singh tracks so same-artist is exhausted
+    const allJagjitIds = [
+      "yt_TumItnaJo",
+      "yt_HoshwalonKo",
+      "yt_ChithiNaKoi",
+      "yt_JhukiJhuki",
+      "yt_WohKagaz",
+    ];
+    const dummyQueue: Track[] = allJagjitIds.map((id) => ({
+      id,
+      title: "Sample",
+      artist: "Jagjit Singh",
+      durationMs: 200000,
+      url: `/api/stream/youtube?id=${id}`,
+      source: "youtube",
+    }));
+
+    const res = await findSimilarTrack({
+      currentTrack: jagjitTrack1,
+      existingQueue: dummyQueue,
+    });
+
+    expect(res).not.toBeNull();
+    // Must recommend a fellow Ghazal legend
+    const peerArtists = ["mehdi hassan", "ghulam ali", "pankaj udhas"];
+    const matchedPeer = peerArtists.some((p) =>
+      res!.track.artist.toLowerCase().includes(p)
+    );
+    expect(matchedPeer).toBe(true);
+    expect(res!.matchType).toMatch(/peer_artist|genre_match/);
+    expect(res!.reason.toLowerCase()).toContain("ghazal");
+  });
+
+  it("recommends Pop peers (Dua Lipa / Billie Eilish) when Pop track is playing", async () => {
+    // Exclude all The Weeknd tracks
+    const allWeekndIds = [
+      "yt_34Na4j8AVgA",
+      "yt_fHI8X480mxo",
+      "yt_XXYlFuWEuKI",
+      "yt_yzTuBuRdAyA",
+      "yt_CtyytBCHA9U",
+    ];
+    const dummyQueue: Track[] = allWeekndIds.map((id) => ({
+      id,
+      title: "Sample Pop",
+      artist: "The Weeknd",
+      durationMs: 200000,
+      url: `/api/stream/youtube?id=${id}`,
+      source: "youtube",
+    }));
+
+    const res = await findSimilarTrack({
+      currentTrack: weekndTrack1,
+      existingQueue: dummyQueue,
+    });
+
+    expect(res).not.toBeNull();
+    const isPopPeer =
+      res!.track.artist.toLowerCase().includes("dua lipa") ||
+      res!.track.artist.toLowerCase().includes("billie eilish");
+    expect(isPopPeer).toBe(true);
+  });
+
+  it("falls back to live YouTube search for arbitrary external tracks", async () => {
+    const obscureTrack: Track = {
+      id: "yt_obscure_99",
+      title: "Rare Ambient Soundscape 404",
+      artist: "Autonomous Ambient Ensemble",
+      durationMs: 400000,
+      url: "/api/stream/youtube?id=obscure_99",
+      source: "youtube",
+    };
+
+    const mockLiveTrack: Track = {
+      id: "yt_discovered_123",
+      title: "Atmospheric Echoes In F Minor",
+      artist: "Autonomous Ambient Ensemble",
+      durationMs: 350000,
+      url: "/api/stream/youtube?id=discovered_123",
+      source: "youtube",
+    };
+
+    const mockFetch = async () => {
+      return {
+        ok: true,
+        json: async () => ({ tracks: [mockLiveTrack] }),
+      } as unknown as Response;
+    };
+
+    const res = await findSimilarTrack({
+      currentTrack: obscureTrack,
+      existingQueue: [obscureTrack],
+      fetchFn: mockFetch as any,
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.track.id).toBe("yt_discovered_123");
+    expect(res!.matchType).toBe("live_search");
+  });
+
+  it("never duplicates tracks already in the active queue", async () => {
+    const queue = [sidhuTrack1, sidhuTrack2];
+    const res = await findSimilarTrack({
+      currentTrack: sidhuTrack1,
+      existingQueue: queue,
+    });
+
+    expect(res).not.toBeNull();
+    expect(queue.some((t) => t.id === res!.track.id)).toBe(false);
+  });
+});

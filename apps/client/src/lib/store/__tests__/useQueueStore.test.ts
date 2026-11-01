@@ -98,4 +98,38 @@ describe("useQueueStore", () => {
     previousTrack();
     expect(useQueueStore.getState().getCurrentTrack()?.id).toBe("track_a");
   });
+
+  it("toggles and maintains autoplay state", () => {
+    expect(useQueueStore.getState().isAutoplayEnabled).toBe(true);
+
+    useQueueStore.getState().toggleAutoplay();
+    expect(useQueueStore.getState().isAutoplayEnabled).toBe(false);
+
+    useQueueStore.getState().setAutoplayEnabled(true);
+    expect(useQueueStore.getState().isAutoplayEnabled).toBe(true);
+  });
+
+  it("automatically queues a similar track when ensureSimilarQueued is invoked", async () => {
+    const sidhuTrack: Track = {
+      id: "yt_295",
+      title: "295",
+      artist: "Sidhu Moose Wala",
+      durationMs: 270000,
+      url: "/api/stream/youtube?id=295",
+      source: "youtube",
+    };
+
+    useQueueStore.getState().setQueue([sidhuTrack], 0);
+    expect(useQueueStore.getState().queue.length).toBe(1);
+
+    const queued = await useQueueStore.getState().ensureSimilarQueued(sidhuTrack);
+    expect(queued).not.toBeNull();
+    expect(useQueueStore.getState().queue.length).toBe(2);
+    expect(useQueueStore.getState().queue[1].artist).toContain("Sidhu Moose Wala");
+
+    // Check that autoQueueReason is recorded
+    const reason = useQueueStore.getState().autoQueueReasons[queued!.id];
+    expect(reason).toBeDefined();
+    expect(reason).toContain("Sidhu Moose Wala");
+  });
 });

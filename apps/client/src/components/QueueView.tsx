@@ -10,6 +10,7 @@ import {
   Music2,
   X,
   Volume2,
+  Sparkles,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import { TrackArtwork } from "./TrackArtwork";
@@ -17,6 +18,9 @@ import { TrackArtwork } from "./TrackArtwork";
 interface QueueViewProps {
   queue: Track[];
   currentIndex: number;
+  isAutoplayEnabled?: boolean;
+  onToggleAutoplay?: () => void;
+  autoQueueReasons?: Record<string, string>;
   onPlayTrack: (track: Track, index: number) => void;
   onRemoveTrack: (trackId: string) => void;
   onPlayNext: (track: Track) => void;
@@ -27,6 +31,9 @@ interface QueueViewProps {
 export function QueueView({
   queue,
   currentIndex,
+  isAutoplayEnabled = true,
+  onToggleAutoplay,
+  autoQueueReasons = {},
   onPlayTrack,
   onRemoveTrack,
   onPlayNext,
@@ -66,24 +73,41 @@ export function QueueView({
           </p>
         </div>
 
-        {queue.length > 0 && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {onToggleAutoplay && (
             <button
-              onClick={() => setShowSaveModal(true)}
-              className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-white px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
+              onClick={onToggleAutoplay}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                isAutoplayEnabled
+                  ? "bg-[#00e5c9]/15 text-[#00e5c9] border-[#00e5c9]/40 shadow-sm shadow-[#00e5c9]/20 font-semibold"
+                  : "bg-[#0e111a] hover:bg-[#151926] text-[#71788d] border-[#1b202d]"
+              }`}
+              title="Automatically queue similar songs matching artist and genre"
             >
-              <BookmarkPlus className="w-3.5 h-3.5 text-indigo-400" />
-              Save Playlist
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Autoplay Similar: {isAutoplayEnabled ? "ON" : "OFF"}</span>
             </button>
-            <button
-              onClick={onClearQueue}
-              className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-rose-400 px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Clear
-            </button>
-          </div>
-        )}
+          )}
+
+          {queue.length > 0 && (
+            <>
+              <button
+                onClick={() => setShowSaveModal(true)}
+                className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-white px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
+              >
+                <BookmarkPlus className="w-3.5 h-3.5 text-indigo-400" />
+                Save Playlist
+              </button>
+              <button
+                onClick={onClearQueue}
+                className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-rose-400 px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Save Queue Modal Inline Form */}
@@ -176,9 +200,17 @@ export function QueueView({
                       >
                         {track.title}
                       </p>
-                      <p className="text-[11px] text-[#71788d] truncate mt-0.5">
-                        {track.artist}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[11px] text-[#71788d] truncate">
+                          {track.artist}
+                        </p>
+                        {autoQueueReasons[track.id] && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-medium text-[#00e5c9] bg-[#00e5c9]/10 px-1.5 py-0.5 rounded border border-[#00e5c9]/25 shrink-0">
+                            <Sparkles className="w-2.5 h-2.5" />
+                            {autoQueueReasons[track.id]}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

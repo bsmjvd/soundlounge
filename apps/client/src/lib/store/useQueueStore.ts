@@ -1,9 +1,13 @@
 import { create } from "zustand";
 import type { Track } from "@soundlounge/shared";
+import { findSimilarTrack } from "../recommendation/SimilarTracksEngine";
 
 export interface QueueState {
   queue: Track[];
   currentIndex: number;
+  isAutoplayEnabled: boolean;
+  autoQueueReasons: Record<string, string>;
+  isFetchingSimilar: boolean;
 
   // Actions
   addTrack: (track: Track, playNext?: boolean) => void;
@@ -15,11 +19,75 @@ export interface QueueState {
   previousTrack: () => Track | null;
   getCurrentTrack: () => Track | null;
   setCurrentIndex: (index: number) => void;
+  toggleAutoplay: () => void;
+  setAutoplayEnabled: (enabled: boolean) => void;
+  setAutoQueueReason: (trackId: string, reason: string) => void;
+  ensureSimilarQueued: (currentTrack: Track, history?: Track[]) => Promise<Track | null>;
 }
 
 export const useQueueStore = create<QueueState>()((set, get) => ({
   queue: [],
   currentIndex: -1,
+  isAutoplayEnabled: true,
+  autoQueueReasons: {},
+  isFetchingSimilar: false,
+
+  toggleAutoplay: () => {
+    set((state) => ({ isAutoplayEnabled: !state.isAutoplayEnabled }));
+  },
+
+  setAutoplayEnabled: (enabled: boolean) => {
+    set({ isAutoplayEnabled: enabled });
+  },
+
+  setAutoQueueReason: (trackId: string, reason: string) => {
+    set((state) => ({
+      autoQueueReasons: { ...state.autoQueueReasons, [trackId]: reason },
+    }));
+  },
+
+  ensureSimilarQueued: async (currentTrack: Track, history: Track[] = []) => {
+    const state = get();
+    if (!state.isAutoplayEnabled || !currentTrack || state.isFetchingSimilar) {
+      return null;
+    }
+
+    // Only auto-queue if we have 1 or 0 tracks remaining ahead of the current track
+    const tracksAhead = state.queue.length - 1 - state.currentIndex;
+    if (tracksAhead >= 2) {
+      return null;
+    }
+
+    set({ isFetchingSimilar: true });
+    try {
+      const res = await findSimilarTrack({
+        currentTrack,
+        existingQueue: state.queue,
+        history,
+      });
+
+      if (res && res.track) {
+        const freshState = get();
+        // Double check not already present
+        if (!freshState.queue.some((t) => t.id === res.track.id)) {
+          set((s) => ({
+            queue: [...s.queue, res.track],
+            autoQueueReasons: {
+              ...s.autoQueueReasons,
+              [res.track.id]: res.reason,
+            },
+          }));
+          return res.track;
+        }
+      }
+      return null;
+    } catch (err) {
+      console.warn("Failed to auto-queue similar track:", err);
+      return null;
+    } finally {
+      set({ isFetchingSimilar: false });
+    }
+  },
 
   addTrack: (track: Track, playNext: boolean = false) => {
     set((state) => {
