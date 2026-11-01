@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Track } from "@soundlounge/shared";
-import { findSimilarTrack } from "../recommendation/SimilarTracksEngine";
+import { findSimilarTrack, normalizeSongTitle } from "../recommendation/SimilarTracksEngine";
 
 export interface QueueState {
   queue: Track[];
@@ -68,8 +68,22 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
 
       if (res && res.track) {
         const freshState = get();
-        // Double check not already present
-        if (!freshState.queue.some((t) => t.id === res.track.id)) {
+        // Double check not already present by ID or by normalized song title
+        const candNorm = normalizeSongTitle(res.track.title, res.track.artist);
+        const isDuplicate = freshState.queue.some((t) => {
+          if (t.id === res.track.id) return true;
+          const tNorm = normalizeSongTitle(t.title, t.artist);
+          return (
+            tNorm &&
+            candNorm &&
+            (tNorm === candNorm ||
+              (tNorm.length >= 4 &&
+                candNorm.length >= 4 &&
+                (tNorm.startsWith(candNorm) || candNorm.startsWith(tNorm))))
+          );
+        });
+
+        if (!isDuplicate) {
           set((s) => ({
             queue: [...s.queue, res.track],
             autoQueueReasons: {
@@ -136,12 +150,7 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
 
   reorderQueue: (fromIndex: number, toIndex: number) => {
     set((state) => {
-      if (
-        fromIndex < 0 ||
-        fromIndex >= state.queue.length ||
-        toIndex < 0 ||
-        toIndex >= state.queue.length
-      ) {
+      if (fromIndex < 0 || fromIndex >= state.queue.length || toIndex < 0 || toIndex >= state.queue.length) {
         return state;
       }
 

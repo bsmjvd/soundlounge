@@ -116,13 +116,32 @@ const ARTIST_DICTIONARY: { name: string; aliases: string[] }[] = [
   { name: "Taylor Swift", aliases: ["taylor swift"] },
   { name: "Drake", aliases: ["drake"] },
   { name: "Ed Sheeran", aliases: ["ed sheeran"] },
-  { name: "Justin Bieber", aliases: ["justin bieber"] },
+  { name: "Justin Bieber", aliases: ["justin Bieber", "bieber"] },
   { name: "Post Malone", aliases: ["post malone"] },
   { name: "Coldplay", aliases: ["coldplay"] },
   { name: "Pritam", aliases: ["pritam"] },
   { name: "Mithoon", aliases: ["mithoon"] },
   { name: "A.R. Rahman", aliases: ["a.r. rahman", "ar rahman", "rahman"] },
 ];
+
+interface AliasEntry {
+  artistName: string;
+  alias: string;
+  regex: RegExp;
+}
+
+// Precompile and sort aliases by length descending so longer, specific artist names
+// (e.g. "Karan Aujla") are matched before short 2-character abbreviations ("KK").
+const SORTED_ARTIST_ALIASES: AliasEntry[] = ARTIST_DICTIONARY.flatMap((entry) =>
+  entry.aliases.map((alias) => {
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return {
+      artistName: entry.name,
+      alias,
+      regex: new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, "i"),
+    };
+  })
+).sort((a, b) => b.alias.length - a.alias.length);
 
 function extractCleanTrackInfo(
   rawTitle: string,
@@ -134,23 +153,23 @@ function extractCleanTrackInfo(
   const queryLower = (query || "").toLowerCase().trim();
   const isLabel =
     RECORD_LABELS.some((l) => authorLower.includes(l)) ||
-    /music|records|company|entertainment|films|official|tseries/i.test(authorLower);
+    /music|records|company|entertainment|films|official|tseries|vevo/i.test(authorLower);
 
-  // 1. Check artist dictionary against title or author
+  // 1. Check title and author against sorted aliases with strict word-boundary matching
   let detectedArtist = "";
-  for (const entry of ARTIST_DICTIONARY) {
-    if (entry.aliases.some((alias) => titleLower.includes(alias) || authorLower.includes(alias))) {
-      detectedArtist = entry.name;
+  for (const entry of SORTED_ARTIST_ALIASES) {
+    if (entry.regex.test(titleLower) || entry.regex.test(authorLower)) {
+      detectedArtist = entry.artistName;
       break;
     }
   }
 
-  // 2. If query was searched for an artist (e.g. 'arjit')
+  // 2. If query was searched for an artist (e.g. 'arjit' or 'karan')
   if (!detectedArtist && queryLower.length >= 3) {
-    for (const entry of ARTIST_DICTIONARY) {
-      if (entry.aliases.some((alias) => alias.includes(queryLower) || queryLower.includes(alias))) {
-        if (titleLower.includes(queryLower) || titleLower.includes(entry.name.toLowerCase())) {
-          detectedArtist = entry.name;
+    for (const entry of SORTED_ARTIST_ALIASES) {
+      if (entry.regex.test(queryLower) || queryLower.includes(entry.alias)) {
+        if (titleLower.includes(queryLower) || entry.regex.test(titleLower)) {
+          detectedArtist = entry.artistName;
           break;
         }
       }
@@ -177,6 +196,12 @@ function extractCleanTrackInfo(
     .replace(/\(.*?\)/g, "")
     .replace(/\[.*?\]/g, "")
     .trim();
+
+  // If title ends with or contains the detected artist name, strip it to keep title clean
+  if (detectedArtist && detectedArtist !== "Various Artists" && detectedArtist !== "Unknown Artist") {
+    const artistRegex = new RegExp(`\\s*[-–—:]?\\s*${detectedArtist.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i");
+    cleanTitle = cleanTitle.replace(artistRegex, "").trim();
+  }
 
   return { title: cleanTitle || rawTitle, artist: detectedArtist };
 }
