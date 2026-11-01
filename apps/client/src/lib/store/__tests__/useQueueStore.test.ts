@@ -156,4 +156,41 @@ describe("useQueueStore", () => {
     expect(queue.map((t) => t.id)).toEqual(["track_a", "track_c", "track_b"]);
     expect(queue.length).toBe(3);
   });
+
+  it("replaces active queue cleanly when user starts a new track, seeding autoplay with the new artist", async () => {
+    const sidhuTrack: Track = {
+      id: "yt_295",
+      title: "295",
+      artist: "Sidhu Moose Wala",
+      durationMs: 270000,
+      url: "/api/stream/youtube?id=295",
+      source: "youtube",
+    };
+    const nusratTrack: Track = {
+      id: "yt_nfak_1",
+      title: "Mujhe Tum Yaad Aate Ho",
+      artist: "Nusrat Fateh Ali Khan",
+      durationMs: 320000,
+      url: "/api/stream/youtube?id=nfak_1",
+      source: "youtube",
+    };
+
+    // User was listening to Sidhu Moose Wala with an active queue
+    useQueueStore.getState().setQueue([sidhuTrack], 0);
+    await useQueueStore.getState().ensureSimilarQueued(sidhuTrack);
+    expect(useQueueStore.getState().queue.length).toBe(2);
+    expect(useQueueStore.getState().queue[1].artist).toContain("Sidhu Moose Wala");
+
+    // User searches for and selects Nusrat Fateh Ali Khan
+    useQueueStore.getState().setQueue([nusratTrack], 0);
+    expect(useQueueStore.getState().queue.length).toBe(1);
+    expect(useQueueStore.getState().queue[0].title).toBe("Mujhe Tum Yaad Aate Ho");
+
+    // Autoplay generates next track for Nusrat Fateh Ali Khan, NOT Sidhu Moose Wala
+    const nextQueued = await useQueueStore.getState().ensureSimilarQueued(nusratTrack);
+    expect(nextQueued).not.toBeNull();
+    expect(useQueueStore.getState().queue.length).toBe(2);
+    expect(useQueueStore.getState().queue[1].artist).toContain("Nusrat Fateh Ali Khan");
+    expect(useQueueStore.getState().queue.some((t) => t.artist.includes("Sidhu Moose Wala"))).toBe(false);
+  });
 });

@@ -198,26 +198,16 @@ export default function SoundloungeApp() {
   const handlePlaySingleTrack = (track: Track) => {
     addToHistory(track);
     if (playerState.mode === "synced") {
-      sync.sendAddTrack(track, true);
+      sync.sendClearQueue();
+      sync.sendAddTrack(track, false);
       sync.sendPlay(track.id, 0);
     } else {
       const state = useQueueStore.getState();
-      const existingIdx = state.queue.findIndex((t) => t.id === track.id);
-
-      if (existingIdx !== -1) {
-        // Track already exists in queue; switch to it without wiping queue
-        state.setCurrentIndex(existingIdx);
-      } else if (state.queue.length > 0) {
-        // Track not in queue, but user has an active queue:
-        // Insert right after current track and play it, preserving the rest of the queue
-        const insertIdx = state.currentIndex >= 0 ? state.currentIndex + 1 : 0;
-        state.addTrack(track, true);
-        state.setCurrentIndex(insertIdx);
-      } else {
-        // Queue was empty: initialize queue with this track
-        state.setQueue([track], 0);
-      }
+      state.setQueue([track], 0);
       coordinator.play(track, 0);
+      if (isAutoplayEnabled) {
+        state.ensureSimilarQueued(track, history);
+      }
     }
   };
 

@@ -195,6 +195,7 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
     set({
       queue: [],
       currentIndex: -1,
+      autoQueueReasons: {},
     });
   },
 
@@ -202,6 +203,7 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
     set({
       queue: tracks,
       currentIndex: tracks.length === 0 ? -1 : Math.max(0, Math.min(currentIndex, tracks.length - 1)),
+      autoQueueReasons: {},
     });
   },
 

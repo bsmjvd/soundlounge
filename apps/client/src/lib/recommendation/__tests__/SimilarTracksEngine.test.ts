@@ -39,6 +39,15 @@ describe("Intelligent Similar Tracks Recommendation Engine", () => {
     source: "youtube",
   };
 
+  const nusratTrack1: Track = {
+    id: "yt_MujheTumYaad",
+    title: "Mujhe Tum Yaad Aate Ho",
+    artist: "Nusrat Fateh Ali Khan",
+    durationMs: 320000,
+    url: "/api/stream/youtube?id=MujheTumYaad",
+    source: "youtube",
+  };
+
   it("prioritizes another track by the same artist when available in catalog", async () => {
     const res = await findSimilarTrack({
       currentTrack: sidhuTrack1,
@@ -49,6 +58,48 @@ describe("Intelligent Similar Tracks Recommendation Engine", () => {
     expect(res!.track.artist).toContain("Sidhu Moose Wala");
     expect(res!.track.id).not.toBe(sidhuTrack1.id);
     expect(res!.matchType).toBe("same_artist");
+  });
+
+  it("prioritizes another track by Nusrat Fateh Ali Khan when playing Nusrat track", async () => {
+    const res = await findSimilarTrack({
+      currentTrack: nusratTrack1,
+      existingQueue: [nusratTrack1],
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.track.artist).toContain("Nusrat Fateh Ali Khan");
+    expect(res!.track.id).not.toBe(nusratTrack1.id);
+    expect(res!.matchType).toBe("same_artist");
+    expect(res!.reason).toContain("Nusrat Fateh Ali Khan");
+  });
+
+  it("recommends Ghazal peers (Jagjit Singh / Mehdi Hassan) when Nusrat tracks are exhausted", async () => {
+    const allNusratIds = [
+      "yt_MujheTumYaad",
+      "yt_YeJoHalkaHalka",
+      "yt_AfreenAfreenOriginal",
+      "yt_MereRashkeQamar",
+      "yt_KinnaSohna",
+    ];
+    const dummyQueue: Track[] = allNusratIds.map((id) => ({
+      id,
+      title: "Sample Nusrat Track",
+      artist: "Nusrat Fateh Ali Khan",
+      durationMs: 300000,
+      url: `/api/stream/youtube?id=${id}`,
+      source: "youtube",
+    }));
+
+    const res = await findSimilarTrack({
+      currentTrack: nusratTrack1,
+      existingQueue: dummyQueue,
+    });
+
+    expect(res).not.toBeNull();
+    const ghazalArtists = ["jagjit singh", "mehdi hassan", "ghulam ali", "pankaj udhas"];
+    const matched = ghazalArtists.some((p) => res!.track.artist.toLowerCase().includes(p));
+    expect(matched).toBe(true);
+    expect(res!.reason.toLowerCase()).toMatch(/ghazal|similar/i);
   });
 
   it("recommends a Ghazal peer (Mehdi Hassan / Ghulam Ali / Pankaj Udhas) when Ghazal is playing and artist tracks are exhausted", async () => {

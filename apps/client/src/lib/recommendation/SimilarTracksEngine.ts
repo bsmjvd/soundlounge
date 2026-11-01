@@ -148,8 +148,24 @@ export function resolveEffectiveArtist(track: Track): string {
   if (matchesWordBoundary(titleLower, "jubin nautiyal") || matchesWordBoundary(titleLower, "jubin"))
     return "Jubin Nautiyal";
   if (matchesWordBoundary(titleLower, "roop kumar")) return "Roop Kumar Rathod";
+  if (
+    matchesWordBoundary(titleLower, "nusrat fateh ali khan") ||
+    matchesWordBoundary(titleLower, "nusrat fateh ali") ||
+    matchesWordBoundary(titleLower, "nusrat")
+  )
+    return "Nusrat Fateh Ali Khan";
+  if (
+    matchesWordBoundary(titleLower, "rahat fateh ali khan") ||
+    matchesWordBoundary(titleLower, "rahat fateh ali") ||
+    matchesWordBoundary(titleLower, "rahat")
+  )
+    return "Rahat Fateh Ali Khan";
   if (matchesWordBoundary(titleLower, "jagjit singh") || matchesWordBoundary(titleLower, "jagjit"))
     return "Jagjit Singh";
+  if (matchesWordBoundary(titleLower, "mehdi hassan") || matchesWordBoundary(titleLower, "mehdi"))
+    return "Mehdi Hassan";
+  if (matchesWordBoundary(titleLower, "ghulam ali")) return "Ghulam Ali";
+  if (matchesWordBoundary(titleLower, "pankaj udhas")) return "Pankaj Udhas";
   if (matchesWordBoundary(titleLower, "lata mangeshkar") || matchesWordBoundary(titleLower, "lata"))
     return "Lata Mangeshkar";
   if (matchesWordBoundary(titleLower, "kishore kumar") || matchesWordBoundary(titleLower, "kishore"))
