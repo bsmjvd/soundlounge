@@ -168,16 +168,24 @@ export class SoloPlayer {
     this.state.status = "playing";
 
     if (this.audioElement) {
+      // Append title and artist to youtube stream URL for instant YouTube search accuracy
+      let playUrl = track.url;
+      if (playUrl.startsWith("/api/stream/youtube")) {
+        const hasParams = playUrl.includes("?");
+        const sep = hasParams ? "&" : "?";
+        playUrl = `${playUrl}${sep}title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist || "")}`;
+      }
+
       const currentSrc = this.audioElement.src;
       const targetUrl =
-        track.url.startsWith("http://") || track.url.startsWith("https://")
-          ? track.url
+        playUrl.startsWith("http://") || playUrl.startsWith("https://")
+          ? playUrl
           : typeof window !== "undefined"
-          ? `${window.location.origin}${track.url}`
-          : track.url;
+          ? `${window.location.origin}${playUrl}`
+          : playUrl;
 
       if (currentSrc !== targetUrl) {
-        this.audioElement.src = track.url;
+        this.audioElement.src = playUrl;
         this.audioElement.load();
       }
 

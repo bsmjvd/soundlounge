@@ -10,6 +10,7 @@ interface CachedFormat {
 }
 
 const formatCache = new Map<string, CachedFormat>();
+const searchToVideoIdCache = new Map<string, string>();
 const ytdl = new Ytdl();
 
 let innertubePromise: Promise<Innertube> | null = null;
@@ -27,66 +28,119 @@ async function getInnertube(): Promise<Innertube> {
 }
 
 /**
- * Resolves a given query or synthetic slug to an authentic YouTube video ID.
+ * Searches YouTube for the exact official song matching title and artist,
+ * filtering out 2-hour compilations, full concerts, and non-music videos.
  */
-async function resolveToValidVideoId(input: string): Promise<string> {
-  const cleanId = input.replace(/^yt_/, "").trim();
-  // Valid 11-char YouTube ID check
+async function searchExactSong(title: string, artist?: string): Promise<string | null> {
+  const cacheKey = `${title.toLowerCase().trim()}::${(artist || "").toLowerCase().trim()}`;
+  if (searchToVideoIdCache.has(cacheKey)) {
+    return searchToVideoIdCache.get(cacheKey)!;
+  }
+
+  try {
+    const yt = await getInnertube();
+    const cleanTitle = title.replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "").trim();
+    const cleanArtist = (artist && artist !== "Unknown Artist") ? artist : "";
+    const query = `${cleanTitle} ${cleanArtist} audio`.trim();
+
+    const search = await yt.search(query);
+    const videos = (search.videos as any[]) || [];
+
+    // Filter for proper song duration: between 50s and 12 mins (720s)
+    const validSongVideos = videos.filter((v) => {
+      const durSec = v.duration?.seconds || 0;
+      return durSec >= 50 && durSec <= 720;
+    });
+
+    const chosen = validSongVideos[0] || videos[0];
+    if (chosen && chosen.id) {
+      const vid = String(chosen.id);
+      searchToVideoIdCache.set(cacheKey, vid);
+      return vid;
+    }
+  } catch (err) {
+    console.warn("Failed exact song search:", title, artist, err);
+  }
+
+  return null;
+}
+
+/**
+ * Resolves a request into a valid 11-char YouTube video ID.
+ */
+async function resolveToValidVideoId(
+  idInput?: string | null,
+  title?: string | null,
+  artist?: string | null,
+  q?: string | null
+): Promise<string> {
+  // If title or query is provided, search YouTube directly for the exact song!
+  if (title && title.trim()) {
+    const foundId = await searchExactSong(title.trim(), artist || undefined);
+    if (foundId) return foundId;
+  }
+
+  if (q && q.trim()) {
+    const foundId = await searchExactSong(q.trim());
+    if (foundId) return foundId;
+  }
+
+  const cleanId = (idInput || "").replace(/^yt_/, "").trim();
+
+  // If cleanId is already an 11-char YouTube ID
   if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
     return cleanId;
   }
 
-  // Turn slugs like "TumItnaJo" or "WoAjnabee_TheTrain" into natural search query
-  const searchQuery = cleanId
-    .replace(/([A-Z])/g, " $1")
-    .replace(/[_\-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  try {
-    const yt = await getInnertube();
-    const search = await yt.search(searchQuery);
-    const first = search.videos?.[0] as any;
-    if (first && first.id) {
-      return String(first.id);
-    }
-  } catch (err) {
-    console.warn("Failed to resolve fallback video query:", searchQuery, err);
+  // Turn slugs like "TumItnaJo" into a natural search query
+  if (cleanId) {
+    const naturalQuery = cleanId
+      .replace(/([A-Z])/g, " $1")
+      .replace(/[_\-]+/g, " ")
+      .trim();
+    const foundId = await searchExactSong(naturalQuery, artist || undefined);
+    if (foundId) return foundId;
   }
 
-  return cleanId;
+  return cleanId || "dQw4w9WgXcQ";
 }
 
-async function getAudioStreamUrl(videoIdInput: string): Promise<CachedFormat> {
-  const cached = formatCache.get(videoIdInput);
+async function getAudioStreamUrl(
+  idInput?: string | null,
+  title?: string | null,
+  artist?: string | null,
+  q?: string | null
+): Promise<CachedFormat> {
+  const cacheKey = `${idInput || ""}::${title || ""}::${artist || ""}::${q || ""}`;
+  const cached = formatCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached;
   }
 
-  let videoId = await resolveToValidVideoId(videoIdInput);
+  let videoId = await resolveToValidVideoId(idInput, title, artist, q);
 
   let info: any;
   try {
     info = await ytdl.getInfo(videoId);
-  } catch (initialErr) {
-    // If ytdl failed on videoId (e.g. video was unavailable or region-locked), search alternative
-    console.warn(`ytdl failed for ${videoId}, searching fallback:`, initialErr);
-    try {
-      const yt = await getInnertube();
-      const searchQuery = videoIdInput
-        .replace(/^yt_/, "")
-        .replace(/([A-Z])/g, " $1")
-        .replace(/[_\-]+/g, " ")
-        .trim();
-      const search = await yt.search(searchQuery);
-      const altVideo = (search.videos as any[])?.find((v) => v && v.id && v.id !== videoId);
-      if (altVideo && altVideo.id) {
-        videoId = String(altVideo.id);
+
+    // Sanity check duration: If video is over 15 mins (900s) and title is available, re-search for the single track!
+    const durSec = Number(info.videoDetails?.lengthSeconds) || 0;
+    if (durSec > 900 && title) {
+      console.warn(`Video ${videoId} is too long (${durSec}s), searching for single song...`);
+      const altId = await searchExactSong(title, artist || undefined);
+      if (altId && altId !== videoId) {
+        videoId = altId;
         info = await ytdl.getInfo(videoId);
-      } else {
-        throw initialErr;
       }
-    } catch {
+    }
+  } catch (initialErr) {
+    console.warn(`ytdl failed for ${videoId}, searching fallback:`, initialErr);
+    const fallbackQuery = title || q || idInput || "";
+    const altId = await searchExactSong(fallbackQuery, artist || undefined);
+    if (altId && altId !== videoId) {
+      videoId = altId;
+      info = await ytdl.getInfo(videoId);
+    } else {
       throw initialErr;
     }
   }
@@ -123,7 +177,7 @@ async function getAudioStreamUrl(videoIdInput: string): Promise<CachedFormat> {
     expiresAt,
   };
 
-  formatCache.set(videoIdInput, result);
+  formatCache.set(cacheKey, result);
   formatCache.set(videoId, result);
   return result;
 }
@@ -131,13 +185,16 @@ async function getAudioStreamUrl(videoIdInput: string): Promise<CachedFormat> {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const videoId = searchParams.get("id");
+  const query = searchParams.get("q");
+  const title = searchParams.get("title");
+  const artist = searchParams.get("artist");
 
-  if (!videoId) {
-    return new NextResponse("Missing video id", { status: 400 });
+  if (!videoId && !query && !title) {
+    return new NextResponse("Missing track identifier (id, title, or q required)", { status: 400 });
   }
 
   try {
-    const streamInfo = await getAudioStreamUrl(videoId);
+    const streamInfo = await getAudioStreamUrl(videoId, title, artist, query);
     const rangeHeader = req.headers.get("range");
 
     const upstreamHeaders: Record<string, string> = {
@@ -175,7 +232,7 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
   } catch (err: any) {
-    console.error(`Streaming error for video ${videoId}:`, err);
+    console.error(`Streaming error for ${videoId || title || query}:`, err);
     return new NextResponse(`Streaming error: ${err.message}`, { status: 500 });
   }
 }

@@ -144,6 +144,13 @@ export class SyncedPlayer {
     this.serverEpochStartTime = serverTimeToExecute;
     this.initialPlayPositionMs = positionMs;
 
+    let playUrl = track.url;
+    if (playUrl.startsWith("/api/stream/youtube")) {
+      const hasParams = playUrl.includes("?");
+      const sep = hasParams ? "&" : "?";
+      playUrl = `${playUrl}${sep}title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist || "")}`;
+    }
+
     const plan = this.calculateExecutionPlan(serverTimeToExecute, positionMs);
 
     const execute = () => {
@@ -151,8 +158,17 @@ export class SyncedPlayer {
       this.state.positionMs = plan.startPositionMs;
 
       if (this.audioElement) {
-        if (this.audioElement.src !== track.url) {
-          this.audioElement.src = track.url;
+        const currentSrc = this.audioElement.src;
+        const targetUrl =
+          playUrl.startsWith("http://") || playUrl.startsWith("https://")
+            ? playUrl
+            : typeof window !== "undefined"
+            ? `${window.location.origin}${playUrl}`
+            : playUrl;
+
+        if (currentSrc !== targetUrl) {
+          this.audioElement.src = playUrl;
+          this.audioElement.load();
         }
         this.audioElement.currentTime = plan.startPositionMs / 1000;
         this.audioElement.volume = this.state.volume;
@@ -167,10 +183,19 @@ export class SyncedPlayer {
       execute();
     } else {
       this.state.status = "buffering";
-      if (this.audioElement && this.audioElement.src !== track.url) {
-        this.audioElement.src = track.url;
-        this.audioElement.currentTime = plan.startPositionMs / 1000;
-        this.audioElement.load();
+      if (this.audioElement) {
+        const currentSrc = this.audioElement.src;
+        const targetUrl =
+          playUrl.startsWith("http://") || playUrl.startsWith("https://")
+            ? playUrl
+            : typeof window !== "undefined"
+            ? `${window.location.origin}${playUrl}`
+            : playUrl;
+        if (currentSrc !== targetUrl) {
+          this.audioElement.src = playUrl;
+          this.audioElement.currentTime = plan.startPositionMs / 1000;
+          this.audioElement.load();
+        }
       }
       this.emitState();
       this.scheduledTimer = setTimeout(execute, plan.delayMs);
