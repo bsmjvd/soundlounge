@@ -266,8 +266,12 @@ export default function SoundloungeApp() {
 
       {/* Main Grid View */}
       <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {/* Multi-Source Music Ingestion */}
-        <MusicIngestion onAddTrack={handleAddTrack} roomId={roomId} />
+        {/* Direct Search & Music Ingestion */}
+        <MusicIngestion
+          onAddTrack={handleAddTrack}
+          onPlayDirect={handlePlaySingleTrack}
+          roomId={roomId}
+        />
 
         {/* 2-Column Split: Collaborative Queue & On-Device Library */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
