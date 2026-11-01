@@ -41,6 +41,14 @@ export class AudioEngineCoordinator {
     });
   }
 
+  setTransportHandlers(handlers: {
+    onNext?: () => void;
+    onPrevious?: () => void;
+    onEnded?: () => void;
+  }): void {
+    this.soloPlayer.setTransportHandlers(handlers);
+  }
+
   getSoloPlayer(): SoloPlayer {
     return this.soloPlayer;
   }

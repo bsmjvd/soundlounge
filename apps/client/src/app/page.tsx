@@ -10,6 +10,7 @@ import { LibraryView } from "../components/LibraryView";
 import { PlayerBar } from "../components/PlayerBar";
 import { InviteModal } from "../components/InviteModal";
 import { AccessDenied } from "../components/AccessDenied";
+import { StudioImmersiveModal } from "../components/StudioImmersiveModal";
 
 import {
   AudioEngineCoordinator,
@@ -37,6 +38,7 @@ export default function SoundloungeApp() {
   const [roomId, setRoomId] = useState("lounge-main");
   const [inviteToken, setInviteToken] = useState<string | undefined>(undefined);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -232,6 +234,53 @@ export default function SoundloungeApp() {
     }
   };
 
+  // Wire transport handlers for lock screen and auto-next on track completion
+  useEffect(() => {
+    coordinator.setTransportHandlers({
+      onNext: handleNext,
+      onPrevious: handlePrevious,
+      onEnded: handleNext,
+    });
+  }, [queue, currentIndex]);
+
+  // Global desktop studio keyboard shortcuts (Space, Arrow keys, F for Studio Mode)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        handleTogglePlay();
+      } else if (e.code === "ArrowRight" || e.key === "l" || e.key === "L") {
+        e.preventDefault();
+        handleSeek(Math.min((playerState.durationMs || 0), playerState.positionMs + 5000));
+      } else if (e.code === "ArrowLeft" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        handleSeek(Math.max(0, playerState.positionMs - 5000));
+      } else if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        handlePrevious();
+      } else if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        setIsStudioOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [playerState.status, playerState.positionMs, playerState.durationMs]);
+
   if (playerState.mode === "synced" && sync.isAccessDenied) {
     return (
       <div className="min-h-screen bg-[#0b0d13]">
@@ -290,6 +339,7 @@ export default function SoundloungeApp() {
             onNext={handleNext}
             onPrevious={handlePrevious}
             onSeek={handleSeek}
+            onOpenStudio={() => setIsStudioOpen(true)}
           />
 
           {/* Direct Search & Music Ingestion */}
@@ -352,6 +402,24 @@ export default function SoundloungeApp() {
         onClose={() => setIsInviteOpen(false)}
         roomId={roomId}
         inviteToken={inviteToken}
+      />
+
+      {/* Immersive Studio Modal (Studio Experience) */}
+      <StudioImmersiveModal
+        isOpen={isStudioOpen}
+        onClose={() => setIsStudioOpen(false)}
+        currentTrack={activeTrack}
+        status={playerState.status}
+        positionMs={playerState.positionMs}
+        durationMs={playerState.durationMs}
+        volume={playerState.volume}
+        isLiked={activeTrack ? isLiked(activeTrack.id) : false}
+        onToggleLike={(t) => toggleLike(t)}
+        onTogglePlay={handleTogglePlay}
+        onSeek={handleSeek}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        onVolumeChange={(v) => coordinator.setVolume(v)}
       />
     </div>
   );

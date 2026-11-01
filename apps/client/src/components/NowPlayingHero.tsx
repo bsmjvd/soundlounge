@@ -14,6 +14,7 @@ import {
   VolumeX,
   Disc3,
   Wifi,
+  Maximize2,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import type { PlaybackMode } from "../lib/player";
@@ -31,6 +32,7 @@ interface NowPlayingHeroProps {
   onNext: () => void;
   onPrevious?: () => void;
   onSeek?: (posMs: number) => void;
+  onOpenStudio?: () => void;
 }
 
 export function NowPlayingHero({
@@ -46,6 +48,7 @@ export function NowPlayingHero({
   onNext,
   onPrevious,
   onSeek,
+  onOpenStudio,
 }: NowPlayingHeroProps) {
   const [hoverSeekPos, setHoverSeekPos] = useState<number | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -295,6 +298,18 @@ export function NowPlayingHero({
             >
               <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
             </button>
+
+            {onOpenStudio && (
+              <button
+                onClick={onOpenStudio}
+                title="Enter Studio Mode (F)"
+                aria-label="Enter Studio Mode"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/15 text-sky-400 hover:text-white transition-all hover:scale-105 active:scale-95 cursor-pointer ml-auto"
+              >
+                <Maximize2 className="w-4 h-4" />
+                <span className="text-xs font-semibold hidden sm:inline">Studio</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -21,9 +21,22 @@ export class SoloPlayer {
   };
   private listeners: Set<StateChangeCallback> = new Set();
   private timeUpdateInterval: any = null;
+  private onNextCallback?: () => void;
+  private onPreviousCallback?: () => void;
+  private onEndedCallback?: () => void;
 
   constructor() {
     this.initAudioElement();
+  }
+
+  setTransportHandlers(handlers: {
+    onNext?: () => void;
+    onPrevious?: () => void;
+    onEnded?: () => void;
+  }): void {
+    this.onNextCallback = handlers.onNext;
+    this.onPreviousCallback = handlers.onPrevious;
+    this.onEndedCallback = handlers.onEnded;
   }
 
   private initAudioElement() {
@@ -62,6 +75,9 @@ export class SoloPlayer {
           this.state.status = "idle";
           this.state.positionMs = 0;
           this.emitState();
+          if (this.onEndedCallback) {
+            this.onEndedCallback();
+          }
         });
       } catch {
         // Fallback to simulated audio in headless / non-DOM environments
@@ -112,6 +128,12 @@ export class SoloPlayer {
           if (details.seekTime !== undefined) {
             this.seek(details.seekTime * 1000);
           }
+        });
+        navigator.mediaSession.setActionHandler("nexttrack", () => {
+          if (this.onNextCallback) this.onNextCallback();
+        });
+        navigator.mediaSession.setActionHandler("previoustrack", () => {
+          if (this.onPreviousCallback) this.onPreviousCallback();
         });
       } catch {
         // Ignored in non-supporting browsers
