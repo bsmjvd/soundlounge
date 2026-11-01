@@ -263,7 +263,7 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#14232c] bg-[#081014] px-4 sm:px-6 py-2.5 transition-colors">
+    <header className="sticky top-0 z-[100] w-full border-b border-[#14232c] bg-[#081014] px-4 sm:px-6 py-2.5 transition-colors">
       <div className="flex items-center justify-between gap-3 sm:gap-6">
         {/* Left: Mobile Menu Trigger & History Navigation */}
         <div className="flex items-center gap-2">
@@ -346,7 +346,8 @@ export function TopBar({
           {isDropdownOpen && searchQuery.trim().length > 0 && (
             <div
               ref={dropdownRef}
-              className="absolute left-0 right-0 top-full mt-2 bg-[#0c161d] border border-[#203644] rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.98)] overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-150 max-h-[75vh] flex flex-col"
+              style={{ backgroundColor: "#091217" }}
+              className="absolute left-0 right-0 top-full mt-2 bg-[#091217] border border-[#203644] rounded-2xl shadow-[0_30px_90px_rgba(0,0,0,1)] overflow-hidden z-[120] animate-in fade-in zoom-in-95 duration-150 max-h-[75vh] flex flex-col"
             >
               {/* Scrollable Results Stage */}
               <div className="p-3 overflow-y-auto space-y-4 flex-1">

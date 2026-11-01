@@ -464,6 +464,9 @@ export default function SoundloungeApp() {
               setSearchQuery={setSearchQuery}
               onSearch={(q) => {
                 if (q.trim()) {
+                  setSearchQuery(q.trim());
+                  setSelectedArtist(null);
+                  setSelectedAlbum(null);
                   setActiveTab("search");
                 }
               }}

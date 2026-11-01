@@ -250,6 +250,9 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
     label: "Bollywood & Hindi Melodies",
     coreArtists: [
       "arijit singh",
+      "arjit singh",
+      "arijit",
+      "arjit",
       "atif aslam",
       "shreya ghoshal",
       "mohit chauhan",

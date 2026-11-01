@@ -1,13 +1,13 @@
 import type { Track } from "@soundlounge/shared";
 
-export type RegionKey = "all" | "global" | "punjabi" | "electronic" | "hiphop" | "ghazal";
+export type RegionKey = "all" | "global" | "punjabi" | "electronic" | "hiphop" | "ghazal" | "bollywood";
 
 export interface ArtistProfileData {
   id: string;
   name: string;
   realName: string;
   genre: string;
-  region: "global" | "punjabi" | "electronic" | "hiphop" | "ghazal";
+  region: "global" | "punjabi" | "electronic" | "hiphop" | "ghazal" | "bollywood";
   regionLabel: string;
   avatarUrl: string;
   bannerUrl: string;
@@ -17,6 +17,88 @@ export interface ArtistProfileData {
 }
 
 export const ARTISTS_CATALOG: ArtistProfileData[] = [
+  {
+    id: "arijit-singh",
+    name: "Arijit Singh",
+    realName: "Arijit Singh",
+    genre: "Bollywood / Romantic / Sufi Pop",
+    region: "bollywood",
+    regionLabel: "South Asia / Bollywood",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1600&auto=format&fit=crop&q=80",
+    monthlyListeners: "112.5M",
+    bio: "Widely regarded as one of the most versatile and celebrated playback vocalists in Indian music history. Recipient of multiple National Film Awards and Filmfare Awards.",
+    topTracks: [
+      {
+        id: "yt_IJq0yyWug1k",
+        title: "Tum Hi Ho",
+        artist: "Arijit Singh",
+        durationMs: 262000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=IJq0yyWug1k",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_BddP6PYo2gs",
+        title: "Kesariya",
+        artist: "Arijit Singh",
+        durationMs: 268000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=BddP6PYo2gs",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_bzSTpdcs-EI",
+        title: "Channa Mereya",
+        artist: "Arijit Singh",
+        durationMs: 289000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=bzSTpdcs-EI",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_T3qCg4P-2k4",
+        title: "Hamari Adhuri Kahani",
+        artist: "Arijit Singh",
+        durationMs: 398000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=T3qCg4P-2k4",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_sK7riqg2mr4",
+        title: "Agar Tum Saath Ho",
+        artist: "Arijit Singh & Alka Yagnik",
+        durationMs: 341000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=sK7riqg2mr4",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+      {
+        id: "yt_ElZfdU54Cp8",
+        title: "Apna Bana Le",
+        artist: "Arijit Singh",
+        durationMs: 261000,
+        coverUrl:
+          "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80",
+        url: "/api/stream/youtube?id=ElZfdU54Cp8",
+        source: "youtube",
+        createdAt: Date.now(),
+      },
+    ],
+  },
   {
     id: "the-weeknd",
     name: "The Weeknd",

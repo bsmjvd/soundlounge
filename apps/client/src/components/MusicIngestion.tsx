@@ -81,6 +81,9 @@ export function MusicIngestion({
     if (initialQuery !== undefined && initialQuery !== searchQuery) {
       setSearchQuery(initialQuery);
       setCurrentPage(1);
+      if (initialQuery.trim().length > 0) {
+        executeSearch(initialQuery.trim(), 1, sortBy);
+      }
     }
   }, [initialQuery]);
 
@@ -106,7 +109,7 @@ export function MusicIngestion({
     sort: "views" | "relevance" | "duration" = sortBy
   ) => {
     const clean = query.trim();
-    if (!clean || clean.length < 2) {
+    if (!clean || clean.length < 1) {
       setSearchResults([]);
       setTotalTracks(0);
       setTotalPages(1);
@@ -137,7 +140,7 @@ export function MusicIngestion({
   // Debounced search when query changes
   useEffect(() => {
     const clean = searchQuery.trim();
-    if (!clean || clean.length < 2) {
+    if (!clean || clean.length < 1) {
       setSearchResults([]);
       setTotalTracks(0);
       setTotalPages(1);
@@ -148,7 +151,7 @@ export function MusicIngestion({
     const timer = setTimeout(() => {
       setCurrentPage(1);
       executeSearch(clean, 1, sortBy);
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [searchQuery, sortBy]);
@@ -366,6 +369,16 @@ export function MusicIngestion({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Loading state when fetching results */}
+      {isSearching && searchResults.length === 0 && (
+        <div className="text-center py-16 rounded-2xl border border-[#182b36] bg-[#0c161d] flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-[#00e5c9]" />
+          <p className="text-xs text-[#8da0ad] font-medium">
+            Searching tracks, artists, and audio for &ldquo;{searchQuery}&rdquo;...
+          </p>
         </div>
       )}
 

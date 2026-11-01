@@ -112,10 +112,10 @@ export function CoverflowHero({
     <div
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className="relative w-full overflow-hidden pt-2 pb-4 select-none isolate"
+      className="relative z-10 w-full overflow-hidden pt-2 pb-4 select-none"
     >
       {/* 3D Coverflow Container */}
-      <div className="relative h-64 sm:h-72 w-full flex items-center justify-center perspective-1000">
+      <div className="relative h-64 sm:h-72 w-full flex items-center justify-center">
         {FEATURED_ITEMS.map((item, idx) => {
           const count = FEATURED_ITEMS.length;
           // Calculate relative position: -2, -1, 0 (active), 1, 2
@@ -141,14 +141,14 @@ export function CoverflowHero({
               }}
               style={{
                 transform: isCenter
-                  ? "translateX(0) scale(1) translateZ(50px)"
+                  ? "translateX(0) scale(1)"
                   : isLeft
-                  ? "translateX(-48%) scale(0.82) rotateY(18deg) translateZ(-40px)"
-                  : "translateX(48%) scale(0.82) rotateY(-18deg) translateZ(-40px)",
-                zIndex: isCenter ? 30 : 10,
+                  ? "translateX(-48%) scale(0.84) rotateY(14deg)"
+                  : "translateX(48%) scale(0.84) rotateY(-14deg)",
+                zIndex: isCenter ? 20 : 10,
                 opacity: isCenter ? 1 : 0.65,
               }}
-              className="absolute w-[75%] max-w-sm sm:max-w-md h-52 sm:h-60 rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ease-out preserve-3d shadow-2xl border border-[#20343f] bg-[#0c161c]"
+              className="absolute w-[75%] max-w-sm sm:max-w-md h-52 sm:h-60 rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ease-out shadow-2xl border border-[#20343f] bg-[#0c161c]"
             >
               {/* Background Art */}
               <img

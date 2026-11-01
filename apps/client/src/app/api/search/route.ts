@@ -57,6 +57,121 @@ function formatViews(views: number): string {
   return views.toLocaleString();
 }
 
+const RECORD_LABELS = [
+  "sony music", "t-series", "yrf", "zee music", "tips", "saregama", "speed records",
+  "universal music", "eros now", "aditya music", "think music", "lahari", "geet mp3",
+  "white hill", "juke dock", "warner music", "times music", "venus", "desi music factory",
+  "vyrl", "dm - desi melodies", "vevo", "official channel", "yrf music", "tseries"
+];
+
+const ARTIST_DICTIONARY: { name: string; aliases: string[] }[] = [
+  { name: "Arijit Singh", aliases: ["arijit singh", "arjit singh", "arijit", "arjit"] },
+  { name: "Atif Aslam", aliases: ["atif aslam", "atif"] },
+  { name: "Mohit Chauhan", aliases: ["mohit chauhan"] },
+  { name: "KK", aliases: ["kk", "k.k.", "kay kay"] },
+  { name: "Shreya Ghoshal", aliases: ["shreya ghoshal", "shreya"] },
+  { name: "Sonu Nigam", aliases: ["sonu nigam"] },
+  { name: "Jubin Nautiyal", aliases: ["jubin nautiyal", "jubin"] },
+  { name: "Asees Kaur", aliases: ["asees kaur", "asees"] },
+  { name: "Roop Kumar Rathod", aliases: ["roop kumar rathod", "roop kumar"] },
+  { name: "Jagjit Singh", aliases: ["jagjit singh", "jagjit"] },
+  { name: "Mehdi Hassan", aliases: ["mehdi hassan"] },
+  { name: "Ghulam Ali", aliases: ["ghulam ali"] },
+  { name: "Pankaj Udhas", aliases: ["pankaj udhas"] },
+  { name: "Lata Mangeshkar", aliases: ["lata mangeshkar", "lata"] },
+  { name: "Kishore Kumar", aliases: ["kishore kumar", "kishore"] },
+  { name: "Mohammed Rafi", aliases: ["mohammed rafi", "mohd rafi", "rafi"] },
+  { name: "Asha Bhosle", aliases: ["asha bhosle", "asha"] },
+  { name: "R.D. Burman", aliases: ["r.d. burman", "rd burman", "pancham"] },
+  { name: "Mukesh", aliases: ["mukesh"] },
+  { name: "Alka Yagnik", aliases: ["alka yagnik"] },
+  { name: "Kumar Sanu", aliases: ["kumar sanu"] },
+  { name: "Udit Narayan", aliases: ["udit narayan"] },
+  { name: "Sunidhi Chauhan", aliases: ["sunidhi chauhan"] },
+  { name: "Sidhu Moose Wala", aliases: ["sidhu moose wala", "sidhu moosewala", "sidhu"] },
+  { name: "Karan Aujla", aliases: ["karan aujla"] },
+  { name: "Diljit Dosanjh", aliases: ["diljit dosanjh", "diljit"] },
+  { name: "AP Dhillon", aliases: ["ap dhillon"] },
+  { name: "The Weeknd", aliases: ["the weeknd", "weeknd"] },
+  { name: "Daft Punk", aliases: ["daft punk"] },
+  { name: "Billie Eilish", aliases: ["billie eilish"] },
+  { name: "Dua Lipa", aliases: ["dua lipa"] },
+  { name: "Taylor Swift", aliases: ["taylor swift"] },
+  { name: "Drake", aliases: ["drake"] },
+  { name: "Ed Sheeran", aliases: ["ed sheeran"] },
+  { name: "Justin Bieber", aliases: ["justin bieber"] },
+  { name: "Post Malone", aliases: ["post malone"] },
+  { name: "Coldplay", aliases: ["coldplay"] },
+  { name: "Pritam", aliases: ["pritam"] },
+  { name: "Mithoon", aliases: ["mithoon"] },
+  { name: "A.R. Rahman", aliases: ["a.r. rahman", "ar rahman", "rahman"] },
+];
+
+function extractCleanTrackInfo(
+  rawTitle: string,
+  rawAuthor?: string,
+  query: string = ""
+): { title: string; artist: string } {
+  const authorLower = (rawAuthor || "").toLowerCase().trim();
+  const titleLower = (rawTitle || "").toLowerCase();
+  const queryLower = (query || "").toLowerCase().trim();
+  const isLabel =
+    RECORD_LABELS.some((l) => authorLower.includes(l)) ||
+    /music|records|company|entertainment|films|official|tseries/i.test(authorLower);
+
+  // 1. Check artist dictionary against title or author
+  let detectedArtist = "";
+  for (const entry of ARTIST_DICTIONARY) {
+    if (
+      entry.aliases.some(
+        (alias) => titleLower.includes(alias) || authorLower.includes(alias)
+      )
+    ) {
+      detectedArtist = entry.name;
+      break;
+    }
+  }
+
+  // 2. If query was searched for an artist (e.g. 'arjit')
+  if (!detectedArtist && queryLower.length >= 3) {
+    for (const entry of ARTIST_DICTIONARY) {
+      if (
+        entry.aliases.some(
+          (alias) => alias.includes(queryLower) || queryLower.includes(alias)
+        )
+      ) {
+        if (titleLower.includes(queryLower) || titleLower.includes(entry.name.toLowerCase())) {
+          detectedArtist = entry.name;
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. Fallback: if not a record label, use author name
+  if (!detectedArtist) {
+    detectedArtist = isLabel ? "Various Artists" : (rawAuthor || "Unknown Artist");
+  }
+
+  // Clean title: extract main song title before first | or • or separator
+  let cleanTitle = rawTitle;
+  const pipeParts = rawTitle.split(/\s*[|•]\s*/);
+  if (pipeParts.length > 1) {
+    cleanTitle = pipeParts[0];
+  }
+
+  cleanTitle = cleanTitle
+    .replace(
+      /\s*[-–—]\s*(lyrical song|lyric video|official audio|official video|full song|video song|audio song|song).*/i,
+      ""
+    )
+    .replace(/\(.*?\)/g, "")
+    .replace(/\[.*?\]/g, "")
+    .trim();
+
+  return { title: cleanTitle || rawTitle, artist: detectedArtist };
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q")?.trim();
@@ -133,8 +248,9 @@ export async function GET(req: NextRequest) {
         // Filter strictly for individual song duration: 50s to 720s (12 mins max)
         if (durSec < 50 || durSec > 720) continue;
 
-        const title = video.title?.text || "Unknown Song";
-        const artist = video.author?.name || "YouTube Artist";
+        const rawTitle = video.title?.text || "Unknown Song";
+        const rawArtist = video.author?.name || "YouTube Artist";
+        const { title, artist } = extractCleanTrackInfo(rawTitle, rawArtist, query);
         const views = parseViewCount(video.view_count?.text, video.short_view_count?.text);
 
         const track: Track = {
@@ -161,14 +277,15 @@ export async function GET(req: NextRequest) {
         const id = String(song.id);
         if (seenIds.has(id)) continue;
 
-        const title = song.title || "Song";
-        const artist =
+        const rawTitle = song.title || "Song";
+        const rawArtist =
           Array.isArray(song.artists) && song.artists.length > 0
             ? song.artists
                 .map((a: any) => a.name)
                 .filter(Boolean)
                 .join(", ")
             : song.author || "Unknown Artist";
+        const { title, artist } = extractCleanTrackInfo(rawTitle, rawArtist, query);
 
         const durSec =
           song.duration?.seconds ||
