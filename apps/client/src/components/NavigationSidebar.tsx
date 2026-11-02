@@ -82,12 +82,9 @@ export function NavigationSidebar({
       // Show recommended tracks
       return MOCKUP_SIDEBAR_TRACKS.slice(2).concat(MOCKUP_SIDEBAR_TRACKS.slice(0, 2));
     }
-    // "my_playlist": show active queue if present, otherwise default mockup tracks
-    if (queue && queue.length > 0) {
-      return queue;
-    }
+    // "my_playlist": show curated 8 mockup playlist tracks matching reference UI
     return MOCKUP_SIDEBAR_TRACKS;
-  }, [sidebarFilter, queue, historyTracks]);
+  }, [sidebarFilter, historyTracks]);
 
   const handleTrackClick = (track: Track) => {
     if (onPlayTrack) {

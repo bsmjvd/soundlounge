@@ -149,7 +149,7 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       {/* Horizontal Carousel */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
+        className="flex gap-5 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
       >
         {combinedAlbums.map((album) => (
           <div
