@@ -1,18 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import {
-  Search,
-  X,
-  Menu,
-  Music2,
-  Play,
-  Plus,
-  Check,
-  Disc,
-  User,
-  Loader2,
-} from "lucide-react";
+import { Search, X, Menu, Music2, Play, Plus, Check, Disc, User, Loader2 } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
 import type { Track, Album } from "@soundlounge/shared";
 import { ARTISTS_CATALOG, type ArtistProfileData } from "../lib/data/artistsCatalog";
@@ -221,7 +210,7 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-[#152033] bg-[#0c121e]/95 backdrop-blur-md px-4 sm:px-8 py-3 transition-colors">
+    <header className="sticky top-0 z-[100] w-full bg-gradient-to-b from-[#0b1422]/95 via-[#0b1422]/60 to-transparent backdrop-blur-sm px-4 sm:px-8 py-3.5 transition-colors">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Mobile Trigger & Top Navigation Tabs: DISCOVER, MY LIBRARY, RADIO */}
         <div className="flex items-center gap-6">

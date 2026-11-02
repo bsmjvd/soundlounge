@@ -65,24 +65,24 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
 
   return (
     <section className="w-full">
-      {/* Header with Title and Pagination Arrows */}
+      {/* Header with Title and Minimalist Pagination Arrows */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold tracking-tight text-white font-sans">Popular Albums</h2>
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">Popular Albums</h2>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={scrollLeft}
-            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-slate-700/60"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
             aria-label="Scroll left"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={scrollRight}
-            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-slate-700/60"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
             aria-label="Scroll right"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -90,16 +90,16 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       {/* Horizontal Carousel */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
+        className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
       >
         {combinedAlbums.map((album) => (
           <div
             key={album.id}
             onClick={() => handleAlbumClick(album)}
-            className="group flex-shrink-0 w-36 sm:w-40 snap-start cursor-pointer transition-transform duration-200 hover:-translate-y-1"
+            className="group flex-shrink-0 w-32 sm:w-36 lg:w-40 snap-start cursor-pointer transition-transform duration-200 hover:-translate-y-1"
           >
-            {/* Album Cover Art */}
-            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-800 shadow-lg shadow-black/40">
+            {/* Album Cover Art: clean square with subtle rounded corners matching mockup */}
+            <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-slate-900 shadow-md shadow-black/50">
               <img
                 src={album.coverUrl}
                 alt={album.title}
@@ -109,14 +109,14 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
 
               {/* Hover Play Button Overlay */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="w-10 h-10 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_15px_rgba(0,229,255,0.5)] transform scale-75 group-hover:scale-100 transition-transform">
-                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                <div className="w-9 h-9 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_15px_rgba(0,229,255,0.5)] transform scale-75 group-hover:scale-100 transition-transform">
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                 </div>
               </div>
             </div>
 
             {/* Album Title & Artist */}
-            <h3 className="text-xs sm:text-sm font-semibold text-white truncate mt-2.5 group-hover:text-[#00e5ff] transition-colors">
+            <h3 className="text-xs sm:text-sm font-medium text-white truncate mt-2 group-hover:text-[#00e5ff] transition-colors">
               {album.title}
             </h3>
             <p className="text-[11px] text-slate-400 truncate mt-0.5">{album.subtitle || album.artist}</p>

@@ -80,24 +80,24 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
 
   return (
     <section className="w-full">
-      {/* Header with Title and Pagination Arrows */}
+      {/* Header with Title and Minimalist Pagination Arrows */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold tracking-tight text-white font-sans">Popular Artists</h2>
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">Popular Artists</h2>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={scrollLeft}
-            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-slate-700/60"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
             aria-label="Scroll left"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={scrollRight}
-            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-slate-700/60"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
             aria-label="Scroll right"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>

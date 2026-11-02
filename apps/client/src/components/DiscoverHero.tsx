@@ -32,37 +32,35 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
   };
 
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl bg-[#0e1626] border border-cyan-500/20 group">
-      {/* Background Gradient Mesh */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#03343f] via-[#092235] to-[#0e1626] opacity-95" />
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#00e5ff]/15 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative w-full overflow-hidden pt-4 pb-10 sm:pb-14 group">
+      {/* Seamless Ambient Background Glow: rich teal to dark midnight canvas (no box border) */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_65%_at_15%_25%,#1c6e7a_0%,#114050_35%,#0d1a29_70%,transparent_100%)] pointer-events-none" />
+      <div className="absolute -top-28 -left-24 w-[480px] h-[480px] bg-[#00e5ff]/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Artist Portrait Image with Mask / Feathering on the right */}
-      <div className="absolute right-0 top-0 bottom-0 w-full sm:w-3/5 lg:w-1/2 pointer-events-none overflow-hidden">
-        <div
-          className="w-full h-full bg-cover bg-center transition-all duration-700 ease-out scale-100 group-hover:scale-105"
-          style={{
-            backgroundImage: `url(${spotlight.heroImageUrl})`,
-            maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.8) 40%, rgba(0,0,0,1) 100%)",
-            WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.8) 40%, rgba(0,0,0,1) 100%)",
-          }}
+      {/* Artist Portrait Image: seamlessly blending with feathered edges on the right (NOT inside a box) */}
+      <div className="absolute right-0 sm:right-6 lg:right-16 top-0 bottom-0 w-full sm:w-1/2 max-w-xl pointer-events-none flex items-center justify-end overflow-visible">
+        <img
+          src={spotlight.heroImageUrl}
+          alt={spotlight.title}
+          className="max-h-[340px] sm:max-h-[380px] lg:max-h-[420px] w-auto object-contain select-none transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0e1626] via-transparent to-transparent opacity-80" />
       </div>
 
-      {/* Hero Content Overlay */}
-      <div className="relative z-10 p-6 sm:p-10 lg:p-12 flex flex-col justify-center min-h-[280px] sm:min-h-[320px] max-w-xl">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight mb-3">
+      {/* Hero Content: display typography & action buttons */}
+      <div className="relative z-10 px-2 sm:px-4 flex flex-col justify-center min-h-[260px] sm:min-h-[300px] max-w-xl">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-3">
           {spotlight.title}
         </h1>
 
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-8 max-w-md">{spotlight.description}</p>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-8 max-w-md">
+          {spotlight.description}
+        </p>
 
         {/* Action Buttons: PLAY and FOLLOW */}
         <div className="flex items-center gap-4">
           <button
             onClick={handlePlayHero}
-            className="flex items-center gap-2 bg-[#00e5ff] hover:bg-[#00d0e6] text-[#0a0e17] font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-full shadow-[0_0_20px_rgba(0,229,255,0.4)] hover:shadow-[0_0_28px_rgba(0,229,255,0.6)] transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-2 bg-[#00e5ff] hover:bg-[#00d0e6] text-[#0a0e17] font-bold text-xs uppercase tracking-widest px-9 py-3.5 rounded-full shadow-[0_0_24px_rgba(0,229,255,0.45)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] transition-all cursor-pointer active:scale-95"
           >
             {isTrackPlaying ? (
               <>
@@ -79,7 +77,7 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
 
           <button
             onClick={() => setIsFollowing((f) => !f)}
-            className={`flex items-center gap-2 border font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-full transition-all cursor-pointer active:scale-95 ${
+            className={`flex items-center gap-2 border-2 font-bold text-xs uppercase tracking-widest px-9 py-3.5 rounded-full transition-all cursor-pointer active:scale-95 ${
               isFollowing
                 ? "border-emerald-400 text-emerald-400 bg-emerald-500/10"
                 : "border-[#00e5ff] text-[#00e5ff] hover:bg-[#00e5ff]/10"
