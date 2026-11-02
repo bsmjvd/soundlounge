@@ -210,7 +210,7 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-[100] w-full bg-gradient-to-b from-[#0b1422]/95 via-[#0b1422]/60 to-transparent backdrop-blur-sm px-4 sm:px-8 py-3.5 transition-colors">
+    <header className="sticky top-0 z-[100] w-full bg-transparent px-4 sm:px-8 py-3.5 transition-colors">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Mobile Trigger & Top Navigation Tabs: DISCOVER, MY LIBRARY, RADIO */}
         <div className="flex items-center gap-6">

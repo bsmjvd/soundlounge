@@ -205,12 +205,20 @@ export class SoloPlayer {
         }
       }
 
-      // Append title and artist to youtube stream URL for instant YouTube search accuracy
+      // Ensure title and artist are cleanly added to stream URL without duplicating
       let playUrl = track.url;
       if (playUrl.startsWith("/api/stream/youtube")) {
-        const hasParams = playUrl.includes("?");
-        const sep = hasParams ? "&" : "?";
-        playUrl = `${playUrl}${sep}title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist || "")}`;
+        try {
+          const dummyBase = "http://localhost";
+          const parsed = new URL(playUrl, dummyBase);
+          if (!parsed.searchParams.has("title") && track.title) {
+            parsed.searchParams.set("title", track.title);
+          }
+          if (!parsed.searchParams.has("artist") && track.artist) {
+            parsed.searchParams.set("artist", track.artist);
+          }
+          playUrl = `${parsed.pathname}${parsed.search}`;
+        } catch {}
       }
 
       const currentSrc = this.audioElement.src;

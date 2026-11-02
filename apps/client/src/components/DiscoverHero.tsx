@@ -32,17 +32,17 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
   };
 
   return (
-    <div className="relative w-full overflow-hidden pt-4 pb-10 sm:pb-14 group">
+    <div className="relative w-full overflow-visible pt-2 pb-10 sm:pb-14 group">
       {/* Seamless Ambient Background Glow: rich teal to dark midnight canvas (no box border) */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_65%_at_15%_25%,#1c6e7a_0%,#114050_35%,#0d1a29_70%,transparent_100%)] pointer-events-none" />
-      <div className="absolute -top-28 -left-24 w-[480px] h-[480px] bg-[#00e5ff]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-24 -left-12 -right-12 bottom-0 bg-[radial-gradient(ellipse_90%_75%_at_20%_20%,#1c6e7a_0%,#114050_45%,#0d1a29_80%,transparent_100%)] pointer-events-none" />
+      <div className="absolute -top-28 -left-24 w-[520px] h-[520px] bg-[#00e5ff]/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Artist Portrait Image: seamlessly blending with feathered edges on the right (NOT inside a box) */}
-      <div className="absolute right-0 sm:right-6 lg:right-16 top-0 bottom-0 w-full sm:w-1/2 max-w-xl pointer-events-none flex items-center justify-end overflow-visible">
+      <div className="absolute right-0 sm:right-4 lg:right-10 top-0 bottom-0 w-full sm:w-1/2 max-w-xl pointer-events-none flex items-center justify-end overflow-visible">
         <img
           src={spotlight.heroImageUrl}
           alt={spotlight.title}
-          className="max-h-[340px] sm:max-h-[380px] lg:max-h-[420px] w-auto object-contain select-none transition-transform duration-700 ease-out group-hover:scale-105"
+          className="max-h-[380px] sm:max-h-[420px] lg:max-h-[460px] w-auto object-contain select-none transition-transform duration-700 ease-out group-hover:scale-105"
         />
       </div>
 
@@ -52,9 +52,7 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
           {spotlight.title}
         </h1>
 
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-8 max-w-md">
-          {spotlight.description}
-        </p>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-8 max-w-md">{spotlight.description}</p>
 
         {/* Action Buttons: PLAY and FOLLOW */}
         <div className="flex items-center gap-4">
