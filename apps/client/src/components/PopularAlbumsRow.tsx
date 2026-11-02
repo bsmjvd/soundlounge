@@ -15,21 +15,48 @@ interface PopularAlbumsRowProps {
 export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: PopularAlbumsRowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Combine mockup albums with top catalog albums
+  // Combine popular mockup albums with catalog albums with de-duplication
   const combinedAlbums = React.useMemo(() => {
-    return [
-      ...POPULAR_ALBUMS_MOCKUP,
-      ...ALBUMS_CATALOG.slice(0, 8).map((a) => ({
-        id: a.id,
-        title: a.title,
-        artist: a.primaryArtist,
-        subtitle: a.primaryArtist,
-        coverUrl:
-          a.coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
-        tracksCount: a.tracks.length,
-        tracks: a.tracks,
-      })),
-    ];
+    const seen = new Set<string>();
+    const list: DisplayAlbum[] = [];
+
+    // 1. First add the curated popular albums
+    for (const alb of POPULAR_ALBUMS_MOCKUP) {
+      const key = alb.title.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        // If there is a matching catalog album with more tracks, attach them
+        const catalogMatch = ALBUMS_CATALOG.find((c) => c.title.toLowerCase().trim() === key || c.id === alb.id);
+        if (catalogMatch && catalogMatch.tracks && catalogMatch.tracks.length > 0) {
+          list.push({
+            ...alb,
+            tracksCount: Math.max(alb.tracksCount || 0, catalogMatch.tracks.length),
+            tracks: catalogMatch.tracks,
+          });
+        } else {
+          list.push(alb);
+        }
+      }
+    }
+
+    // 2. Add remaining rich catalog albums
+    for (const a of ALBUMS_CATALOG) {
+      const key = a.title.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push({
+          id: a.id,
+          title: a.title,
+          artist: a.primaryArtist,
+          subtitle: a.primaryArtist,
+          coverUrl: a.coverUrl || "/albums/rockstar.webp",
+          tracksCount: a.tracks.length,
+          tracks: a.tracks,
+        });
+      }
+    }
+
+    return list;
   }, []);
 
   const scrollLeft = () => {
@@ -46,7 +73,9 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
 
   const handleAlbumClick = (album: DisplayAlbum) => {
     // Find matching catalog album if available
-    const catalogMatch = ALBUMS_CATALOG.find((a) => a.id === album.id || a.title.toLowerCase() === album.title.toLowerCase());
+    const catalogMatch = ALBUMS_CATALOG.find(
+      (a) => a.id === album.id || a.title.toLowerCase() === album.title.toLowerCase()
+    );
     if (catalogMatch) {
       if (catalogMatch.tracks && catalogMatch.tracks.length > 0) {
         if (onPlayAlbum) onPlayAlbum(catalogMatch.tracks);
