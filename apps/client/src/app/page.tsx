@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { TopBar, type TopNavTab } from "../components/TopBar";
 import { DiscoverHero } from "../components/DiscoverHero";
+import { FEATURED_SPOTLIGHTS } from "../lib/data/mockupData";
 import { PopularAlbumsRow } from "../components/PopularAlbumsRow";
 import { PopularArtistsRow } from "../components/PopularArtistsRow";
 import { AmbientBackground } from "../components/AmbientBackground";
@@ -72,6 +73,8 @@ export default function SoundloungeApp() {
   });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
+  const [heroSpotlightIndex, setHeroSpotlightIndex] = useState(0);
+  const currentSpotlight = FEATURED_SPOTLIGHTS[heroSpotlightIndex] || FEATURED_SPOTLIGHTS[0];
 
   const handleTabChange = (tab: NavTab) => {
     setSelectedArtist(null);
@@ -476,9 +479,10 @@ export default function SoundloungeApp() {
                 {/* THE HERO ARTWORK / ALBUM COVER FILLED SEAMLESSLY IN THE BACKGROUND */}
                 <div className="absolute top-0 right-0 bottom-0 w-[55%] sm:w-[50%] lg:w-[48%] pointer-events-none z-0 overflow-hidden flex items-start justify-end">
                   <img
-                    src="/flume-hero-feathered.png"
-                    alt="Flume: Skin"
-                    className="w-full h-full object-cover object-top sm:object-[center_top] select-none [mask-image:linear-gradient(to_left,black_60%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_60%,transparent_100%)]"
+                    key={currentSpotlight.id}
+                    src={currentSpotlight.heroImageUrl}
+                    alt={currentSpotlight.title}
+                    className="w-full h-full object-cover object-top sm:object-[center_top] select-none animate-in fade-in duration-700 [mask-image:linear-gradient(to_left,black_60%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_60%,transparent_100%)]"
                   />
                 </div>
 
@@ -534,6 +538,8 @@ export default function SoundloungeApp() {
                     onPlayTrack={handlePlaySingleTrack}
                     currentTrack={activeTrack}
                     isPlaying={playerState.status === "playing"}
+                    activeIndex={heroSpotlightIndex}
+                    onActiveIndexChange={setHeroSpotlightIndex}
                   />
                 </div>
               </div>

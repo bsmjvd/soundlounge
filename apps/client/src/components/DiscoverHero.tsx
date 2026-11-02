@@ -9,10 +9,29 @@ interface DiscoverHeroProps {
   onPlayTrack: (track: Track) => void;
   currentTrack: Track | null;
   isPlaying: boolean;
+  activeIndex?: number;
+  onActiveIndexChange?: (index: number) => void;
 }
 
-export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverHeroProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
+export function DiscoverHero({
+  onPlayTrack,
+  currentTrack,
+  isPlaying,
+  activeIndex: externalIndex,
+  onActiveIndexChange,
+}: DiscoverHeroProps) {
+  const [internalIndex, setInternalIndex] = useState(0);
+  const activeIndex = externalIndex !== undefined ? externalIndex : internalIndex;
+  const setActiveIndex = (updater: number | ((prev: number) => number)) => {
+    if (typeof updater === "function") {
+      const nextVal = updater(activeIndex);
+      if (onActiveIndexChange) onActiveIndexChange(nextVal);
+      else setInternalIndex(nextVal);
+    } else {
+      if (onActiveIndexChange) onActiveIndexChange(updater);
+      else setInternalIndex(updater);
+    }
+  };
   const [isFollowing, setIsFollowing] = useState(false);
 
   const spotlight = FEATURED_SPOTLIGHTS[activeIndex] || FEATURED_SPOTLIGHTS[0];
