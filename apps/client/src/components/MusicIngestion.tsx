@@ -528,13 +528,17 @@ export function MusicIngestion({
               return (
                 <div
                   key={track.id}
-                  className="group grid grid-cols-[40px_1fr_140px_80px_130px] items-center px-4 py-3 hover:bg-[#12232e] transition-colors"
+                  onClick={() => handleSelectTrack(track, true, false)}
+                  className="group grid grid-cols-[40px_1fr_140px_80px_130px] items-center px-4 py-3 hover:bg-[#12232e] transition-colors cursor-pointer"
                 >
                   {/* Number / Quick Play on Hover */}
                   <div className="text-xs font-mono text-[#5c707d]">
                     <span className="group-hover:hidden">{rankNumber}</span>
                     <button
-                      onClick={() => handleSelectTrack(track, true, false)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectTrack(track, true, false);
+                      }}
                       className="hidden group-hover:inline-flex text-[#00e5c9] hover:scale-110 transition-transform cursor-pointer"
                       title="Play Now"
                     >
@@ -581,7 +585,10 @@ export function MusicIngestion({
                     ) : (
                       <>
                         <button
-                          onClick={() => toggleLike(track)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLike(track);
+                          }}
                           title={liked ? "Liked" : "Like Track"}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             liked ? "text-[#f43f5e]" : "text-[#5c707d] hover:text-white"
@@ -590,14 +597,20 @@ export function MusicIngestion({
                           <Heart className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
                         </button>
                         <button
-                          onClick={() => handleSelectTrack(track, false, true)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectTrack(track, false, true);
+                          }}
                           title="Play Next"
                           className="p-1.5 rounded-lg text-[#5c707d] hover:text-[#00e5c9] transition-colors cursor-pointer"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleSelectTrack(track, false, false)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectTrack(track, false, false);
+                          }}
                           title="Add to Queue"
                           className="p-1.5 rounded-lg text-[#5c707d] hover:text-white transition-colors cursor-pointer"
                         >

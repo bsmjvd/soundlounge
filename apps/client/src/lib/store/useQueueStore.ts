@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Track } from "@soundlounge/shared";
-import { findSimilarTrack, normalizeSongTitle } from "../recommendation/SimilarTracksEngine";
+import { findSimilarTrack, findSimilarBatch, normalizeSongTitle } from "../recommendation/SimilarTracksEngine";
 
 export interface QueueState {
   queue: Track[];
@@ -23,6 +23,7 @@ export interface QueueState {
   setAutoplayEnabled: (enabled: boolean) => void;
   setAutoQueueReason: (trackId: string, reason: string) => void;
   ensureSimilarQueued: (currentTrack: Track, history?: Track[]) => Promise<Track | null>;
+  seedSimilarQueue: (currentTrack: Track, history?: Track[]) => Promise<Track[]>;
 }
 
 export const useQueueStore = create<QueueState>()((set, get) => ({
@@ -96,6 +97,65 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
     } catch (err) {
       console.warn("Failed to auto-queue similar track:", err);
       return null;
+    } finally {
+      set({ isFetchingSimilar: false });
+    }
+  },
+
+  seedSimilarQueue: async (currentTrack: Track, history: Track[] = []) => {
+    const state = get();
+    if (!state.isAutoplayEnabled || !currentTrack) {
+      return [];
+    }
+
+    set({ isFetchingSimilar: true });
+    try {
+      const results = await findSimilarBatch(
+        {
+          currentTrack,
+          existingQueue: state.queue,
+          history,
+        },
+        4
+      );
+
+      if (results.length > 0) {
+        set((s) => {
+          const newReasons = { ...s.autoQueueReasons };
+          const newTracks: Track[] = [];
+
+          for (const res of results) {
+            const candNorm = normalizeSongTitle(res.track.title, res.track.artist);
+            const exists = s.queue.concat(newTracks).some((t) => {
+              if (t.id === res.track.id) return true;
+              const tNorm = normalizeSongTitle(t.title, t.artist);
+              return (
+                tNorm &&
+                candNorm &&
+                (tNorm === candNorm ||
+                  (tNorm.length >= 4 &&
+                    candNorm.length >= 4 &&
+                    (tNorm.startsWith(candNorm) || candNorm.startsWith(tNorm))))
+              );
+            });
+
+            if (!exists) {
+              newTracks.push(res.track);
+              newReasons[res.track.id] = res.reason;
+            }
+          }
+
+          return {
+            queue: [...s.queue, ...newTracks],
+            autoQueueReasons: newReasons,
+          };
+        });
+        return results.map((r) => r.track);
+      }
+      return [];
+    } catch (err) {
+      console.warn("Failed to seed similar queue batch:", err);
+      return [];
     } finally {
       set({ isFetchingSimilar: false });
     }

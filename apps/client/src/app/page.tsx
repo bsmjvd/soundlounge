@@ -204,7 +204,7 @@ export default function SoundloungeApp() {
       state.setQueue([track], 0);
       coordinator.play(track, 0);
       if (isAutoplayEnabled) {
-        state.ensureSimilarQueued(track, history);
+        state.seedSimilarQueue(track, history);
       }
     }
   };
@@ -468,53 +468,68 @@ export default function SoundloungeApp() {
           <div>
             {isDiscoverHome ? (
               /* SEAMLESS FULL-BLEED DISCOVER STAGE (TopBar + Flume Spotlight Hero) */
-              <div className="relative w-full overflow-hidden bg-gradient-to-r from-[#175d69] via-[#103a4c] to-[#0c192c]">
+              <div className="relative w-full overflow-hidden min-h-[340px] sm:min-h-[380px] bg-gradient-to-r from-[#175d69] via-[#103a4c] to-[#0c192c]">
                 {/* Ambient glowing atmosphere matching reference design */}
-                <div className="absolute top-0 left-0 w-[640px] h-full bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#187280_40%,transparent_75%)] opacity-35 pointer-events-none" />
-                <div className="absolute -top-10 right-0 w-[680px] h-full bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-40 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-b from-transparent to-[#0e1422] pointer-events-none z-10" />
+                <div className="absolute top-0 left-0 w-[640px] h-full bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#187280_40%,transparent_75%)] opacity-35 pointer-events-none z-[1]" />
+                <div className="absolute -top-10 right-0 w-[680px] h-full bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-40 pointer-events-none z-[1]" />
 
-                <TopBar
-                  mode={playerState.mode}
-                  onModeChange={handleModeChange}
-                  roomId={roomId}
-                  participantsCount={sync.participantsCount}
-                  pingMs={sync.pingMs}
-                  onOpenInvite={() => setIsInviteOpen(true)}
-                  onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                  onSearch={(q) => {
-                    if (q.trim()) {
-                      setSearchQuery(q.trim());
+                {/* THE HERO ARTWORK / ALBUM COVER FILLED SEAMLESSLY IN THE BACKGROUND */}
+                <div className="absolute top-0 right-0 bottom-0 w-[55%] sm:w-[50%] lg:w-[48%] pointer-events-none z-0 overflow-hidden flex items-start justify-end">
+                  <img
+                    src="/flume-hero-feathered.png"
+                    alt="Flume: Skin"
+                    className="w-full h-full object-cover object-top sm:object-[center_top] select-none [mask-image:linear-gradient(to_left,black_60%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_60%,transparent_100%)]"
+                  />
+                </div>
+
+                {/* Ambient bottom-edge smooth gradient fade into main content */}
+                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-b from-transparent to-[#0e1422] pointer-events-none z-10" />
+
+                {/* TopBar sitting seamlessly over the hero stage */}
+                <div className="relative z-20">
+                  <TopBar
+                    mode={playerState.mode}
+                    onModeChange={handleModeChange}
+                    roomId={roomId}
+                    participantsCount={sync.participantsCount}
+                    pingMs={sync.pingMs}
+                    onOpenInvite={() => setIsInviteOpen(true)}
+                    onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    onSearch={(q) => {
+                      if (q.trim()) {
+                        setSearchQuery(q.trim());
+                        setSelectedArtist(null);
+                        setSelectedAlbum(null);
+                        setActiveTab("search");
+                      }
+                    }}
+                    onNavBack={handleNavBack}
+                    onNavForward={handleNavForward}
+                    onOpenUpload={() => setActiveTab("search")}
+                    onPlayTrack={handlePlaySingleTrack}
+                    onAddTrack={handleAddTrack}
+                    onSelectArtist={(artist) => setSelectedArtist(artist)}
+                    onSelectAlbum={(album) => setSelectedAlbum(album)}
+                    activeTopTab={topNavTab}
+                    onTopTabChange={(tab) => {
                       setSelectedArtist(null);
                       setSelectedAlbum(null);
-                      setActiveTab("search");
-                    }
-                  }}
-                  onNavBack={handleNavBack}
-                  onNavForward={handleNavForward}
-                  onOpenUpload={() => setActiveTab("search")}
-                  onPlayTrack={handlePlaySingleTrack}
-                  onAddTrack={handleAddTrack}
-                  onSelectArtist={(artist) => setSelectedArtist(artist)}
-                  onSelectAlbum={(album) => setSelectedAlbum(album)}
-                  activeTopTab={topNavTab}
-                  onTopTabChange={(tab) => {
-                    setSelectedArtist(null);
-                    setSelectedAlbum(null);
-                    setTopNavTab(tab);
-                    if (tab === "discover") {
-                      setActiveTab("home");
-                    } else if (tab === "library") {
-                      setActiveTab("liked");
-                    } else if (tab === "radio") {
-                      setActiveTab("genres");
-                    }
-                  }}
-                />
+                      setTopNavTab(tab);
+                      if (tab === "discover") {
+                        setActiveTab("home");
+                      } else if (tab === "library") {
+                        setActiveTab("liked");
+                      } else if (tab === "radio") {
+                        setActiveTab("genres");
+                      }
+                    }}
+                  />
+                </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-8">
+                {/* Hero Typography & Action Controls */}
+                <div className="relative z-10 px-4 sm:px-8 lg:px-12 pt-2 sm:pt-4 pb-12">
                   <DiscoverHero
                     onPlayTrack={handlePlaySingleTrack}
                     currentTrack={activeTrack}

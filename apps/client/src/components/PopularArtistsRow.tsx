@@ -111,15 +111,15 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
           <div
             key={artist.id}
             onClick={() => handleArtistClick(artist)}
-            className="group flex-shrink-0 flex flex-col items-center w-20 sm:w-24 snap-start cursor-pointer"
+            className="group flex-shrink-0 flex flex-col items-center w-[74px] snap-start cursor-pointer"
           >
             {/* Circular Avatar */}
-            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-slate-800 ring-2 ring-slate-800 group-hover:ring-[#00e5ff] shadow-md transition-all duration-300 group-hover:scale-105">
+            <div className="relative w-[74px] h-[74px] rounded-full overflow-hidden bg-slate-800 ring-2 ring-slate-800/80 group-hover:ring-[#00e5ff] shadow-md transition-all duration-300 group-hover:scale-105">
               <img src={artist.avatarUrl} alt={artist.name} className="w-full h-full object-cover" loading="lazy" />
             </div>
 
             {/* Centered Name */}
-            <span className="text-xs font-semibold text-slate-200 group-hover:text-white mt-2.5 text-center truncate w-full transition-colors">
+            <span className="text-xs font-medium text-slate-300 group-hover:text-white mt-2 text-center truncate w-full transition-colors">
               {artist.name}
             </span>
           </div>

@@ -149,16 +149,16 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       {/* Horizontal Carousel */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
+        className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
       >
         {combinedAlbums.map((album) => (
           <div
             key={album.id}
             onClick={() => handleAlbumClick(album)}
-            className="group flex-shrink-0 w-32 sm:w-36 lg:w-40 snap-start cursor-pointer transition-transform duration-200 hover:-translate-y-1"
+            className="group flex-shrink-0 w-[107px] min-w-[107px] max-w-[107px] snap-start cursor-pointer transition-transform duration-200 hover:-translate-y-1"
           >
             {/* Album Cover Art: clean square with subtle rounded corners matching mockup */}
-            <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-slate-900 shadow-md shadow-black/50">
+            <div className="relative w-[107px] h-[107px] rounded-xl overflow-hidden bg-slate-900 shadow-md shadow-black/50 ring-1 ring-white/5">
               <img
                 src={album.coverUrl}
                 alt={album.title}
@@ -168,14 +168,14 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
 
               {/* Hover Play Button Overlay */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_15px_rgba(0,229,255,0.5)] transform scale-75 group-hover:scale-100 transition-transform">
+                <div className="w-8 h-8 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_15px_rgba(0,229,255,0.5)] transform scale-75 group-hover:scale-100 transition-transform">
                   <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                 </div>
               </div>
             </div>
 
             {/* Album Title & Artist */}
-            <h3 className="text-xs sm:text-sm font-medium text-white truncate mt-2 group-hover:text-[#00e5ff] transition-colors">
+            <h3 className="text-xs font-semibold text-white truncate mt-2 group-hover:text-[#00e5ff] transition-colors leading-tight">
               {album.title}
             </h3>
             <p className="text-[11px] text-slate-400 truncate mt-0.5">{album.subtitle || album.artist}</p>

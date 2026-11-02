@@ -455,3 +455,27 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
 
   return null;
 }
+
+/**
+ * Generates a batch of similar tracks (same artist first, then genre peers)
+ * to seed an immediate rich queue when starting playback of a new song or artist.
+ */
+export async function findSimilarBatch(
+  options: FindSimilarOptions,
+  count: number = 4
+): Promise<SimilarTrackResult[]> {
+  const results: SimilarTrackResult[] = [];
+  let currentQueue = [...options.existingQueue];
+
+  for (let i = 0; i < count; i++) {
+    const next = await findSimilarTrack({
+      ...options,
+      existingQueue: currentQueue,
+    });
+    if (!next || !next.track) break;
+    results.push(next);
+    currentQueue.push(next.track);
+  }
+
+  return results;
+}

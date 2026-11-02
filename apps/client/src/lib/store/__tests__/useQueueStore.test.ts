@@ -193,4 +193,25 @@ describe("useQueueStore", () => {
     expect(useQueueStore.getState().queue[1].artist).toContain("Nusrat Fateh Ali Khan");
     expect(useQueueStore.getState().queue.some((t) => t.artist.includes("Sidhu Moose Wala"))).toBe(false);
   });
+
+  it("seeds a rich batch of same-artist tracks followed by genre peers when seedSimilarQueue is called", async () => {
+    const nusratTrack: Track = {
+      id: "yt_nfak_1",
+      title: "Mujhe Tum Yaad Aate Ho",
+      artist: "Nusrat Fateh Ali Khan",
+      durationMs: 320000,
+      url: "/api/stream/youtube?id=nfak_1",
+      source: "youtube",
+    };
+
+    useQueueStore.getState().setQueue([nusratTrack], 0);
+    expect(useQueueStore.getState().queue.length).toBe(1);
+
+    const seeded = await useQueueStore.getState().seedSimilarQueue(nusratTrack);
+    expect(seeded.length).toBeGreaterThanOrEqual(2);
+    expect(useQueueStore.getState().queue.length).toBeGreaterThanOrEqual(3);
+
+    // The first seeded song must be by Nusrat Fateh Ali Khan (same artist)
+    expect(useQueueStore.getState().queue[1].artist).toContain("Nusrat Fateh Ali Khan");
+  });
 });

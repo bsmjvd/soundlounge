@@ -32,25 +32,14 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
   };
 
   return (
-    <div className="relative w-full overflow-visible pt-4 sm:pt-6 pb-12 sm:pb-16 group select-none">
-      {/* Artist Portrait Image: seamlessly blending on the right without ANY card or box container */}
-      <div className="absolute right-0 sm:right-2 lg:right-6 -top-12 sm:-top-16 bottom-0 w-full sm:w-1/2 max-w-2xl pointer-events-none flex items-end justify-end overflow-visible z-0">
-        <img
-          src={spotlight.heroImageUrl}
-          alt={spotlight.title}
-          className="max-h-[360px] sm:max-h-[420px] lg:max-h-[460px] w-auto object-contain select-none transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-        />
-      </div>
-
+    <div className="relative w-full overflow-visible pt-2 pb-6 sm:pb-8 group select-none">
       {/* Hero Content: display typography & action buttons */}
-      <div className="relative z-10 px-2 sm:px-4 flex flex-col justify-center min-h-[240px] sm:min-h-[280px] max-w-xl">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-3 drop-shadow-sm">
+      <div className="relative z-10 px-2 sm:px-4 flex flex-col justify-center min-h-[220px] sm:min-h-[260px] max-w-xl">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-3 drop-shadow-sm font-sans">
           {spotlight.title}
         </h1>
 
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-8 max-w-md">
-          {spotlight.description}
-        </p>
+        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed mb-8 max-w-md">{spotlight.description}</p>
 
         {/* Action Buttons: PLAY and FOLLOW */}
         <div className="flex items-center gap-4">
@@ -93,7 +82,7 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
 
       {/* Spotlights Carousel Controls (Next / Prev) */}
       {FEATURED_SPOTLIGHTS.length > 1 && (
-        <div className="absolute bottom-4 right-6 z-20 flex items-center gap-2">
+        <div className="absolute bottom-2 right-6 z-20 flex items-center gap-2">
           <button
             onClick={handlePrevSpotlight}
             className="w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
