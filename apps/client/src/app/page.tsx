@@ -430,6 +430,7 @@ export default function SoundloungeApp() {
   }
 
   const activeTrack = playerState.currentTrack || queue[currentIndex] || null;
+  const isDiscoverHome = !selectedArtist && !selectedAlbum && activeTab === "home" && topNavTab === "discover";
 
   return (
     <div className="min-h-screen bg-[#0e1422] text-[#f3f4f6] relative overflow-x-hidden selection:bg-[#00e5ff]/30 selection:text-white">
@@ -465,46 +466,103 @@ export default function SoundloungeApp() {
         {/* Right Stage: Top Bar + Content Canvas */}
         <div className="flex-1 min-w-0 flex flex-col justify-between pb-28">
           <div>
-            {/* Top Bar with Section Tabs (DISCOVER, MY LIBRARY, RADIO) & Pill Search */}
-            <TopBar
-              mode={playerState.mode}
-              onModeChange={handleModeChange}
-              roomId={roomId}
-              participantsCount={sync.participantsCount}
-              pingMs={sync.pingMs}
-              onOpenInvite={() => setIsInviteOpen(true)}
-              onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onSearch={(q) => {
-                if (q.trim()) {
-                  setSearchQuery(q.trim());
+            {isDiscoverHome ? (
+              /* SEAMLESS FULL-BLEED DISCOVER STAGE (TopBar + Flume Spotlight Hero) */
+              <div className="relative w-full overflow-hidden bg-gradient-to-r from-[#175d69] via-[#103a4c] to-[#0c192c]">
+                {/* Ambient glowing atmosphere matching reference design */}
+                <div className="absolute top-0 left-0 w-[640px] h-full bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#187280_40%,transparent_75%)] opacity-35 pointer-events-none" />
+                <div className="absolute -top-10 right-0 w-[680px] h-full bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-40 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-b from-transparent to-[#0e1422] pointer-events-none z-10" />
+
+                <TopBar
+                  mode={playerState.mode}
+                  onModeChange={handleModeChange}
+                  roomId={roomId}
+                  participantsCount={sync.participantsCount}
+                  pingMs={sync.pingMs}
+                  onOpenInvite={() => setIsInviteOpen(true)}
+                  onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  onSearch={(q) => {
+                    if (q.trim()) {
+                      setSearchQuery(q.trim());
+                      setSelectedArtist(null);
+                      setSelectedAlbum(null);
+                      setActiveTab("search");
+                    }
+                  }}
+                  onNavBack={handleNavBack}
+                  onNavForward={handleNavForward}
+                  onOpenUpload={() => setActiveTab("search")}
+                  onPlayTrack={handlePlaySingleTrack}
+                  onAddTrack={handleAddTrack}
+                  onSelectArtist={(artist) => setSelectedArtist(artist)}
+                  onSelectAlbum={(album) => setSelectedAlbum(album)}
+                  activeTopTab={topNavTab}
+                  onTopTabChange={(tab) => {
+                    setSelectedArtist(null);
+                    setSelectedAlbum(null);
+                    setTopNavTab(tab);
+                    if (tab === "discover") {
+                      setActiveTab("home");
+                    } else if (tab === "library") {
+                      setActiveTab("liked");
+                    } else if (tab === "radio") {
+                      setActiveTab("genres");
+                    }
+                  }}
+                />
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-8">
+                  <DiscoverHero
+                    onPlayTrack={handlePlaySingleTrack}
+                    currentTrack={activeTrack}
+                    isPlaying={playerState.status === "playing"}
+                  />
+                </div>
+              </div>
+            ) : (
+              <TopBar
+                mode={playerState.mode}
+                onModeChange={handleModeChange}
+                roomId={roomId}
+                participantsCount={sync.participantsCount}
+                pingMs={sync.pingMs}
+                onOpenInvite={() => setIsInviteOpen(true)}
+                onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onSearch={(q) => {
+                  if (q.trim()) {
+                    setSearchQuery(q.trim());
+                    setSelectedArtist(null);
+                    setSelectedAlbum(null);
+                    setActiveTab("search");
+                  }
+                }}
+                onNavBack={handleNavBack}
+                onNavForward={handleNavForward}
+                onOpenUpload={() => setActiveTab("search")}
+                onPlayTrack={handlePlaySingleTrack}
+                onAddTrack={handleAddTrack}
+                onSelectArtist={(artist) => setSelectedArtist(artist)}
+                onSelectAlbum={(album) => setSelectedAlbum(album)}
+                activeTopTab={topNavTab}
+                onTopTabChange={(tab) => {
                   setSelectedArtist(null);
                   setSelectedAlbum(null);
-                  setActiveTab("search");
-                }
-              }}
-              onNavBack={handleNavBack}
-              onNavForward={handleNavForward}
-              onOpenUpload={() => setActiveTab("search")}
-              onPlayTrack={handlePlaySingleTrack}
-              onAddTrack={handleAddTrack}
-              onSelectArtist={(artist) => setSelectedArtist(artist)}
-              onSelectAlbum={(album) => setSelectedAlbum(album)}
-              activeTopTab={topNavTab}
-              onTopTabChange={(tab) => {
-                setSelectedArtist(null);
-                setSelectedAlbum(null);
-                setTopNavTab(tab);
-                if (tab === "discover") {
-                  setActiveTab("home");
-                } else if (tab === "library") {
-                  setActiveTab("liked");
-                } else if (tab === "radio") {
-                  setActiveTab("genres");
-                }
-              }}
-            />
+                  setTopNavTab(tab);
+                  if (tab === "discover") {
+                    setActiveTab("home");
+                  } else if (tab === "library") {
+                    setActiveTab("liked");
+                  } else if (tab === "radio") {
+                    setActiveTab("genres");
+                  }
+                }}
+              />
+            )}
 
             {/* Stage Canvas */}
             <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
@@ -622,23 +680,16 @@ export default function SoundloungeApp() {
                   />
                 </div>
               ) : (
-                /* EXACT REFERENCE UI VIEW: Hero Banner + Popular Albums + Popular Artists */
-                <div className="space-y-10">
-                  {/* 1. Featured Spotlight Hero ("Flume: Skin") */}
-                  <DiscoverHero
-                    onPlayTrack={handlePlaySingleTrack}
-                    currentTrack={activeTrack}
-                    isPlaying={playerState.status === "playing"}
-                  />
-
-                  {/* 2. Popular Albums Section */}
+                /* EXACT REFERENCE UI VIEW: Popular Albums + Popular Artists */
+                <div className="space-y-10 pt-2">
+                  {/* Popular Albums Section */}
                   <PopularAlbumsRow
                     onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
                     onPlayAlbum={handlePlayAlbum}
                     onPlayTrack={handlePlaySingleTrack}
                   />
 
-                  {/* 3. Popular Artists Section */}
+                  {/* Popular Artists Section */}
                   <PopularArtistsRow onSelectArtist={(artist) => setSelectedArtist(artist)} />
                 </div>
               )}

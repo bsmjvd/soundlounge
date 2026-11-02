@@ -32,27 +32,25 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
   };
 
   return (
-    <div className="relative w-full overflow-visible pt-2 pb-10 sm:pb-14 group">
-      {/* Seamless Ambient Background Glow: rich teal to dark midnight canvas (no box border) */}
-      <div className="absolute -top-24 -left-12 -right-12 bottom-0 bg-[radial-gradient(ellipse_90%_75%_at_20%_20%,#1c6e7a_0%,#114050_45%,#0d1a29_80%,transparent_100%)] pointer-events-none" />
-      <div className="absolute -top-28 -left-24 w-[520px] h-[520px] bg-[#00e5ff]/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Artist Portrait Image: seamlessly blending with feathered edges on the right (NOT inside a box) */}
-      <div className="absolute right-0 sm:right-4 lg:right-10 top-0 bottom-0 w-full sm:w-1/2 max-w-xl pointer-events-none flex items-center justify-end overflow-visible">
+    <div className="relative w-full overflow-visible pt-4 sm:pt-6 pb-12 sm:pb-16 group select-none">
+      {/* Artist Portrait Image: seamlessly blending on the right without ANY card or box container */}
+      <div className="absolute right-0 sm:right-2 lg:right-6 -top-12 sm:-top-16 bottom-0 w-full sm:w-1/2 max-w-2xl pointer-events-none flex items-end justify-end overflow-visible z-0">
         <img
           src={spotlight.heroImageUrl}
           alt={spotlight.title}
-          className="max-h-[380px] sm:max-h-[420px] lg:max-h-[460px] w-auto object-contain select-none transition-transform duration-700 ease-out group-hover:scale-105"
+          className="max-h-[360px] sm:max-h-[420px] lg:max-h-[460px] w-auto object-contain select-none transition-transform duration-700 ease-out group-hover:scale-[1.02]"
         />
       </div>
 
       {/* Hero Content: display typography & action buttons */}
-      <div className="relative z-10 px-2 sm:px-4 flex flex-col justify-center min-h-[260px] sm:min-h-[300px] max-w-xl">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-3">
+      <div className="relative z-10 px-2 sm:px-4 flex flex-col justify-center min-h-[240px] sm:min-h-[280px] max-w-xl">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-3 drop-shadow-sm">
           {spotlight.title}
         </h1>
 
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-8 max-w-md">{spotlight.description}</p>
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-8 max-w-md">
+          {spotlight.description}
+        </p>
 
         {/* Action Buttons: PLAY and FOLLOW */}
         <div className="flex items-center gap-4">
@@ -95,7 +93,7 @@ export function DiscoverHero({ onPlayTrack, currentTrack, isPlaying }: DiscoverH
 
       {/* Spotlights Carousel Controls (Next / Prev) */}
       {FEATURED_SPOTLIGHTS.length > 1 && (
-        <div className="absolute bottom-5 right-6 z-20 flex items-center gap-2">
+        <div className="absolute bottom-4 right-6 z-20 flex items-center gap-2">
           <button
             onClick={handlePrevSpotlight}
             className="w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
