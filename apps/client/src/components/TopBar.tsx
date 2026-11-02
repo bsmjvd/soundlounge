@@ -3,12 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
-  Users,
-  Share2,
   X,
-  UploadCloud,
   Menu,
   Music2,
   Play,
@@ -17,13 +12,14 @@ import {
   Disc,
   User,
   Loader2,
-  ArrowRight,
 } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
 import type { Track, Album } from "@soundlounge/shared";
 import { ARTISTS_CATALOG, type ArtistProfileData } from "../lib/data/artistsCatalog";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import { TrackArtwork } from "./TrackArtwork";
+
+export type TopNavTab = "discover" | "library" | "radio";
 
 interface TopBarProps {
   mode: PlaybackMode;
@@ -43,6 +39,8 @@ interface TopBarProps {
   onAddTrack?: (track: Track, playNext?: boolean) => void;
   onSelectArtist?: (artist: ArtistProfileData) => void;
   onSelectAlbum?: (album: Album) => void;
+  activeTopTab?: TopNavTab;
+  onTopTabChange?: (tab: TopNavTab) => void;
 }
 
 export function TopBar({
@@ -63,6 +61,8 @@ export function TopBar({
   onAddTrack,
   onSelectArtist,
   onSelectAlbum,
+  activeTopTab = "discover",
+  onTopTabChange,
 }: TopBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -183,35 +183,16 @@ export function TopBar({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Combine local catalog tracks and live search tracks
-  const displayedTracks = useMemo(() => {
-    const list = [...matchingLocalTracks];
-    const seenTitles = new Set(list.map((t) => t.title.toLowerCase().trim()));
-
-    for (const t of liveTracks) {
-      const key = t.title.toLowerCase().trim();
-      if (!seenTitles.has(key)) {
-        seenTitles.add(key);
-        list.push(t);
-      }
-      if (list.length >= 6) break;
-    }
-    return list;
-  }, [matchingLocalTracks, liveTracks]);
-
-  const hasAnyResults = matchingArtists.length > 0 || matchingAlbums.length > 0 || displayedTracks.length > 0;
-
-  const handleSelectTrackPlay = (track: Track) => {
+  const handlePlayDirect = (track: Track) => {
     if (onPlayTrack) {
       onPlayTrack(track);
     }
     setIsDropdownOpen(false);
   };
 
-  const handleAddTrackQueue = (e: React.MouseEvent, track: Track, playNext: boolean = false) => {
-    e.stopPropagation();
+  const handleAddDirect = (track: Track) => {
     if (onAddTrack) {
-      onAddTrack(track, playNext);
+      onAddTrack(track, false);
       setAddedTrackId(track.id);
       setTimeout(() => setAddedTrackId(null), 1500);
     }
@@ -239,328 +220,255 @@ export function TopBar({
     }
   };
 
-  const formatDuration = (ms?: number) => {
-    if (!ms) return "3:30";
-    const totalSecs = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-[#14232c] bg-[#081014] px-4 sm:px-6 py-2.5 transition-colors">
-      <div className="flex items-center justify-between gap-3 sm:gap-6">
-        {/* Left: Mobile Menu Trigger & History Navigation */}
-        <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-[100] w-full border-b border-[#152033] bg-[#0c121e]/95 backdrop-blur-md px-4 sm:px-8 py-3 transition-colors">
+      <div className="flex items-center justify-between gap-4">
+        {/* Left: Mobile Trigger & Top Navigation Tabs: DISCOVER, MY LIBRARY, RADIO */}
+        <div className="flex items-center gap-6">
           {onToggleMobileMenu && (
             <button
               onClick={onToggleMobileMenu}
-              className="md:hidden p-2 text-[#7d8f9c] hover:text-white rounded-lg hover:bg-[#122028] transition-colors cursor-pointer"
-              aria-label="Open navigation menu"
+              className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Open playlist menu"
             >
               <Menu className="w-5 h-5" />
             </button>
           )}
 
-          <div className="hidden sm:flex items-center gap-1.5">
+          <nav className="flex items-center gap-6 sm:gap-8">
             <button
-              onClick={onNavBack}
-              aria-label="Go back"
-              className="w-8 h-8 rounded-full bg-[#0d181e] hover:bg-[#15252f] border border-[#1c2e38] flex items-center justify-center text-[#7d8f9c] hover:text-white transition-colors cursor-pointer"
+              onClick={() => onTopTabChange && onTopTabChange("discover")}
+              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
+                activeTopTab === "discover"
+                  ? "text-[#00e5ff] border-[#00e5ff]"
+                  : "text-slate-400 border-transparent hover:text-white"
+              }`}
             >
-              <ChevronLeft className="w-4 h-4" />
+              Discover
             </button>
+
             <button
-              onClick={onNavForward}
-              aria-label="Go forward"
-              className="w-8 h-8 rounded-full bg-[#0d181e] hover:bg-[#15252f] border border-[#1c2e38] flex items-center justify-center text-[#7d8f9c] hover:text-white transition-colors cursor-pointer"
+              onClick={() => onTopTabChange && onTopTabChange("library")}
+              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
+                activeTopTab === "library"
+                  ? "text-[#00e5ff] border-[#00e5ff]"
+                  : "text-slate-400 border-transparent hover:text-white"
+              }`}
             >
-              <ChevronRight className="w-4 h-4" />
+              My Library
             </button>
-          </div>
+
+            <button
+              onClick={() => onTopTabChange && onTopTabChange("radio")}
+              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
+                activeTopTab === "radio"
+                  ? "text-[#00e5ff] border-[#00e5ff]"
+                  : "text-slate-400 border-transparent hover:text-white"
+              }`}
+            >
+              Radio
+            </button>
+          </nav>
         </div>
 
-        {/* Center: Rounded Pill Search Input Bar + Instant Live Dropdown */}
-        <div className="relative flex-1 max-w-xl mx-auto">
-          <form onSubmit={handleSearchSubmit} className="relative w-full">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#5c707d]">
-              <Search className="w-4 h-4" />
-            </div>
+        {/* Center/Right: Pill Search Input + Dropdown */}
+        <div className="flex items-center gap-4 flex-1 justify-end max-w-lg">
+          <div className="relative w-full max-w-xs sm:max-w-sm">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <Search className="w-4 h-4" />
+              </div>
 
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search songs, artists, or albums..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (e.target.value.trim().length > 0) {
-                  setIsDropdownOpen(true);
-                } else {
-                  setIsDropdownOpen(false);
-                }
-              }}
-              onFocus={() => {
-                if (searchQuery.trim().length > 0) {
-                  setIsDropdownOpen(true);
-                }
-              }}
-              className="w-full h-10 bg-[#0d181e] hover:bg-[#101e26] focus:bg-[#12212a] border border-[#1c2e38] focus:border-[#00e5c9] rounded-full pl-10 pr-20 text-xs text-white placeholder-[#5c707d] outline-none transition-all shadow-inner"
-            />
-
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search artist, albums..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value.trim().length > 0) {
+                    setIsDropdownOpen(true);
+                  } else {
                     setIsDropdownOpen(false);
-                  }}
-                  className="p-1 text-[#6b7e8b] hover:text-white rounded-md cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <kbd className="hidden sm:inline-flex items-center rounded border border-[#203440] bg-[#14222a] px-1.5 py-0.5 text-[10px] font-mono text-[#718593]">
-                ⌘K
-              </kbd>
-            </div>
-          </form>
+                  }
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim().length > 0) {
+                    setIsDropdownOpen(true);
+                  }
+                }}
+                className="w-full h-9 bg-slate-800/60 hover:bg-slate-800 focus:bg-slate-800/90 border border-slate-700/60 focus:border-[#00e5ff] rounded-full pl-9 pr-16 text-xs text-white placeholder-slate-400 outline-none transition-all shadow-inner"
+              />
 
-          {/* Instant Live Search Results Popover */}
-          {isDropdownOpen && searchQuery.trim().length > 0 && (
-            <div
-              ref={dropdownRef}
-              style={{ backgroundColor: "#091217" }}
-              className="absolute left-0 right-0 top-full mt-2 bg-[#091217] border border-[#203644] rounded-2xl shadow-[0_30px_90px_rgba(0,0,0,1)] overflow-hidden z-[120] animate-in fade-in zoom-in-95 duration-150 max-h-[75vh] flex flex-col"
-            >
-              {/* Scrollable Results Stage */}
-              <div className="p-3 overflow-y-auto space-y-4 flex-1">
-                {/* 1. ARTISTS SECTION */}
-                {matchingArtists.length > 0 && (
-                  <div>
-                    <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-[#00e5c9] uppercase">
-                      <User className="w-3 h-3" />
-                      <span>Artists</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {matchingArtists.map((artist) => (
-                        <button
-                          key={artist.id}
-                          onClick={() => handleSelectArtistClick(artist)}
-                          className="flex items-center gap-2.5 p-2 rounded-xl bg-[#101d26] hover:bg-[#162a37] border border-[#1b313f] hover:border-[#00e5c9]/40 transition-all text-left cursor-pointer group"
-                        >
-                          <img
-                            src={artist.avatarUrl}
-                            alt={artist.name}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=80";
-                            }}
-                            className="w-9 h-9 rounded-full object-cover border border-[#203440] flex-shrink-0 group-hover:scale-105 transition-transform"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
-                              {artist.name}
-                            </p>
-                            <p className="text-[10px] text-[#718492] truncate capitalize">{artist.genre}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setIsDropdownOpen(false);
+                    }}
+                    className="p-0.5 text-slate-400 hover:text-white rounded cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
+                <kbd className="hidden sm:inline-flex items-center rounded border border-slate-700 bg-slate-900/60 px-1 py-0.2 text-[9px] font-mono text-slate-400">
+                  ⌘K
+                </kbd>
+              </div>
+            </form>
 
-                {/* 2. ALBUMS SECTION */}
-                {matchingAlbums.length > 0 && (
-                  <div>
-                    <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-[#00e5c9] uppercase">
-                      <Disc className="w-3 h-3" />
-                      <span>Albums & Soundtracks</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {matchingAlbums.map((album) => (
-                        <button
-                          key={album.id}
-                          onClick={() => handleSelectAlbumClick(album)}
-                          className="flex items-center gap-2.5 p-2 rounded-xl bg-[#101d26] hover:bg-[#162a37] border border-[#1b313f] hover:border-[#00e5c9]/40 transition-all text-left cursor-pointer group"
-                        >
-                          <img
-                            src={album.coverUrl}
-                            alt={album.title}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&auto=format&fit=crop&q=80";
-                            }}
-                            className="w-9 h-9 rounded-lg object-cover border border-[#203440] flex-shrink-0 group-hover:scale-105 transition-transform"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
-                              {album.title}
-                            </p>
-                            <p className="text-[10px] text-[#718492] truncate">
-                              {album.releaseYear} ·{" "}
-                              {album.movieDetails?.movieTitle || album.primaryArtist || "Original"}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. SONGS SECTION */}
-                {displayedTracks.length > 0 && (
-                  <div>
-                    <div className="px-2 pb-1.5 flex items-center justify-between text-[10px] font-semibold tracking-wider text-[#00e5c9] uppercase">
-                      <div className="flex items-center gap-1.5">
-                        <Music2 className="w-3 h-3" />
-                        <span>Songs</span>
+            {/* Instant Search Results Dropdown */}
+            {isDropdownOpen && searchQuery.trim().length > 0 && (
+              <div
+                ref={dropdownRef}
+                className="absolute left-0 right-0 top-full mt-2 bg-[#0c121e] border border-[#1b273d] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden z-[120] max-h-[70vh] flex flex-col"
+              >
+                <div className="p-3 overflow-y-auto space-y-4 flex-1 scrollbar-thin scrollbar-thumb-slate-800">
+                  {/* ARTISTS */}
+                  {matchingArtists.length > 0 && (
+                    <div>
+                      <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
+                        <User className="w-3 h-3" />
+                        <span>Artists</span>
                       </div>
-                      {isLoadingLive && (
-                        <span className="flex items-center gap-1 text-[10px] text-[#718492] lowercase">
-                          <Loader2 className="w-2.5 h-2.5 animate-spin text-[#00e5c9]" />
-                          loading more...
-                        </span>
-                      )}
+                      <div className="space-y-1">
+                        {matchingArtists.map((artist) => (
+                          <button
+                            key={artist.id}
+                            onClick={() => handleSelectArtistClick(artist)}
+                            className="w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-800/70 text-left transition-colors cursor-pointer"
+                          >
+                            <img
+                              src={artist.avatarUrl}
+                              alt={artist.name}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-white truncate">{artist.name}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{artist.genre}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                  )}
 
-                    <div className="space-y-1">
-                      {displayedTracks.map((track) => (
-                        <div
-                          key={track.id}
-                          onClick={() => handleSelectTrackPlay(track)}
-                          className="flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-[#132530] border border-transparent hover:border-[#1e3746] transition-colors cursor-pointer group"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="relative flex-shrink-0">
-                              <TrackArtwork
-                                coverUrl={track.coverUrl}
-                                trackId={track.id}
-                                title={track.title}
-                                className="w-10 h-10 rounded-lg"
-                                iconClassName="w-4 h-4"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
-                                <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
+                  {/* ALBUMS */}
+                  {matchingAlbums.length > 0 && (
+                    <div>
+                      <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
+                        <Disc className="w-3 h-3" />
+                        <span>Albums</span>
+                      </div>
+                      <div className="space-y-1">
+                        {matchingAlbums.map((album) => (
+                          <button
+                            key={album.id}
+                            onClick={() => handleSelectAlbumClick(album)}
+                            className="w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-800/70 text-left transition-colors cursor-pointer"
+                          >
+                            <img src={album.coverUrl} alt={album.title} className="w-8 h-8 rounded-lg object-cover" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-white truncate">{album.title}</p>
+                              <p className="text-[10px] text-slate-400 truncate">
+                                {album.primaryArtist} • {album.releaseYear}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SONGS (Local + Live YouTube) */}
+                  {(matchingLocalTracks.length > 0 || liveTracks.length > 0) && (
+                    <div>
+                      <div className="px-2 pb-1.5 flex items-center justify-between text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
+                        <div className="flex items-center gap-1.5">
+                          <Music2 className="w-3 h-3" />
+                          <span>Songs</span>
+                        </div>
+                        {isLoadingLive && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+                      </div>
+
+                      <div className="space-y-1">
+                        {[...matchingLocalTracks, ...liveTracks].slice(0, 6).map((track) => (
+                          <div
+                            key={track.id}
+                            onClick={() => handlePlayDirect(track)}
+                            className="group flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0">
+                                <TrackArtwork
+                                  coverUrl={track.coverUrl}
+                                  trackId={track.id}
+                                  title={track.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium text-white truncate group-hover:text-[#00e5ff]">
+                                  {track.title}
+                                </p>
+                                <p className="text-[10px] text-slate-400 truncate">{track.artist}</p>
                               </div>
                             </div>
 
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
-                                {track.title}
-                              </p>
-                              <p className="text-[11px] text-[#718492] truncate">{track.artist}</p>
+                            <div className="flex items-center gap-1.5 ml-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddDirect(track);
+                                }}
+                                className="p-1 rounded-full hover:bg-slate-700 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Add to queue"
+                              >
+                                {addedTrackId === track.id ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Plus className="w-3 h-3" />
+                                )}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePlayDirect(track);
+                                }}
+                                className="p-1.5 rounded-full bg-[#00e5ff] text-[#0a0e17] opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Play song"
+                              >
+                                <Play className="w-3 h-3 fill-current ml-0.5" />
+                              </button>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-[11px] font-mono text-[#5c707d]">
-                              {formatDuration(track.durationMs)}
-                            </span>
-
-                            <button
-                              onClick={(e) => handleAddTrackQueue(e, track, true)}
-                              title="Play Next"
-                              className="p-1.5 text-[#5c707d] hover:text-[#00e5c9] rounded-lg hover:bg-[#1a2d39] transition-colors cursor-pointer"
-                            >
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              onClick={(e) => handleAddTrackQueue(e, track, false)}
-                              title="Add to Playing Queue"
-                              className="p-1.5 text-[#5c707d] hover:text-white rounded-lg hover:bg-[#1a2d39] transition-colors cursor-pointer"
-                            >
-                              {addedTrackId === track.id ? (
-                                <Check className="w-3.5 h-3.5 text-[#00e5c9]" />
-                              ) : (
-                                <Plus className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {/* 4. LOADING STATE (when no items matched yet) */}
-                {isLoadingLive && !hasAnyResults && (
-                  <div className="py-8 text-center flex flex-col items-center justify-center gap-2 text-[#718492]">
-                    <Loader2 className="w-5 h-5 animate-spin text-[#00e5c9]" />
-                    <p className="text-xs">Searching songs, artists, and albums...</p>
-                  </div>
-                )}
-
-                {/* 5. NO RESULTS STATE */}
-                {!isLoadingLive && !hasAnyResults && searchQuery.trim().length >= 2 && (
-                  <div className="py-6 text-center text-[#718492] space-y-2">
-                    <p className="text-xs">No quick matches found for &ldquo;{searchQuery}&rdquo;.</p>
-                    <button
-                      onClick={handleSearchSubmit}
-                      className="inline-flex items-center gap-1.5 text-xs text-[#00e5c9] font-medium hover:underline cursor-pointer"
-                    >
-                      <span>Search on YouTube Ingestion</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
+                <div className="p-2 border-t border-slate-800/80 bg-slate-900/40 text-center">
+                  <button onClick={handleSearchSubmit} className="text-xs text-[#00e5ff] hover:underline font-semibold">
+                    View all results for &ldquo;{searchQuery}&rdquo; →
+                  </button>
+                </div>
               </div>
+            )}
+          </div>
 
-              {/* Bottom Footer Actions */}
-              <div className="p-2.5 bg-[#081014] border-t border-[#14232c] flex items-center justify-between text-[11px] text-[#6b7e8c] px-4">
-                <span className="hidden sm:inline">
-                  Click any song to play instantly · Press <kbd className="font-mono text-[#00e5c9]">ESC</kbd> to close
-                </span>
-                <button
-                  onClick={handleSearchSubmit}
-                  className="flex items-center gap-1 text-[#00e5c9] hover:underline font-medium cursor-pointer ml-auto"
-                >
-                  <span>See full search results</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+          {/* User Profile Avatar with subtle cyan halo (matching reference image) */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#00e5ff]/40 shadow-[0_0_12px_rgba(0,229,255,0.25)] flex-shrink-0">
+              <img
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+                alt="User Profile"
+                className="w-full h-full object-cover"
+              />
             </div>
-          )}
-        </div>
-
-        {/* Right: Real Soundlounge Actions (Upload Audio, Mode Switch, Room Sync) */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {onOpenUpload && (
-            <button
-              onClick={onOpenUpload}
-              title="Upload Audio to Cloud"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0d181e] hover:bg-[#14232c] border border-[#1c2e38] text-xs font-medium text-[#7d8f9c] hover:text-[#00e5c9] transition-colors cursor-pointer"
-            >
-              <UploadCloud className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Upload Audio</span>
-            </button>
-          )}
-
-          {/* Sync Lounge Status Pill */}
-          {mode === "synced" ? (
-            <div className="flex items-center gap-2 bg-[#0e1920] border border-[#1a323e] px-3 py-1.5 rounded-full text-xs">
-              <span className="w-2 h-2 rounded-full bg-[#00e5c9] animate-pulse" />
-              <span className="text-[#8da0ad] font-mono tabular-nums">{pingMs}ms</span>
-              <button
-                onClick={onOpenInvite}
-                title="Invite to Room"
-                className="text-[#00e5c9] font-medium hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <Share2 className="w-3 h-3" />
-                <span>Invite</span>
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => onModeChange("synced")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0d181e] hover:bg-[#14232c] border border-[#1c2e38] text-xs font-medium text-[#7d8f9c] hover:text-[#00e5c9] transition-colors cursor-pointer"
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sync Lounge</span>
-            </button>
-          )}
+          </div>
         </div>
       </div>
     </header>

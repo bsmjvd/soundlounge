@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { TopBar } from "../components/TopBar";
+import { TopBar, type TopNavTab } from "../components/TopBar";
+import { DiscoverHero } from "../components/DiscoverHero";
+import { PopularAlbumsRow } from "../components/PopularAlbumsRow";
+import { PopularArtistsRow } from "../components/PopularArtistsRow";
 import { AmbientBackground } from "../components/AmbientBackground";
-import { CoverflowHero } from "../components/CoverflowHero";
-import { FeaturedMixesColumn } from "../components/FeaturedMixesColumn";
-import { WeeklyTopSongs } from "../components/WeeklyTopSongs";
-import { RecentArtistsGrid } from "../components/RecentArtistsGrid";
 import { MusicIngestion } from "../components/MusicIngestion";
-import { QueueView } from "../components/QueueView";
 import { LibraryView } from "../components/LibraryView";
 import { PlayerBar } from "../components/PlayerBar";
 import { InviteModal } from "../components/InviteModal";
@@ -16,9 +14,7 @@ import { AccessDenied } from "../components/AccessDenied";
 import { StudioImmersiveModal } from "../components/StudioImmersiveModal";
 import { NavigationSidebar, type NavTab } from "../components/NavigationSidebar";
 import { ArtistDetailView } from "../components/ArtistDetailView";
-import { ArtistsDirectoryView } from "../components/ArtistsDirectoryView";
 import { AlbumDetailView } from "../components/AlbumDetailView";
-import { AlbumsDirectoryView } from "../components/AlbumsDirectoryView";
 import { GenreDirectoryView } from "../components/GenreDirectoryView";
 import { type ArtistProfileData, ARTISTS_CATALOG } from "../lib/data/artistsCatalog";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
@@ -54,6 +50,7 @@ export default function SoundloungeApp() {
 
   // Navigation and Modal State
   const [activeTab, setActiveTab] = useState<NavTab>("home");
+  const [topNavTab, setTopNavTab] = useState<TopNavTab>("discover");
   const [selectedArtist, setSelectedArtist] = useState<ArtistProfileData | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [navHistory, setNavHistory] = useState<NavTab[]>(["home"]);
@@ -434,13 +431,13 @@ export default function SoundloungeApp() {
   const activeTrack = playerState.currentTrack || queue[currentIndex] || null;
 
   return (
-    <div className="min-h-screen bg-[#080f14] text-[#f3f4f6] relative overflow-x-hidden selection:bg-[#00e5c9]/30 selection:text-white">
+    <div className="min-h-screen bg-[#0e1422] text-[#f3f4f6] relative overflow-x-hidden selection:bg-[#00e5ff]/30 selection:text-white">
       {/* Full-bleed Ambient Blurred Song Backdrop */}
       <AmbientBackground currentTrack={activeTrack} isPlaying={playerState.status === "playing"} />
 
-      {/* Main Studio Shell: Left Sidebar + Right Stage */}
+      {/* Main Studio Shell: Left Sidebar ("Playlist") + Right Main Stage */}
       <div className="relative z-10 flex min-h-screen">
-        {/* Left Persistent Navigation Sidebar */}
+        {/* Left Persistent Navigation & Playlist Sidebar */}
         <NavigationSidebar
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -457,12 +454,17 @@ export default function SoundloungeApp() {
           onResumeSession={handleResumeSession}
           isOpenMobile={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
+          currentTrack={activeTrack}
+          isPlaying={playerState.status === "playing"}
+          onPlayTrack={handlePlaySingleTrack}
+          queue={queue}
+          historyTracks={history}
         />
 
         {/* Right Stage: Top Bar + Content Canvas */}
         <div className="flex-1 min-w-0 flex flex-col justify-between pb-28">
           <div>
-            {/* Top Bar with History Arrows, Pill Search, Real Controls */}
+            {/* Top Bar with Section Tabs (DISCOVER, MY LIBRARY, RADIO) & Pill Search */}
             <TopBar
               mode={playerState.mode}
               onModeChange={handleModeChange}
@@ -488,10 +490,23 @@ export default function SoundloungeApp() {
               onAddTrack={handleAddTrack}
               onSelectArtist={(artist) => setSelectedArtist(artist)}
               onSelectAlbum={(album) => setSelectedAlbum(album)}
+              activeTopTab={topNavTab}
+              onTopTabChange={(tab) => {
+                setSelectedArtist(null);
+                setSelectedAlbum(null);
+                setTopNavTab(tab);
+                if (tab === "discover") {
+                  setActiveTab("home");
+                } else if (tab === "library") {
+                  setActiveTab("liked");
+                } else if (tab === "radio") {
+                  setActiveTab("genres");
+                }
+              }}
             />
 
             {/* Stage Canvas */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+            <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
               {/* Detailed Artist Profile & Discography View */}
               {selectedArtist ? (
                 <ArtistDetailView
@@ -519,181 +534,79 @@ export default function SoundloungeApp() {
                   isPlaying={playerState.status === "playing"}
                   onSelectAlbum={(alb) => setSelectedAlbum(alb)}
                 />
-              ) : (
-                <>
-                  {/* 1. CORE HOME VIEW (Exact 3-Column Dashboard from Reference) */}
-                  {activeTab === "home" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                      {/* Left Column: Top Remixes & Mixes (3 of 12 cols on desktop) */}
-                      <div className="lg:col-span-3 order-2 lg:order-1">
-                        <FeaturedMixesColumn
-                          onPlayTrack={handlePlaySingleTrack}
-                          currentTrack={activeTrack}
-                          isPlaying={playerState.status === "playing"}
-                        />
-                      </div>
-
-                      {/* Center Column: 3D Coverflow Hero + Weekly Top Songs (6 of 12 cols on desktop) */}
-                      <div className="lg:col-span-6 order-1 lg:order-2 space-y-6">
-                        <CoverflowHero
-                          onPlayTrack={handlePlaySingleTrack}
-                          currentTrack={activeTrack}
-                          isPlaying={playerState.status === "playing"}
-                          onOpenStudio={() => setIsStudioOpen(true)}
-                        />
-
-                        <WeeklyTopSongs
-                          onPlayTrack={handlePlaySingleTrack}
-                          onAddTrack={handleAddTrack}
-                          currentTrack={activeTrack}
-                          isPlaying={playerState.status === "playing"}
-                          positionMs={playerState.positionMs}
-                          durationMs={playerState.durationMs}
-                        />
-                      </div>
-
-                      {/* Right Column: Popular Artists Grid (3 of 12 cols on desktop) */}
-                      <div className="lg:col-span-3 order-3">
-                        <RecentArtistsGrid onSelectArtist={(artist) => setSelectedArtist(artist)} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 2. SEARCH & DISCOVERY VIEW */}
-                  {activeTab === "search" && (
-                    <div className="max-w-4xl mx-auto space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-lg font-bold text-white tracking-tight">Music Search & Ingestion</h2>
-                          <p className="text-xs text-[#718492]">
-                            Direct search powered by YouTube & low-latency edge audio streaming
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSearchQuery("");
-                            setActiveTab("home");
-                          }}
-                          className="text-xs text-[#00e5c9] hover:underline cursor-pointer"
-                        >
-                          Back to Home
-                        </button>
-                      </div>
-
-                      <MusicIngestion
-                        onAddTrack={handleAddTrack}
-                        onPlayDirect={handlePlaySingleTrack}
-                        roomId={roomId}
-                        initialQuery={searchQuery}
-                        onQueryChange={setSearchQuery}
-                        onSelectAlbum={(album) => setSelectedAlbum(album)}
-                      />
-                    </div>
-                  )}
-
-                  {/* 3. PLAYING QUEUE VIEW */}
-                  {activeTab === "queue" && (
-                    <div className="max-w-4xl mx-auto">
-                      <QueueView
-                        queue={queue}
-                        currentIndex={currentIndex}
-                        isAutoplayEnabled={isAutoplayEnabled}
-                        onToggleAutoplay={toggleAutoplay}
-                        autoQueueReasons={autoQueueReasons}
-                        onPlayTrack={handlePlayQueueTrack}
-                        onRemoveTrack={handleRemoveTrack}
-                        onPlayNext={handlePlayNext}
-                        onClearQueue={handleClearQueue}
-                        onSavePlaylist={handleSaveQueueAsPlaylist}
-                      />
-                    </div>
-                  )}
-
-                  {/* 4. FAVORITES / LIKED SONGS VIEW */}
-                  {activeTab === "liked" && (
-                    <div className="max-w-4xl mx-auto">
-                      <LibraryView
-                        likedTracks={likedTracks}
-                        playlists={playlists}
-                        history={history}
-                        lastSession={lastSession}
-                        onPlayTrack={handlePlaySingleTrack}
-                        onPlayPlaylist={handlePlayPlaylist}
-                        onCreatePlaylist={createPlaylist}
-                        onDeletePlaylist={deletePlaylist}
-                        onResumeSession={handleResumeSession}
-                        activeSection="liked"
-                      />
-                    </div>
-                  )}
-
-                  {/* 5. HISTORY VIEW */}
-                  {activeTab === "history" && (
-                    <div className="max-w-4xl mx-auto">
-                      <LibraryView
-                        likedTracks={likedTracks}
-                        playlists={playlists}
-                        history={history}
-                        lastSession={lastSession}
-                        onPlayTrack={handlePlaySingleTrack}
-                        onPlayPlaylist={handlePlayPlaylist}
-                        onCreatePlaylist={createPlaylist}
-                        onDeletePlaylist={deletePlaylist}
-                        onResumeSession={handleResumeSession}
-                        activeSection="history"
-                      />
-                    </div>
-                  )}
-
-                  {/* 6. ARTISTS DIRECT VIEW */}
-                  {activeTab === "artists" && (
-                    <div className="max-w-6xl mx-auto">
-                      <ArtistsDirectoryView
-                        onSelectArtist={(artist) => setSelectedArtist(artist)}
-                        onPlayArtistTopSongs={(artist) => handlePlayArtistAll(artist.topTracks)}
-                      />
-                    </div>
-                  )}
-
-                  {/* 7. ALBUMS & MOVIE SOUNDTRACKS VIEW */}
-                  {activeTab === "albums" && (
-                    <div className="max-w-6xl mx-auto">
-                      <AlbumsDirectoryView
-                        onSelectAlbum={(album) => setSelectedAlbum(album)}
-                        onPlayAlbumQuick={(album) => handlePlayAlbum(album.tracks)}
-                      />
-                    </div>
-                  )}
-
-                  {/* 8. GENRE ECOSYSTEM VIEW */}
-                  {activeTab === "genres" && (
-                    <div className="max-w-6xl mx-auto">
-                      <GenreDirectoryView
-                        onPlayGenreRadio={handlePlayGenreRadio}
-                        onSelectArtist={(artist) => setSelectedArtist(artist)}
-                        onSelectAlbum={(album) => setSelectedAlbum(album)}
-                      />
-                    </div>
-                  )}
-
-                  {/* 9. OTHER TABS (Radio, Podcasts, Downloaded) */}
-                  {(activeTab === "radio" || activeTab === "podcasts" || activeTab === "downloaded") && (
-                    <div className="max-w-4xl mx-auto py-12 text-center rounded-2xl bg-[#0d181e] border border-[#1a2c35] space-y-3">
-                      <h3 className="text-base font-bold text-white capitalize">{activeTab} Channel</h3>
-                      <p className="text-xs text-[#718492] max-w-md mx-auto">
-                        Live curated stream and audio channel for {activeTab}.
+              ) : activeTab === "search" ? (
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-white tracking-tight">Music Search & Ingestion</h2>
+                      <p className="text-xs text-slate-400">
+                        Direct search powered by YouTube & low-latency edge audio streaming
                       </p>
-                      <div className="pt-2 flex justify-center gap-3">
-                        <button
-                          onClick={() => setActiveTab("home")}
-                          className="px-4 py-2 rounded-xl bg-[#00e5c9] text-[#081014] text-xs font-semibold hover:bg-[#1cebd2] transition-colors cursor-pointer"
-                        >
-                          Explore Home Charts
-                        </button>
-                      </div>
                     </div>
-                  )}
-                </>
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setActiveTab("home");
+                        setTopNavTab("discover");
+                      }}
+                      className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
+                    >
+                      Back to Discover
+                    </button>
+                  </div>
+
+                  <MusicIngestion
+                    onAddTrack={handleAddTrack}
+                    onPlayDirect={handlePlaySingleTrack}
+                    roomId={roomId}
+                    initialQuery={searchQuery}
+                    onQueryChange={setSearchQuery}
+                    onSelectAlbum={(album) => setSelectedAlbum(album)}
+                  />
+                </div>
+              ) : topNavTab === "library" || activeTab === "liked" || activeTab === "history" ? (
+                <div className="max-w-5xl mx-auto">
+                  <LibraryView
+                    likedTracks={likedTracks}
+                    playlists={playlists}
+                    history={history}
+                    lastSession={lastSession}
+                    onPlayTrack={handlePlaySingleTrack}
+                    onPlayPlaylist={handlePlayPlaylist}
+                    onCreatePlaylist={createPlaylist}
+                    onDeletePlaylist={deletePlaylist}
+                    onResumeSession={handleResumeSession}
+                    activeSection={activeTab === "history" ? "history" : "liked"}
+                  />
+                </div>
+              ) : topNavTab === "radio" || activeTab === "genres" ? (
+                <div className="max-w-6xl mx-auto">
+                  <GenreDirectoryView
+                    onPlayGenreRadio={handlePlayGenreRadio}
+                    onSelectArtist={(artist) => setSelectedArtist(artist)}
+                    onSelectAlbum={(album) => setSelectedAlbum(album)}
+                  />
+                </div>
+              ) : (
+                /* EXACT REFERENCE UI VIEW: Hero Banner + Popular Albums + Popular Artists */
+                <div className="space-y-10">
+                  {/* 1. Featured Spotlight Hero ("Flume: Skin") */}
+                  <DiscoverHero
+                    onPlayTrack={handlePlaySingleTrack}
+                    currentTrack={activeTrack}
+                    isPlaying={playerState.status === "playing"}
+                  />
+
+                  {/* 2. Popular Albums Section */}
+                  <PopularAlbumsRow
+                    onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
+                    onPlayAlbum={handlePlayAlbum}
+                    onPlayTrack={handlePlaySingleTrack}
+                  />
+
+                  {/* 3. Popular Artists Section */}
+                  <PopularArtistsRow onSelectArtist={(artist) => setSelectedArtist(artist)} />
+                </div>
               )}
             </main>
           </div>

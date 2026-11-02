@@ -13,7 +13,7 @@ import {
   Repeat,
   Maximize2,
   ListPlus,
-  UserPlus,
+  Radio,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import type { PlaybackMode } from "../lib/player";
@@ -78,32 +78,64 @@ export function PlayerBar({
   };
 
   const effectiveDuration = durationMs || currentTrack?.durationMs || 1;
-  const remainingMs = Math.max(0, effectiveDuration - positionMs);
   const progressPercent = Math.min(100, Math.max(0, (positionMs / effectiveDuration) * 100));
+  const isPlaying = status === "playing";
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#081014] border-t border-[#15232c] px-4 sm:px-6 h-[76px] flex items-center shadow-2xl">
-      <div className="w-full flex items-center justify-between gap-3 sm:gap-6">
-        {/* Left Side: Fullscreen, Transport Controls (Prev, Play, Next, Shuffle, Repeat) & Volume */}
-        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-          {/* Fullscreen Studio Trigger */}
-          {onOpenStudio && (
-            <button
-              onClick={onOpenStudio}
-              title="Studio Fullscreen (F)"
-              className="p-1.5 text-[#6c808e] hover:text-[#00e5c9] transition-colors cursor-pointer"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-          )}
+    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e18]/95 backdrop-blur-md border-t border-[#152033] px-4 sm:px-8 h-20 flex items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      <div className="w-full flex items-center justify-between gap-4 sm:gap-8">
+        {/* Left Side: Animated Equalizer + Square Album Art + Track Title & Artist */}
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 max-w-[220px] sm:max-w-[260px] flex-shrink-0">
+          {/* Animated Cyan Equalizer */}
+          <div className="flex items-end gap-0.5 h-4 flex-shrink-0">
+            <span
+              className={`w-0.5 bg-[#00e5ff] rounded-full transition-all ${
+                isPlaying ? "h-4 animate-[sound-wave-1_1s_ease-in-out_infinite]" : "h-1.5 opacity-40"
+              }`}
+            />
+            <span
+              className={`w-0.5 bg-[#00e5ff] rounded-full transition-all ${
+                isPlaying ? "h-3 animate-[sound-wave-2_1.2s_ease-in-out_infinite]" : "h-3 opacity-40"
+              }`}
+            />
+            <span
+              className={`w-0.5 bg-[#00e5ff] rounded-full transition-all ${
+                isPlaying ? "h-4.5 animate-[sound-wave-3_0.9s_ease-in-out_infinite]" : "h-2 opacity-40"
+              }`}
+            />
+          </div>
 
+          {/* Square Album Art */}
+          <div className="w-11 h-11 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 shadow-md">
+            <TrackArtwork
+              coverUrl={currentTrack?.coverUrl}
+              trackId={currentTrack?.id}
+              title={currentTrack?.title}
+              className="w-full h-full object-cover"
+              iconClassName="w-4 h-4 text-[#00e5ff]"
+            />
+          </div>
+
+          {/* Track Title and Artist */}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-white truncate hover:text-[#00e5ff] transition-colors leading-tight">
+              {currentTrack ? currentTrack.title : "No track playing"}
+            </p>
+            <p className="text-[11px] text-slate-400 truncate mt-0.5">
+              {currentTrack ? currentTrack.artist : "Select a song"}
+            </p>
+          </div>
+        </div>
+
+        {/* Center: Transport Controls (Prev, Play, Next) + Timeline with Cyan Glow */}
+        <div className="flex-1 max-w-2xl mx-auto flex flex-col items-center gap-1.5">
           {/* Transport Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-4">
             <button
               onClick={onPrevious}
               disabled={!currentTrack}
               aria-label="Previous track"
-              className="p-1.5 text-[#738795] hover:text-white disabled:opacity-30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
               <SkipBack className="w-4 h-4" />
             </button>
@@ -111,10 +143,10 @@ export function PlayerBar({
             <button
               onClick={onTogglePlay}
               disabled={!currentTrack}
-              aria-label={status === "playing" ? "Pause" : "Play"}
-              className="w-9 h-9 rounded-full bg-[#00e5c9] hover:bg-[#1cebd2] text-[#081014] flex items-center justify-center shadow-lg shadow-[#00e5c9]/30 disabled:opacity-30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              aria-label={isPlaying ? "Pause" : "Play"}
+              className="w-8 h-8 rounded-full bg-[#00e5ff] hover:bg-[#00d0e6] text-[#0a0e17] flex items-center justify-center shadow-[0_0_15px_rgba(0,229,255,0.4)] disabled:opacity-30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
-              {status === "playing" ? (
+              {isPlaying ? (
                 <Pause className="w-4 h-4 fill-current" />
               ) : (
                 <Play className="w-4 h-4 fill-current ml-0.5" />
@@ -125,40 +157,72 @@ export function PlayerBar({
               onClick={onNext}
               disabled={!currentTrack}
               aria-label="Next track"
-              className="p-1.5 text-[#738795] hover:text-white disabled:opacity-30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
               <SkipForward className="w-4 h-4" />
             </button>
-
-            <button
-              onClick={() => setIsShuffle((prev) => !prev)}
-              title="Shuffle"
-              className={`p-1.5 rounded transition-colors cursor-pointer hidden sm:block ${
-                isShuffle ? "text-[#00e5c9]" : "text-[#586d7a] hover:text-white"
-              }`}
-            >
-              <Shuffle className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              onClick={() => setIsRepeat((prev) => !prev)}
-              title="Repeat"
-              className={`p-1.5 rounded transition-colors cursor-pointer hidden sm:block ${
-                isRepeat ? "text-[#00e5c9]" : "text-[#586d7a] hover:text-white"
-              }`}
-            >
-              <Repeat className="w-3.5 h-3.5" />
-            </button>
           </div>
 
-          {/* Volume Control */}
-          <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-[#16252e]">
+          {/* Timeline Progress Bar (Left Cyan Time, Glowing Cyan Bar, Right Gray Time) */}
+          <div className="w-full flex items-center gap-3">
+            <span className="text-[11px] font-mono tabular-nums text-[#00e5ff] font-semibold w-9 text-right select-none">
+              {formatTime(positionMs)}
+            </span>
+
+            <div className="relative flex-1 group flex items-center">
+              {/* Slate Track */}
+              <div className="relative w-full h-1 bg-slate-800 rounded-full overflow-hidden group-hover:h-1.5 transition-all">
+                {/* Glowing Cyan Fill */}
+                <div
+                  className="h-full bg-[#00e5ff] shadow-[0_0_10px_#00e5ff] transition-all duration-100"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+
+              {/* Glowing Thumb on hover */}
+              <div
+                className="absolute w-2.5 h-2.5 rounded-full bg-[#00e5ff] shadow-[0_0_10px_#00e5ff] pointer-events-none transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ left: `${progressPercent}%` }}
+              />
+
+              {/* Native Input for Scrubbing */}
+              <input
+                type="range"
+                min="0"
+                max={effectiveDuration}
+                value={positionMs}
+                onChange={(e) => onSeek(Number(e.target.value))}
+                disabled={!currentTrack}
+                className="absolute inset-0 w-full opacity-0 cursor-pointer"
+              />
+            </div>
+
+            <span className="text-[11px] font-mono tabular-nums text-slate-400 w-9 select-none">
+              {formatTime(effectiveDuration)}
+            </span>
+          </div>
+        </div>
+
+        {/* Right Side: Shuffle + Volume + Fullscreen */}
+        <div className="flex items-center justify-end gap-3 sm:gap-4 flex-shrink-0 min-w-0 max-w-[200px]">
+          <button
+            onClick={() => setIsShuffle((prev) => !prev)}
+            title="Shuffle"
+            className={`p-1.5 rounded transition-colors cursor-pointer hidden sm:block ${
+              isShuffle ? "text-[#00e5ff]" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Shuffle className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Volume Control with cyan slider */}
+          <div className="flex items-center gap-2">
             <button
               onClick={toggleMute}
-              className="p-1 text-[#6c808e] hover:text-white transition-colors cursor-pointer"
+              className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="w-4 h-4 text-[#f43f5e]" />
+                <VolumeX className="w-4 h-4 text-rose-400" />
               ) : (
                 <Volume2 className="w-4 h-4" />
               )}
@@ -173,89 +237,20 @@ export function PlayerBar({
                 setIsMuted(false);
                 onVolumeChange(Number(e.target.value));
               }}
-              className="w-16 h-1 bg-[#192b35] rounded-lg appearance-none cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* Center: Timeline Scrubber with Cyan Glow */}
-        <div className="flex-1 max-w-xl mx-2 sm:mx-6 flex items-center gap-3">
-          <span className="text-[11px] font-mono tabular-nums text-[#728593] w-9 text-right select-none">
-            {formatTime(positionMs)}
-          </span>
-
-          <div className="relative flex-1 group flex items-center">
-            {/* Custom glowing cyan progress track */}
-            <div className="relative w-full h-1 bg-[#162731] rounded-full overflow-hidden group-hover:h-1.5 transition-all">
-              <div
-                className="h-full bg-[#00e5c9] shadow-sm shadow-[#00e5c9]/60 transition-all duration-150"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            {/* Hidden native input overlaid for clean scrubbing */}
-            <input
-              type="range"
-              min="0"
-              max={effectiveDuration}
-              value={positionMs}
-              onChange={(e) => onSeek(Number(e.target.value))}
-              disabled={!currentTrack}
-              className="absolute inset-0 w-full opacity-0 cursor-pointer"
+              className="w-16 sm:w-20 h-1 bg-slate-800 accent-[#00e5ff] rounded-lg appearance-none cursor-pointer"
             />
           </div>
 
-          <span className="text-[11px] font-mono tabular-nums text-[#728593] w-10 select-none">
-            -{formatTime(remainingMs)}
-          </span>
-        </div>
-
-        {/* Right Side: Track Metadata, Add to Playlist, Like, & Artwork */}
-        <div className="flex items-center justify-end gap-3 flex-shrink-0 min-w-0 max-w-[280px]">
-          {/* Quick Playlist & Follow Actions */}
-          <div className="hidden sm:flex items-center gap-1">
-            {onOpenQueue && (
-              <button
-                onClick={onOpenQueue}
-                title="Playing Queue"
-                className="p-1.5 text-[#5c707d] hover:text-white transition-colors cursor-pointer"
-              >
-                <ListPlus className="w-4 h-4" />
-              </button>
-            )}
-
-            {currentTrack && (
-              <button
-                onClick={() => onToggleLike(currentTrack)}
-                title={isLiked ? "Unlike" : "Like"}
-                className={`p-1.5 rounded transition-colors cursor-pointer ${
-                  isLiked ? "text-[#f43f5e]" : "text-[#5c707d] hover:text-white"
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
-              </button>
-            )}
-          </div>
-
-          {/* Title & Artist info */}
-          {currentTrack ? (
-            <div className="text-right truncate min-w-0">
-              <p className="text-xs font-semibold text-white truncate hover:text-[#00e5c9] transition-colors">
-                {currentTrack.title}
-              </p>
-              <p className="text-[11px] text-[#6e828f] truncate">{currentTrack.artist}</p>
-            </div>
-          ) : (
-            <div className="text-xs text-[#5c707d] truncate">No track selected</div>
+          {/* Fullscreen Studio Trigger */}
+          {onOpenStudio && (
+            <button
+              onClick={onOpenStudio}
+              title="Fullscreen Studio"
+              className="p-1.5 text-slate-400 hover:text-[#00e5ff] transition-colors cursor-pointer hidden md:block"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           )}
-
-          {/* Album Jacket Cover Thumbnail */}
-          <TrackArtwork
-            coverUrl={currentTrack?.coverUrl}
-            trackId={currentTrack?.id}
-            title={currentTrack?.title}
-            className="w-11 h-11 rounded-xl border border-[#1d313c] shadow-lg flex-shrink-0"
-            iconClassName="w-5 h-5 text-[#00e5c9]"
-          />
         </div>
       </div>
     </footer>

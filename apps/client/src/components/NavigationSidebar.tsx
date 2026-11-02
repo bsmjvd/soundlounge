@@ -1,26 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
-  Home,
-  Mic2,
-  Disc,
-  LayoutGrid,
-  Radio,
-  Headphones,
-  Heart,
-  History,
-  ListMusic,
-  DownloadCloud,
-  Users,
   Music2,
-  Share2,
   Play,
-  Wifi,
-  Sparkles,
+  Pause,
+  MoreVertical,
+  X,
+  Share2,
 } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
 import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
+import type { Track } from "@soundlounge/shared";
+import { MOCKUP_SIDEBAR_TRACKS } from "../lib/data/mockupData";
 import { TrackArtwork } from "./TrackArtwork";
 
 export type NavTab =
@@ -35,6 +27,8 @@ export type NavTab =
   | "queue"
   | "downloaded"
   | "search";
+
+export type PlaylistSidebarFilter = "my_playlist" | "last_listening" | "recommended";
 
 interface NavigationSidebarProps {
   activeTab: NavTab;
@@ -52,6 +46,11 @@ interface NavigationSidebarProps {
   onResumeSession: (session: LastSessionSnapshot) => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  currentTrack?: Track | null;
+  isPlaying?: boolean;
+  onPlayTrack?: (track: Track) => void;
+  queue?: Track[];
+  historyTracks?: Track[];
 }
 
 export function NavigationSidebar({
@@ -70,257 +69,254 @@ export function NavigationSidebar({
   onResumeSession,
   isOpenMobile = false,
   onCloseMobile,
+  currentTrack,
+  isPlaying = false,
+  onPlayTrack,
+  queue = [],
+  historyTracks = [],
 }: NavigationSidebarProps) {
-  const formatTime = (ms: number) => {
-    const totalSecs = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  const [sidebarFilter, setSidebarFilter] = useState<PlaylistSidebarFilter>("my_playlist");
+
+  // Determine which track list to render in the sidebar based on active filter
+  const displayedTracks: Track[] = React.useMemo(() => {
+    if (sidebarFilter === "last_listening") {
+      if (historyTracks && historyTracks.length > 0) {
+        return historyTracks.slice(0, 15);
+      }
+      return MOCKUP_SIDEBAR_TRACKS.slice().reverse();
+    }
+    if (sidebarFilter === "recommended") {
+      // Show recommended tracks
+      return MOCKUP_SIDEBAR_TRACKS.slice(2).concat(MOCKUP_SIDEBAR_TRACKS.slice(0, 2));
+    }
+    // "my_playlist": show active queue if present, otherwise default mockup tracks
+    if (queue && queue.length > 0) {
+      return queue;
+    }
+    return MOCKUP_SIDEBAR_TRACKS;
+  }, [sidebarFilter, queue, historyTracks]);
+
+  const handleTrackClick = (track: Track) => {
+    if (onPlayTrack) {
+      onPlayTrack(track);
+    }
   };
-
-  const mainNavItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
-    { id: "home", label: "Home", icon: <Home className="w-4 h-4" /> },
-    { id: "artists", label: "Artists", icon: <Mic2 className="w-4 h-4" /> },
-    { id: "albums", label: "Albums", icon: <Disc className="w-4 h-4" /> },
-    { id: "genres", label: "Genres", icon: <LayoutGrid className="w-4 h-4" /> },
-    { id: "radio", label: "Radio", icon: <Radio className="w-4 h-4" /> },
-    { id: "podcasts", label: "Podcasts", icon: <Headphones className="w-4 h-4" /> },
-  ];
-
-  const libraryNavItems: {
-    id: NavTab;
-    label: string;
-    icon: React.ReactNode;
-    count?: number;
-  }[] = [
-    {
-      id: "liked",
-      label: "Favorites",
-      icon: <Heart className="w-4 h-4" />,
-      count: likedCount,
-    },
-    {
-      id: "history",
-      label: "Recently Played",
-      icon: <History className="w-4 h-4" />,
-      count: historyCount,
-    },
-    {
-      id: "queue",
-      label: "Playing Queue",
-      icon: <ListMusic className="w-4 h-4" />,
-      count: queueCount,
-    },
-    {
-      id: "downloaded",
-      label: "Downloaded",
-      icon: <DownloadCloud className="w-4 h-4" />,
-    },
-  ];
 
   return (
     <>
-      {/* Mobile Backdrop Overlay */}
+      {/* Mobile Backdrop */}
       {isOpenMobile && (
         <div
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={onCloseMobile}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
         />
       )}
 
-      {/* Main Persistent Sidebar */}
+      {/* Left Sidebar Shell */}
       <aside
-        className={`fixed md:sticky top-0 left-0 bottom-0 z-50 md:z-30 w-64 bg-[#081014] border-r border-[#15232c] flex flex-col justify-between py-5 px-3.5 transition-transform duration-300 ${
-          isOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        } h-screen overflow-y-auto`}
+        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-72 lg:w-80 flex-shrink-0 bg-[#0c121e] border-r border-[#152033] flex flex-col justify-between py-6 px-5 transition-transform duration-300 ease-in-out ${
+          isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
       >
-        <div className="space-y-5">
-          {/* Brand Logo with Cyan Soundwave */}
-          <div
-            onClick={() => onTabChange("home")}
-            className="flex items-center gap-3 px-2 cursor-pointer group"
-          >
-            <div className="flex items-center gap-0.5 h-6">
-              <span className="w-1 h-3.5 bg-[#00e5c9] rounded-full group-hover:h-5 transition-all" />
-              <span className="w-1 h-5 bg-[#00e5c9] rounded-full group-hover:h-3 transition-all" />
-              <span className="w-1 h-6 bg-[#00e5c9] rounded-full group-hover:h-6 transition-all" />
-              <span className="w-1 h-4 bg-[#00e5c9] rounded-full group-hover:h-5 transition-all" />
-              <span className="w-1 h-2.5 bg-[#00e5c9] rounded-full group-hover:h-4 transition-all" />
-            </div>
-            <div className="truncate">
-              <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-                Soundlounge
-              </h1>
-              <p className="text-[10px] text-[#637785] font-medium tracking-wide">
-                Studio Streaming
-              </p>
-            </div>
-          </div>
-
-          {/* Mode Segmented Control: Solo vs Sync Lounge */}
-          <div className="p-1 rounded-xl bg-[#0d181e] border border-[#1b2c35] flex items-center">
-            <button
-              onClick={() => onModeChange("solo")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                mode === "solo"
-                  ? "bg-[#182833] text-white shadow-sm"
-                  : "text-[#697d8a] hover:text-white"
-              }`}
-            >
-              <Music2 className="w-3.5 h-3.5" />
-              Solo
-            </button>
-            <button
-              onClick={() => onModeChange("synced")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                mode === "synced"
-                  ? "bg-[#00e5c9] text-[#081014] font-semibold shadow-sm shadow-[#00e5c9]/30"
-                  : "text-[#697d8a] hover:text-white"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Sync Lounge
-            </button>
-          </div>
-
-          {/* 1. Main Navigation Items */}
-          <nav className="space-y-0.5">
-            {mainNavItems.map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onTabChange(item.id);
-                    onCloseMobile?.();
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-[#0f1f28] text-[#00e5c9] font-semibold border-l-2 border-[#00e5c9]"
-                      : "text-[#7b8f9d] hover:text-white hover:bg-[#0c1820]"
-                  }`}
-                >
-                  <span className={isActive ? "text-[#00e5c9]" : "text-[#586e7c]"}>
-                    {item.icon}
-                  </span>
-                  <span className="truncate">{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* 2. Personal Library Section */}
-          <nav className="space-y-0.5 pt-2 border-t border-[#13222a]">
-            {libraryNavItems.map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onTabChange(item.id);
-                    onCloseMobile?.();
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-[#0f1f28] text-[#00e5c9] font-semibold border-l-2 border-[#00e5c9]"
-                      : "text-[#7b8f9d] hover:text-white hover:bg-[#0c1820]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <span className={isActive ? "text-[#00e5c9]" : "text-[#586e7c]"}>
-                      {item.icon}
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                  </div>
-                  {item.count !== undefined && item.count > 0 && (
-                    <span
-                      className={`text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded-md ${
-                        isActive
-                          ? "bg-[#00e5c9]/20 text-[#00e5c9]"
-                          : "bg-[#122028] text-[#637684]"
-                      }`}
-                    >
-                      {item.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Sync Lounge Room Status Card (when in Synced Mode) */}
-          {mode === "synced" && (
-            <div className="p-3 rounded-xl bg-[#0c1820] border border-[#1a2d38] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#00e5c9] flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00e5c9] animate-pulse" />
-                  Room: {roomId}
-                </span>
-                <span className="text-[10px] font-mono tabular-nums text-emerald-400 flex items-center gap-1">
-                  <Wifi className="w-3 h-3" />
-                  {pingMs}ms
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-[#7d909d]">
-                <span>{participantsCount} online</span>
-                <button
-                  onClick={onOpenInvite}
-                  aria-label="Invite friends"
-                  className="text-[11px] font-medium text-[#00e5c9] hover:underline cursor-pointer"
-                >
-                  Invite Friends
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Continue Listening Mini Card */}
-          {lastSession && (
-            <div className="p-2.5 rounded-xl bg-[#0c171e] border border-[#192b35] flex items-center justify-between gap-2.5 group hover:border-[#00e5c9]/40 transition-colors">
-              <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-                <TrackArtwork
-                  coverUrl={lastSession.track.coverUrl}
-                  trackId={lastSession.track.id}
-                  title={lastSession.track.title}
-                  className="w-9 h-9 rounded-lg"
-                  iconClassName="w-4 h-4"
-                />
-                <div className="truncate">
-                  <p className="text-[11px] font-semibold text-white truncate">
-                    {lastSession.track.title}
-                  </p>
-                  <p className="text-[10px] text-[#667a88] font-mono tabular-nums">
-                    Resume {formatTime(lastSession.positionMs)}
-                  </p>
-                </div>
-              </div>
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Header & Mobile Close */}
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold tracking-tight text-white font-sans">Playlist</h1>
+            {isOpenMobile && (
               <button
-                onClick={() => onResumeSession(lastSession)}
-                title="Resume playback"
-                className="w-7 h-7 rounded-lg bg-[#00e5c9] text-[#081014] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform flex-shrink-0 cursor-pointer shadow-sm"
+                onClick={onCloseMobile}
+                className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Close navigation"
               >
-                <Play className="w-3 h-3 fill-current ml-0.5" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Sub-navigation Filters: My Playlist, Last Listening, Recommended */}
+          <nav className="space-y-1.5 mb-5 pb-3 border-b border-slate-800/80">
+            <button
+              onClick={() => {
+                setSidebarFilter("my_playlist");
+                onTabChange("home");
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                sidebarFilter === "my_playlist"
+                  ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+              }`}
+            >
+              <Music2
+                className={`w-3.5 h-3.5 ${sidebarFilter === "my_playlist" ? "text-[#00e5ff]" : "text-slate-400"}`}
+              />
+              <span>My Playlist</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setSidebarFilter("last_listening");
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                sidebarFilter === "last_listening"
+                  ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full border ${
+                  sidebarFilter === "last_listening"
+                    ? "border-[#00e5ff] bg-[#00e5ff]"
+                    : "border-slate-500 bg-transparent"
+                }`}
+              />
+              <span>Last Listening</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setSidebarFilter("recommended");
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                sidebarFilter === "recommended"
+                  ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full border ${
+                  sidebarFilter === "recommended" ? "border-[#00e5ff] bg-[#00e5ff]" : "border-slate-500 bg-transparent"
+                }`}
+              />
+              <span>Recommended</span>
+            </button>
+          </nav>
+
+          {/* Numbered Tracks List (01, 02, 03...) */}
+          <div className="flex-1 overflow-y-auto pr-1 space-y-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+            {displayedTracks.map((track, idx) => {
+              const trackNum = (idx + 1).toString().padStart(2, "0");
+              const isCurrent = currentTrack?.id === track.id || currentTrack?.title === track.title;
+              const isTrackPlaying = isCurrent && isPlaying;
+
+              return (
+                <div
+                  key={`${track.id}-${idx}`}
+                  onClick={() => handleTrackClick(track)}
+                  className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl transition-all cursor-pointer ${
+                    isCurrent
+                      ? "bg-[#182338] text-white shadow-md ring-1 ring-cyan-500/30"
+                      : "hover:bg-slate-800/50 text-slate-300"
+                  }`}
+                >
+                  {/* Left: Track Index / Equalizer Indicator */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="w-5 text-[11px] font-mono text-slate-400 text-center flex-shrink-0 group-hover:hidden">
+                      {trackNum}
+                    </span>
+                    <button
+                      className="w-5 text-center flex-shrink-0 hidden group-hover:flex items-center justify-center text-[#00e5ff]"
+                      aria-label="Play track"
+                    >
+                      {isTrackPlaying ? (
+                        <Pause className="w-3.5 h-3.5 fill-current" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      )}
+                    </button>
+
+                    {/* Equalizer animation indicator for active / current track */}
+                    {isTrackPlaying && (
+                      <div className="flex items-end gap-0.5 h-3 flex-shrink-0">
+                        <span className="w-0.5 h-3 bg-[#00e5ff] animate-[sound-wave-1_1s_ease-in-out_infinite]" />
+                        <span className="w-0.5 h-2 bg-[#00e5ff] animate-[sound-wave-2_1.2s_ease-in-out_infinite]" />
+                        <span className="w-0.5 h-3.5 bg-[#00e5ff] animate-[sound-wave-3_0.9s_ease-in-out_infinite]" />
+                      </div>
+                    )}
+
+                    {/* Artwork Thumbnail */}
+                    <div className="w-9 h-9 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 shadow-sm">
+                      <TrackArtwork
+                        coverUrl={track.coverUrl}
+                        trackId={track.id}
+                        title={track.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Song Title & Artist */}
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-xs font-semibold truncate leading-tight ${
+                          isCurrent ? "text-white" : "text-slate-200 group-hover:text-white"
+                        }`}
+                      >
+                        {track.title}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">{track.artist}</p>
+                    </div>
+                  </div>
+
+                  {/* Right side: Action icon / Active Play Badge */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                    {isCurrent ? (
+                      <div className="w-6 h-6 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_10px_rgba(0,229,255,0.4)]">
+                        {isTrackPlaying ? (
+                          <Pause className="w-3 h-3 fill-current" />
+                        ) : (
+                          <Play className="w-3 h-3 fill-current ml-0.5" />
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTrackClick(track);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white transition-opacity cursor-pointer"
+                        title="Options"
+                      >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Bottom Actions: Download Application + Keyboard Shortcuts */}
-        <div className="pt-3 border-t border-[#13222a] space-y-2">
-          {/* Download App Action */}
-          <button
-            onClick={() => alert("Soundlounge Desktop & Mobile client is ready for install.")}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#0c171e] hover:bg-[#12222b] border border-[#192b35] text-xs font-semibold text-[#8ca0ae] hover:text-[#00e5c9] transition-colors cursor-pointer"
-          >
-            <DownloadCloud className="w-4 h-4 text-[#00e5c9]" />
-            <span>Download Desktop App</span>
-          </button>
-
-          {/* Keyboard Shortcuts */}
-          <div className="px-2 pt-1 text-[10px] text-[#556976] flex items-center justify-between">
-            <span>Play/Pause: Space</span>
-            <span>Studio: F</span>
+        {/* Bottom Room Sync status pill */}
+        <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                mode === "synced" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-slate-600"
+              }`}
+            />
+            <span className="font-mono text-[11px] text-slate-300">
+              {mode === "synced" ? `Room: ${roomId}` : "Solo Player"}
+            </span>
           </div>
+
+          <button
+            onClick={() => {
+              if (mode === "solo") {
+                onModeChange("synced");
+              } else {
+                onOpenInvite();
+              }
+            }}
+            className="text-[11px] font-semibold text-[#00e5ff] hover:underline cursor-pointer flex items-center gap-1"
+          >
+            {mode === "synced" ? (
+              <>
+                <Share2 className="w-3 h-3" />
+                <span>Invite ({participantsCount})</span>
+              </>
+            ) : (
+              <span>Sync Room</span>
+            )}
+          </button>
         </div>
       </aside>
     </>
