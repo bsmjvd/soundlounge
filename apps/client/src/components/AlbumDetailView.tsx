@@ -83,7 +83,8 @@ export function AlbumDetailView({
                   Looking for another release named &ldquo;{album.title}&rdquo;?
                 </p>
                 <p className="text-[11px] text-amber-300/70">
-                  Soundlounge detected {disambiguationCounterparts.length} distinct release{disambiguationCounterparts.length > 1 ? "s" : ""} sharing this title or artist across eras.
+                  Soundlounge detected {disambiguationCounterparts.length} distinct release
+                  {disambiguationCounterparts.length > 1 ? "s" : ""} sharing this title or artist across eras.
                 </p>
               </div>
             </div>
@@ -169,10 +170,10 @@ export function AlbumDetailView({
               </span>
 
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#1a202c] text-[#a0aec0] border border-[#2d3748]">
-                {album.releaseYear}
+                {album.releaseYear || "2024"}
               </span>
 
-              {album.genres.slice(0, 3).map((g) => (
+              {(album.genres || []).slice(0, 3).map((g) => (
                 <span
                   key={g}
                   className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#141824] text-[#8c94aa] border border-[#1f2637]"
@@ -188,7 +189,7 @@ export function AlbumDetailView({
                 {album.title}
               </h1>
               <p className="text-xs sm:text-sm text-[#00e5c9] font-medium mt-1">
-                {album.disambiguationLabel}
+                {album.disambiguationLabel || album.primaryArtist || album.title}
               </p>
             </div>
 
@@ -220,9 +221,7 @@ export function AlbumDetailView({
                   <p className="flex items-center gap-2 pt-0.5">
                     <Music className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                     <span className="text-[#64748b]">Music Director:</span>
-                    <strong className="text-white font-medium">
-                      {album.movieDetails.musicDirectors.join(", ")}
-                    </strong>
+                    <strong className="text-white font-medium">{album.movieDetails.musicDirectors.join(", ")}</strong>
                   </p>
                 )}
 
@@ -238,20 +237,20 @@ export function AlbumDetailView({
 
             {/* Quick Metrics */}
             <div className="flex items-center justify-center md:justify-start gap-4 text-xs text-[#718096] pt-1">
-              <span>{album.tracks.length} original tracks</span>
+              <span>{(album.tracks || []).length} original tracks</span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 {Math.round((album.totalDurationMs || 1200000) / 60000)} mins
               </span>
               <span>•</span>
-              <span className="text-[#a0aec0]">{album.primaryArtist}</span>
+              <span className="text-[#a0aec0]">{album.primaryArtist || "Various Artists"}</span>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-3">
               <button
-                onClick={() => onPlayAlbum(album.tracks)}
+                onClick={() => onPlayAlbum(album.tracks || [])}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00e5c9] hover:bg-[#00cbb2] text-[#081014] font-bold text-xs tracking-wide transition-all shadow-lg shadow-[#00e5c9]/25 hover:scale-[1.02] cursor-pointer"
               >
                 <Play className="w-4 h-4 fill-current" />
@@ -259,7 +258,7 @@ export function AlbumDetailView({
               </button>
 
               <button
-                onClick={() => onAddAlbumToQueue(album.tracks)}
+                onClick={() => onAddAlbumToQueue(album.tracks || [])}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#141a27] hover:bg-[#1c2334] text-white border border-[#252f44] text-xs font-semibold transition-colors cursor-pointer"
               >
                 <ListPlus className="w-4 h-4 text-[#00e5c9]" />
@@ -281,7 +280,7 @@ export function AlbumDetailView({
         </div>
 
         <div className="rounded-xl border border-[#171c28] bg-[#090b10] overflow-hidden divide-y divide-[#121620]">
-          {album.tracks.map((track, idx) => {
+          {(album.tracks || []).map((track, idx) => {
             const active = isCurrentTrack(track.id);
 
             return (
@@ -330,9 +329,7 @@ export function AlbumDetailView({
                     >
                       {track.title}
                     </p>
-                    <p className="text-[11px] text-[#718096] truncate mt-0.5">
-                      {track.artist}
-                    </p>
+                    <p className="text-[11px] text-[#718096] truncate mt-0.5">{track.artist}</p>
                   </div>
                 </div>
 

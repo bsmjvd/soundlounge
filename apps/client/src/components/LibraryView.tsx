@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Heart,
-  Library,
-  History,
-  Play,
-  Trash2,
-  Plus,
-  Music2,
-  X,
-  Clock,
-} from "lucide-react";
+import { Heart, Library, History, Play, Trash2, Plus, Music2, X, Clock } from "lucide-react";
 import type { Track, Playlist } from "@soundlounge/shared";
 import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { TrackArtwork } from "./TrackArtwork";
@@ -45,7 +35,13 @@ export function LibraryView({
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
   // Sync with prop if it changes
-  const currentTab = activeSection || internalTab;
+  React.useEffect(() => {
+    if (activeSection) {
+      setInternalTab(activeSection);
+    }
+  }, [activeSection]);
+
+  const currentTab = internalTab;
 
   const formatTime = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
@@ -66,43 +62,53 @@ export function LibraryView({
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
 
   return (
-    <div className="space-y-4">
-      {/* Tab Header if viewing library as a standalone component */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-            {currentTab === "liked" && (
-              <>
-                <Heart className="w-4 h-4 text-rose-500 fill-current" />
-                Liked Songs ({likedTracks.length})
-              </>
-            )}
-            {currentTab === "playlists" && (
-              <>
-                <Library className="w-4 h-4 text-indigo-400" />
-                Playlists ({playlists.length})
-              </>
-            )}
-            {currentTab === "history" && (
-              <>
-                <History className="w-4 h-4 text-sky-400" />
-                Listening History ({history.length})
-              </>
-            )}
-          </h2>
-          <p className="text-xs text-[#636c82] mt-0.5">
-            {currentTab === "liked" && "Your personal favorite tracks saved locally"}
-            {currentTab === "playlists" && "Custom playlists and curated track collections"}
-            {currentTab === "history" && "Tracks you have listened to in Soundlounge"}
-          </p>
+    <div className="space-y-6">
+      {/* Tab Navigation Pill Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setInternalTab("liked")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              currentTab === "liked"
+                ? "bg-rose-500/15 text-rose-400 border border-rose-500/30 shadow-sm"
+                : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${currentTab === "liked" ? "fill-current" : ""}`} />
+            <span>Liked Songs ({likedTracks.length})</span>
+          </button>
+
+          <button
+            onClick={() => setInternalTab("playlists")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              currentTab === "playlists"
+                ? "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-sm"
+                : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+            }`}
+          >
+            <Library className="w-3.5 h-3.5" />
+            <span>Playlists ({playlists.length})</span>
+          </button>
+
+          <button
+            onClick={() => setInternalTab("history")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              currentTab === "history"
+                ? "bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm"
+                : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>History ({history.length})</span>
+          </button>
         </div>
 
         {currentTab === "playlists" && !showCreateInput && (
           <button
             onClick={() => setShowCreateInput(true)}
-            className="flex items-center gap-1.5 text-xs text-[#8c94aa] hover:text-white px-3 py-1.5 rounded-lg bg-[#0e111a] hover:bg-[#151926] border border-[#1b202d] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-[#00e5ff] hover:text-white px-3 py-1.5 rounded-lg bg-[#00e5ff]/10 hover:bg-[#00e5ff]/20 border border-[#00e5ff]/30 transition-colors cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5 text-indigo-400" />
+            <Plus className="w-3.5 h-3.5 text-[#00e5ff]" />
             New Playlist
           </button>
         )}
@@ -178,9 +184,7 @@ export function LibraryView({
                         <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
                           {track.title}
                         </p>
-                        <p className="text-[11px] text-[#71788d] truncate mt-0.5">
-                          {track.artist}
-                        </p>
+                        <p className="text-[11px] text-[#71788d] truncate mt-0.5">{track.artist}</p>
                       </div>
                     </div>
 
@@ -249,9 +253,7 @@ export function LibraryView({
 
                   <div className="mt-4 pt-3 border-t border-[#12151f] flex items-center justify-between">
                     <button
-                      onClick={() =>
-                        setSelectedPlaylistId(selectedPlaylistId === pl.id ? null : pl.id)
-                      }
+                      onClick={() => setSelectedPlaylistId(selectedPlaylistId === pl.id ? null : pl.id)}
                       className="text-[11px] text-[#71788d] hover:text-white transition-colors cursor-pointer"
                     >
                       {selectedPlaylistId === pl.id ? "Hide Tracks" : "View Tracks"}
@@ -285,9 +287,7 @@ export function LibraryView({
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-white flex items-center gap-2">
                   <span>{selectedPlaylist.name} Tracks</span>
-                  <span className="text-[10px] text-[#636c82] font-normal">
-                    ({selectedPlaylist.tracks.length})
-                  </span>
+                  <span className="text-[10px] text-[#636c82] font-normal">({selectedPlaylist.tracks.length})</span>
                 </h3>
                 <button
                   onClick={() => setSelectedPlaylistId(null)}
@@ -313,9 +313,7 @@ export function LibraryView({
                           iconClassName="w-4 h-4"
                         />
                         <div className="truncate">
-                          <p className="text-xs font-semibold text-white truncate">
-                            {track.title}
-                          </p>
+                          <p className="text-xs font-semibold text-white truncate">{track.title}</p>
                           <p className="text-[11px] text-[#71788d] truncate">{track.artist}</p>
                         </div>
                       </div>
@@ -383,9 +381,7 @@ export function LibraryView({
                         <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
                           {track.title}
                         </p>
-                        <p className="text-[11px] text-[#71788d] truncate mt-0.5">
-                          {track.artist}
-                        </p>
+                        <p className="text-[11px] text-[#71788d] truncate mt-0.5">{track.artist}</p>
                       </div>
                     </div>
 
@@ -410,9 +406,7 @@ export function LibraryView({
             <div className="text-center py-16 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">
               <Clock className="w-8 h-8 text-[#363d50] mx-auto" />
               <p className="text-xs text-[#8c94aa] font-medium">No listening history yet</p>
-              <p className="text-[11px] text-[#586073]">
-                Tracks you play will be cataloged here automatically.
-              </p>
+              <p className="text-[11px] text-[#586073]">Tracks you play will be cataloged here automatically.</p>
             </div>
           )}
         </>

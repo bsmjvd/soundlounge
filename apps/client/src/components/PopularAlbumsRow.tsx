@@ -45,21 +45,51 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
   };
 
   const handleAlbumClick = (album: DisplayAlbum) => {
-    if (album.tracks && album.tracks.length > 0) {
-      if (onPlayAlbum) {
-        onPlayAlbum(album.tracks);
-      } else if (onPlayTrack) {
-        onPlayTrack(album.tracks[0]);
+    // Find matching catalog album if available
+    const catalogMatch = ALBUMS_CATALOG.find((a) => a.id === album.id || a.title.toLowerCase() === album.title.toLowerCase());
+    if (catalogMatch) {
+      if (catalogMatch.tracks && catalogMatch.tracks.length > 0) {
+        if (onPlayAlbum) onPlayAlbum(catalogMatch.tracks);
+        else if (onPlayTrack) onPlayTrack(catalogMatch.tracks[0]);
       }
-    }
-    if (onSelectAlbum) {
-      // Find matching catalog album if available
-      const catalogMatch = ALBUMS_CATALOG.find((a) => a.id === album.id || a.title === album.title);
-      if (catalogMatch) {
-        onSelectAlbum(catalogMatch);
-      } else {
-        onSelectAlbum(album);
+      if (onSelectAlbum) onSelectAlbum(catalogMatch);
+    } else {
+      const fullAlbum: Album = {
+        id: album.id,
+        title: album.title,
+        releaseYear: 2024,
+        type: "studio_album",
+        primaryArtist: album.artist || album.subtitle || "Various Artists",
+        featuredSingers: [],
+        coverUrl: album.coverUrl,
+        disambiguationLabel: `${album.artist || album.subtitle || "Various Artists"} • Popular Release`,
+        genres: ["Pop", "Rock", "Alternative"],
+        tracks:
+          album.tracks && album.tracks.length > 0
+            ? album.tracks
+            : [
+                {
+                  id: `yt_${album.id}_1`,
+                  title: `${album.title}`,
+                  artist: album.artist || album.subtitle || "Popular Artist",
+                  durationMs: 215000,
+                  coverUrl: album.coverUrl,
+                  url: `/api/stream/youtube?title=${encodeURIComponent(album.title)}&artist=${encodeURIComponent(
+                    album.artist || album.subtitle || ""
+                  )}`,
+                  source: "youtube",
+                  createdAt: 0,
+                },
+              ],
+        totalDurationMs: 1800000,
+        createdAt: 0,
+      };
+
+      if (fullAlbum.tracks.length > 0) {
+        if (onPlayAlbum) onPlayAlbum(fullAlbum.tracks);
+        else if (onPlayTrack) onPlayTrack(fullAlbum.tracks[0]);
       }
+      if (onSelectAlbum) onSelectAlbum(fullAlbum);
     }
   };
 

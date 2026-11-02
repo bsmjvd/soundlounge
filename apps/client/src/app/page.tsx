@@ -7,6 +7,7 @@ import { PopularAlbumsRow } from "../components/PopularAlbumsRow";
 import { PopularArtistsRow } from "../components/PopularArtistsRow";
 import { AmbientBackground } from "../components/AmbientBackground";
 import { MusicIngestion } from "../components/MusicIngestion";
+import { QueueView } from "../components/QueueView";
 import { LibraryView } from "../components/LibraryView";
 import { PlayerBar } from "../components/PlayerBar";
 import { InviteModal } from "../components/InviteModal";
@@ -534,6 +535,39 @@ export default function SoundloungeApp() {
                   isPlaying={playerState.status === "playing"}
                   onSelectAlbum={(alb) => setSelectedAlbum(alb)}
                 />
+              ) : activeTab === "queue" ? (
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white tracking-tight">Playing Queue</h2>
+                      <p className="text-xs text-slate-400">
+                        {queue.length} track{queue.length === 1 ? "" : "s"} scheduled • Autoplay similar soundscapes
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setActiveTab("home");
+                        setTopNavTab("discover");
+                      }}
+                      className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
+                    >
+                      Back to Discover
+                    </button>
+                  </div>
+
+                  <QueueView
+                    queue={queue}
+                    currentIndex={currentIndex}
+                    isAutoplayEnabled={isAutoplayEnabled}
+                    onToggleAutoplay={toggleAutoplay}
+                    autoQueueReasons={autoQueueReasons}
+                    onPlayTrack={handlePlayQueueTrack}
+                    onRemoveTrack={handleRemoveTrack}
+                    onPlayNext={handlePlayNext}
+                    onClearQueue={handleClearQueue}
+                    onSavePlaylist={handleSaveQueueAsPlaylist}
+                  />
+                </div>
               ) : activeTab === "search" ? (
                 <div className="max-w-4xl mx-auto space-y-6">
                   <div className="flex items-center justify-between">
@@ -622,6 +656,7 @@ export default function SoundloungeApp() {
         volume={playerState.volume}
         mode={playerState.mode}
         pingMs={sync.pingMs}
+        queueCount={queue.length}
         isLiked={activeTrack ? isLiked(activeTrack.id) : false}
         onToggleLike={(t) => toggleLike(t)}
         onTogglePlay={handleTogglePlay}

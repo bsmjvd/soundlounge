@@ -13,6 +13,7 @@ import {
   Repeat,
   Maximize2,
   ListPlus,
+  ListMusic,
   Radio,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
@@ -27,6 +28,7 @@ interface PlayerBarProps {
   volume: number;
   mode: PlaybackMode;
   pingMs: number;
+  queueCount?: number;
   isLiked: boolean;
   onToggleLike: (track: Track) => void;
   onTogglePlay: () => void;
@@ -46,6 +48,7 @@ export function PlayerBar({
   volume,
   mode,
   pingMs,
+  queueCount,
   isLiked,
   onToggleLike,
   onTogglePlay,
@@ -203,8 +206,24 @@ export function PlayerBar({
           </div>
         </div>
 
-        {/* Right Side: Shuffle + Volume + Fullscreen */}
-        <div className="flex items-center justify-end gap-3 sm:gap-4 flex-shrink-0 min-w-0 max-w-[200px]">
+        {/* Right Side: Queue + Shuffle + Volume + Fullscreen */}
+        <div className="flex items-center justify-end gap-3 sm:gap-4 flex-shrink-0 min-w-0 max-w-[240px]">
+          {/* Queue Button */}
+          {onOpenQueue && (
+            <button
+              onClick={onOpenQueue}
+              title="Playing Queue"
+              className="relative p-1.5 text-slate-400 hover:text-[#00e5ff] transition-colors cursor-pointer"
+            >
+              <ListMusic className="w-4 h-4" />
+              {queueCount !== undefined && queueCount > 0 && (
+                <span className="absolute -top-1 -right-1 text-[9px] font-bold bg-[#00e5ff] text-[#0a0e17] px-1 rounded-full min-w-[14px] text-center leading-tight">
+                  {queueCount}
+                </span>
+              )}
+            </button>
+          )}
+
           <button
             onClick={() => setIsShuffle((prev) => !prev)}
             title="Shuffle"

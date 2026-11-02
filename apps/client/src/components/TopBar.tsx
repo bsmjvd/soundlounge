@@ -450,13 +450,17 @@ export function TopBar({
 
           {/* User Profile Avatar with subtle cyan halo (matching reference image) */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#00e5ff]/40 shadow-[0_0_12px_rgba(0,229,255,0.25)] flex-shrink-0">
+            <button
+              onClick={() => onTopTabChange && onTopTabChange("library")}
+              title="My Library & Profile"
+              className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#00e5ff]/40 shadow-[0_0_12px_rgba(0,229,255,0.25)] flex-shrink-0 hover:ring-[#00e5ff] transition-all cursor-pointer hover:scale-105 active:scale-95"
+            >
               <img
                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
                 alt="User Profile"
                 className="w-full h-full object-cover"
               />
-            </div>
+            </button>
           </div>
         </div>
       </div>

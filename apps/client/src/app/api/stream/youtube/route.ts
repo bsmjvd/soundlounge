@@ -196,14 +196,20 @@ export async function GET(req: NextRequest) {
   }
 
   // 1. If an external stream proxy (e.g. residential tunnel or dedicated proxy) is configured, route through it
-  const streamProxy = process.env.STREAM_PROXY_URL || process.env.NEXT_PUBLIC_STREAM_PROXY_URL;
+  const rawStreamProxy = process.env.STREAM_PROXY_URL || process.env.NEXT_PUBLIC_STREAM_PROXY_URL;
+  const streamProxy = rawStreamProxy
+    ? rawStreamProxy.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().replace(/\/+$/, "")
+    : null;
+
   if (streamProxy) {
     try {
-      const targetUrl = new URL("/api/stream/youtube", streamProxy);
+      const targetUrl = new URL(`${streamProxy}/api/stream/youtube`);
       targetUrl.search = searchParams.toString();
 
       const upstreamHeaders: Record<string, string> = {
-        "User-Agent": req.headers.get("user-agent") || "Mozilla/5.0",
+        "User-Agent":
+          req.headers.get("user-agent") ||
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       };
       const rangeHeader = req.headers.get("range");
       if (rangeHeader) {
@@ -212,6 +218,7 @@ export async function GET(req: NextRequest) {
 
       const proxyRes = await fetch(targetUrl.toString(), {
         headers: upstreamHeaders,
+        signal: AbortSignal.timeout(20000),
       });
 
       if (proxyRes.ok || proxyRes.status === 206) {
@@ -231,6 +238,8 @@ export async function GET(req: NextRequest) {
           status: proxyRes.status,
           headers: responseHeaders,
         });
+      } else {
+        console.warn(`Stream proxy returned HTTP ${proxyRes.status} ${proxyRes.statusText}`);
       }
     } catch (proxyErr) {
       console.warn("Stream proxy failed, falling back to direct extraction:", proxyErr);

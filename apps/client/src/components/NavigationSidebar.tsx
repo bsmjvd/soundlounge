@@ -1,14 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Music2,
-  Play,
-  Pause,
-  MoreVertical,
-  X,
-  Share2,
-} from "lucide-react";
+import { Music2, Play, Pause, MoreVertical, X, Share2 } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
 import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import type { Track } from "@soundlounge/shared";
@@ -140,36 +133,50 @@ export function NavigationSidebar({
                 setSidebarFilter("my_playlist");
                 onTabChange("home");
               }}
-              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
                 sidebarFilter === "my_playlist"
                   ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
                   : "text-slate-400 hover:text-white hover:bg-slate-800/40"
               }`}
             >
-              <Music2
-                className={`w-3.5 h-3.5 ${sidebarFilter === "my_playlist" ? "text-[#00e5ff]" : "text-slate-400"}`}
-              />
-              <span>My Playlist</span>
+              <div className="flex items-center gap-2.5">
+                <Music2
+                  className={`w-3.5 h-3.5 ${sidebarFilter === "my_playlist" ? "text-[#00e5ff]" : "text-slate-400"}`}
+                />
+                <span>My Playlist</span>
+              </div>
+              {queueCount > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[#00e5ff]/20 text-[#00e5ff]">
+                  {queueCount}
+                </span>
+              )}
             </button>
 
             <button
               onClick={() => {
                 setSidebarFilter("last_listening");
               }}
-              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
                 sidebarFilter === "last_listening"
                   ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
                   : "text-slate-400 hover:text-white hover:bg-slate-800/40"
               }`}
             >
-              <span
-                className={`w-2 h-2 rounded-full border ${
-                  sidebarFilter === "last_listening"
-                    ? "border-[#00e5ff] bg-[#00e5ff]"
-                    : "border-slate-500 bg-transparent"
-                }`}
-              />
-              <span>Last Listening</span>
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`w-2 h-2 rounded-full border ${
+                    sidebarFilter === "last_listening"
+                      ? "border-[#00e5ff] bg-[#00e5ff]"
+                      : "border-slate-500 bg-transparent"
+                  }`}
+                />
+                <span>Last Listening</span>
+              </div>
+              {historyCount > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                  {historyCount}
+                </span>
+              )}
             </button>
 
             <button
