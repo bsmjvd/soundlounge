@@ -1,6 +1,6 @@
 /**
  * YouTube IFrame Audio Bridge
- * 
+ *
  * Provides resilient, zero-bot-block client-side audio playback directly
  * within the user's browser using Google's official YouTube IFrame Player API.
  * Ensures 100% audio reliability on cloud platforms (e.g. Vercel) where datacenter
@@ -44,6 +44,8 @@ export interface YTPlayerInstance {
   getCurrentTime: () => number;
   getDuration: () => number;
   getPlayerState: () => number;
+  loadVideoById?: (args: { videoId: string; startSeconds?: number }) => void;
+  cueVideoById?: (args: { videoId: string; startSeconds?: number }) => void;
   destroy: () => void;
 }
 
@@ -248,13 +250,17 @@ export class YouTubeIframeBridge {
 
     try {
       const startSec = Math.max(0, Math.floor(startMs / 1000));
-      (this.player as any).loadVideoById?.({
-        videoId,
-        startSeconds: startSec,
-      }) ?? (this.player as any).cueVideoById?.({
-        videoId,
-        startSeconds: startSec,
-      });
+      if (typeof this.player.loadVideoById === "function") {
+        this.player.loadVideoById({
+          videoId,
+          startSeconds: startSec,
+        });
+      } else if (typeof this.player.cueVideoById === "function") {
+        this.player.cueVideoById({
+          videoId,
+          startSeconds: startSec,
+        });
+      }
       this.player.playVideo();
       this.player.setVolume(Math.round(this.volume * 100));
       this.state.status = "buffering";

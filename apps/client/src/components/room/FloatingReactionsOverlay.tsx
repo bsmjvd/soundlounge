@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 
 interface ReactionParticle {
   id: string;
@@ -17,10 +17,13 @@ const EMOJIS = ["❤️", "🔥", "🎵", "🚀", "👏", "⚡"];
 
 export function FloatingReactionsOverlay({ onSendReaction, className = "" }: FloatingReactionsOverlayProps) {
   const [particles, setParticles] = useState<ReactionParticle[]>([]);
+  const seqRef = useRef(1);
 
-  const triggerReaction = (emoji: string) => {
-    const id = `${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-    const x = Math.floor(Math.random() * 60) + 20; // 20% to 80%
+  const triggerReaction = useCallback((emoji: string) => {
+    seqRef.current += 1;
+    const currentSeq = seqRef.current;
+    const id = `particle_${currentSeq}`;
+    const x = ((currentSeq * 17) % 60) + 20; // 20% to 80% pseudo-random
 
     setParticles((prev) => [...prev, { id, emoji, x }]);
 
@@ -32,7 +35,7 @@ export function FloatingReactionsOverlay({ onSendReaction, className = "" }: Flo
     setTimeout(() => {
       setParticles((prev) => prev.filter((p) => p.id !== id));
     }, 2200);
-  };
+  }, [onSendReaction]);
 
   return (
     <div className={`relative ${className}`}>
