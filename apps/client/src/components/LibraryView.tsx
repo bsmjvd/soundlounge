@@ -1,7 +1,22 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Heart, Library, History, Play, Trash2, Plus, Music2, X, Clock, Download, Upload, Search, ArrowUpDown, Sparkles } from "lucide-react";
+import {
+  Heart,
+  Library,
+  History,
+  Play,
+  Trash2,
+  Plus,
+  Music2,
+  X,
+  Clock,
+  Download,
+  Upload,
+  Search,
+  ArrowUpDown,
+  Sparkles,
+} from "lucide-react";
 import type { Track, Playlist } from "@soundlounge/shared";
 import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { TrackArtwork } from "./TrackArtwork";
@@ -213,13 +228,7 @@ export function LibraryView({
 
         {currentTab === "playlists" && (
           <div className="flex items-center gap-2">
-            <input
-              type="file"
-              ref={fileImportRef}
-              onChange={handleImportFile}
-              accept=".json"
-              className="hidden"
-            />
+            <input type="file" ref={fileImportRef} onChange={handleImportFile} accept=".json" className="hidden" />
             <button
               onClick={() => fileImportRef.current?.click()}
               title="Import playlists from JSON"
@@ -310,7 +319,7 @@ export function LibraryView({
                   <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
                   <select
                     value={likedSort}
-                    onChange={(e) => setLikedSort(e.target.value as any)}
+                    onChange={(e) => setLikedSort(e.target.value as "date" | "title" | "artist" | "duration")}
                     className="bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300 rounded-lg px-2.5 py-1 outline-none cursor-pointer hover:border-slate-600"
                   >
                     <option value="date">Recently Added</option>
@@ -330,54 +339,54 @@ export function LibraryView({
                 </div>
                 <div className="divide-y divide-[#12151f]">
                   {processedLikedTracks.map((track, idx) => (
-                  <div
-                    key={track.id}
-                    className="group grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 hover:bg-[#10131d] transition-colors"
-                  >
-                    <div className="text-xs font-mono text-[#586073]">
-                      <span className="group-hover:hidden">{idx + 1}</span>
-                      <button
-                        onClick={() => onPlayTrack(track)}
-                        className="hidden group-hover:inline-flex text-white hover:text-indigo-400 cursor-pointer"
-                        title="Play Track"
-                      >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                      </button>
-                    </div>
+                    <div
+                      key={track.id}
+                      className="group grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 hover:bg-[#10131d] transition-colors"
+                    >
+                      <div className="text-xs font-mono text-[#586073]">
+                        <span className="group-hover:hidden">{idx + 1}</span>
+                        <button
+                          onClick={() => onPlayTrack(track)}
+                          className="hidden group-hover:inline-flex text-white hover:text-indigo-400 cursor-pointer"
+                          title="Play Track"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                      </div>
 
-                    <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
-                      <TrackArtwork
-                        coverUrl={track.coverUrl}
-                        trackId={track.id}
-                        title={track.title}
-                        className="w-10 h-10 rounded-lg"
-                        iconClassName="w-4 h-4"
-                      />
-                      <div className="truncate">
-                        <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
-                          {track.title}
-                        </p>
-                        <p className="text-[11px] text-[#71788d] truncate mt-0.5">{track.artist}</p>
+                      <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
+                        <TrackArtwork
+                          coverUrl={track.coverUrl}
+                          trackId={track.id}
+                          title={track.title}
+                          className="w-10 h-10 rounded-lg"
+                          iconClassName="w-4 h-4"
+                        />
+                        <div className="truncate">
+                          <p className="text-xs font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
+                            {track.title}
+                          </p>
+                          <p className="text-[11px] text-[#71788d] truncate mt-0.5">{track.artist}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right text-xs font-mono tabular-nums text-[#71788d]">
+                        {formatTime(track.durationMs)}
+                      </div>
+
+                      <div className="flex items-center justify-end">
+                        <button
+                          onClick={() => onPlayTrack(track)}
+                          title="Play Track"
+                          className="p-1.5 rounded-lg text-[#586073] hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="text-right text-xs font-mono tabular-nums text-[#71788d]">
-                      {formatTime(track.durationMs)}
-                    </div>
-
-                    <div className="flex items-center justify-end">
-                      <button
-                        onClick={() => onPlayTrack(track)}
-                        title="Play Track"
-                        className="p-1.5 rounded-lg text-[#586073] hover:text-white transition-colors cursor-pointer"
-                      >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
             </div>
           ) : (
             <div className="text-center py-16 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">

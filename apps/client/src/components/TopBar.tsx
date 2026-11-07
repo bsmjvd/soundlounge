@@ -31,6 +31,8 @@ interface TopBarProps {
   onSelectAlbum?: (album: Album) => void;
   activeTopTab?: TopNavTab;
   onTopTabChange?: (tab: TopNavTab) => void;
+  isLeavesEnabled?: boolean;
+  onToggleLeaves?: () => void;
 }
 
 export function TopBar({
@@ -53,6 +55,8 @@ export function TopBar({
   onSelectAlbum,
   activeTopTab = "discover",
   onTopTabChange,
+  isLeavesEnabled = true,
+  onToggleLeaves,
 }: TopBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -490,75 +494,76 @@ export function TopBar({
                     )}
 
                     {/* SONGS (Local + Live YouTube) */}
-                    {(searchFilter === "all" || searchFilter === "tracks") && (matchingLocalTracks.length > 0 || liveTracks.length > 0) && (
-                      <div>
-                        <div className="px-2 pb-1.5 flex items-center justify-between text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
-                          <div className="flex items-center gap-1.5">
-                            <Music2 className="w-3 h-3" />
-                            <span>Songs</span>
-                          </div>
-                          {isLoadingLive && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
-                        </div>
-
-                        <div className="space-y-1">
-                          {[...matchingLocalTracks, ...liveTracks].slice(0, 6).map((track) => (
-                            <div
-                              key={track.id}
-                              onClick={() => {
-                                saveRecentSearch(track.title);
-                                handlePlayDirect(track);
-                              }}
-                              className="group flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0">
-                                  <TrackArtwork
-                                    coverUrl={track.coverUrl}
-                                    trackId={track.id}
-                                    title={track.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-medium text-white truncate group-hover:text-[#00e5ff]">
-                                    {track.title}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400 truncate">{track.artist}</p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 ml-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddDirect(track);
-                                  }}
-                                  className="p-1 rounded-full hover:bg-slate-700 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Add to queue"
-                                >
-                                  {addedTrackId === track.id ? (
-                                    <Check className="w-3 h-3 text-emerald-400" />
-                                  ) : (
-                                    <Plus className="w-3 h-3" />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    saveRecentSearch(track.title);
-                                    handlePlayDirect(track);
-                                  }}
-                                  className="p-1.5 rounded-full bg-[#00e5ff] text-[#0a0e17] opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Play song"
-                                >
-                                  <Play className="w-3 h-3 fill-current ml-0.5" />
-                                </button>
-                              </div>
+                    {(searchFilter === "all" || searchFilter === "tracks") &&
+                      (matchingLocalTracks.length > 0 || liveTracks.length > 0) && (
+                        <div>
+                          <div className="px-2 pb-1.5 flex items-center justify-between text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
+                            <div className="flex items-center gap-1.5">
+                              <Music2 className="w-3 h-3" />
+                              <span>Songs</span>
                             </div>
-                          ))}
+                            {isLoadingLive && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+                          </div>
+
+                          <div className="space-y-1">
+                            {[...matchingLocalTracks, ...liveTracks].slice(0, 6).map((track) => (
+                              <div
+                                key={track.id}
+                                onClick={() => {
+                                  saveRecentSearch(track.title);
+                                  handlePlayDirect(track);
+                                }}
+                                className="group flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0">
+                                    <TrackArtwork
+                                      coverUrl={track.coverUrl}
+                                      trackId={track.id}
+                                      title={track.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-medium text-white truncate group-hover:text-[#00e5ff]">
+                                      {track.title}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 truncate">{track.artist}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 ml-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddDirect(track);
+                                    }}
+                                    className="p-1 rounded-full hover:bg-slate-700 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Add to queue"
+                                  >
+                                    {addedTrackId === track.id ? (
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                    ) : (
+                                      <Plus className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      saveRecentSearch(track.title);
+                                      handlePlayDirect(track);
+                                    }}
+                                    className="p-1.5 rounded-full bg-[#00e5ff] text-[#0a0e17] opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Play song"
+                                  >
+                                    <Play className="w-3 h-3 fill-current ml-0.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 )}
 
@@ -580,7 +585,23 @@ export function TopBar({
           </div>
 
           {/* User Profile Avatar with subtle cyan halo (matching reference image) */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Seasonal Autumn Leaves Ambient Toggle */}
+            {onToggleLeaves && (
+              <button
+                type="button"
+                onClick={onToggleLeaves}
+                title={isLeavesEnabled ? "Disable falling autumn leaves" : "Enable falling autumn leaves"}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all cursor-pointer border ${
+                  isLeavesEnabled
+                    ? "bg-amber-500/20 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.35)] scale-105"
+                    : "bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-white"
+                }`}
+              >
+                🍂
+              </button>
+            )}
+
             <button
               onClick={() => onTopTabChange && onTopTabChange("library")}
               title="My Library & Profile"

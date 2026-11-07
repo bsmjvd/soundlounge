@@ -27,6 +27,7 @@ import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibra
 import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
 import { useGlobalAudioHotkeys } from "../hooks/useGlobalAudioHotkeys";
+import { FallingLeavesAmbient } from "../components/ui/FallingLeavesAmbient";
 import type { Track, Playlist, Album } from "@soundlounge/shared";
 
 // Singleton coordinator instance for the browser tab, preserved on window across fast refresh
@@ -99,6 +100,27 @@ export default function SoundloungeApp() {
       setHistoryIndex(newIdx);
       setActiveTab(navHistory[newIdx]);
     }
+  };
+
+  // Seasonal Autumn Falling Leaves ambient effect
+  const [isLeavesEnabled, setIsLeavesEnabled] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("soundlounge_falling_leaves_enabled");
+        if (saved !== null) return JSON.parse(saved);
+      } catch {}
+    }
+    return true;
+  });
+
+  const handleToggleLeaves = () => {
+    setIsLeavesEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("soundlounge_falling_leaves_enabled", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   // Player state subscription
@@ -426,6 +448,9 @@ export default function SoundloungeApp() {
       {/* Full-bleed Ambient Blurred Song Backdrop */}
       <AmbientBackground currentTrack={activeTrack} isPlaying={playerState.status === "playing"} />
 
+      {/* Seasonal Autumn Falling Leaves ambient effect */}
+      <FallingLeavesAmbient enabled={isLeavesEnabled} />
+
       {/* Main Studio Shell: Left Sidebar ("Playlist") + Right Main Stage */}
       <div className="relative z-10 flex min-h-screen">
         {/* Left Persistent Navigation & Playlist Sidebar */}
@@ -485,6 +510,8 @@ export default function SoundloungeApp() {
                     pingMs={sync.pingMs}
                     onOpenInvite={() => setIsInviteOpen(true)}
                     onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+                    isLeavesEnabled={isLeavesEnabled}
+                    onToggleLeaves={handleToggleLeaves}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
                     onSearch={(q) => {
@@ -538,6 +565,8 @@ export default function SoundloungeApp() {
                 pingMs={sync.pingMs}
                 onOpenInvite={() => setIsInviteOpen(true)}
                 onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+                isLeavesEnabled={isLeavesEnabled}
+                onToggleLeaves={handleToggleLeaves}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onSearch={(q) => {

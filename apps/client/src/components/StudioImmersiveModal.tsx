@@ -1,7 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Play, Pause, SkipForward, SkipBack, Heart, Volume2, VolumeX, Minimize2, Radio, Music2, Disc } from "lucide-react";
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Heart,
+  Volume2,
+  VolumeX,
+  Minimize2,
+  Radio,
+  Music2,
+  Disc,
+} from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import { AudioFrequencyVisualizer } from "./studio/AudioFrequencyVisualizer";
 
@@ -141,19 +153,19 @@ export function StudioImmersiveModal({
       )}
 
       {/* 2. Top Header Bar with Turntable Speed Controls */}
-      <div className="relative z-10 max-w-7xl w-full mx-auto p-6 sm:p-8 flex items-center justify-between">
+      <div className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-8 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-600/20">
-            <Radio className="w-5 h-5 animate-pulse" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-600/20 shrink-0">
+            <Radio className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs uppercase tracking-widest font-bold text-sky-400">Studio Immersion</span>
-              <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-gray-300 font-mono">
-                Hi-Fi AAC 256kbps
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-[11px] sm:text-xs uppercase tracking-widest font-bold text-sky-400">Studio Immersion</span>
+              <span className="text-[9px] sm:text-[10px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded-full text-gray-300 font-mono">
+                Hi-Fi
               </span>
             </div>
-            <p className="text-sm font-bold text-white tracking-tight">Soundlounge</p>
+            <p className="text-xs sm:text-sm font-bold text-white tracking-tight">Soundlounge</p>
           </div>
         </div>
 
@@ -184,10 +196,10 @@ export function StudioImmersiveModal({
         <button
           onClick={onClose}
           aria-label="Exit Studio Mode"
-          className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold backdrop-blur-xl transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl"
+          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold backdrop-blur-xl transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl min-h-[40px]"
         >
           <Minimize2 className="w-4 h-4" />
-          <span>Exit Studio</span>
+          <span className="hidden xs:inline">Exit Studio</span>
           <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-gray-400">
             ESC
           </kbd>
@@ -195,12 +207,12 @@ export function StudioImmersiveModal({
       </div>
 
       {/* 3. Center Stage: Spinning Vinyl & High-Res Album Cover */}
-      <div className="relative z-10 max-w-5xl w-full mx-auto px-6 py-4 flex flex-col items-center justify-center text-center space-y-6 flex-1">
+      <div className="relative z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 py-2 sm:py-4 flex flex-col items-center justify-center text-center space-y-4 sm:space-y-6 flex-1">
         {/* Centerpiece: Audiophile Gatefold Sleeve, Slideout Vinyl Record & Tonearm */}
-        <div className="relative flex items-center justify-center py-4">
+        <div className="relative flex items-center justify-center py-2 sm:py-4 overflow-visible">
           <div
-            className={`relative w-64 h-64 sm:w-80 sm:h-80 md:w-88 md:h-88 lg:w-96 lg:h-96 flex items-center justify-center transition-transform duration-1000 ease-out ${
-              isPlaying ? "-translate-x-6 sm:-translate-x-12 md:-translate-x-16" : "translate-x-0"
+            className={`relative w-48 h-48 xs:w-56 xs:h-56 sm:w-80 sm:h-80 md:w-88 md:h-88 lg:w-96 lg:h-96 flex items-center justify-center transition-transform duration-1000 ease-out ${
+              isPlaying ? "-translate-x-4 sm:-translate-x-12 md:-translate-x-16" : "translate-x-0"
             }`}
           >
             {/* 1. The Audiophile Vinyl LP Record (emerges from jacket slot on the right) */}
@@ -210,8 +222,8 @@ export function StudioImmersiveModal({
               title="Click grooves to drop needle and seek"
               className={`absolute inset-0 z-10 cursor-pointer transition-all duration-1000 ease-[cubic-bezier(0.34,1.25,0.64,1)] ${
                 isPlaying
-                  ? "translate-x-[52%] sm:translate-x-[56%] opacity-100 scale-100"
-                  : "translate-x-[36%] sm:translate-x-[40%] opacity-90 scale-[0.98]"
+                  ? "translate-x-[46%] sm:translate-x-[56%] opacity-100 scale-100"
+                  : "translate-x-[26%] sm:translate-x-[40%] opacity-90 scale-[0.98]"
               }`}
             >
               <div
@@ -327,15 +339,15 @@ export function StudioImmersiveModal({
       </div>
 
       {/* 4. Bottom Controls & Scrubber */}
-      <div className="relative z-10 max-w-4xl w-full mx-auto p-6 sm:p-8 space-y-5">
+      <div className="relative z-10 max-w-4xl w-full mx-auto px-4 sm:px-8 py-3 sm:py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4 sm:space-y-5">
         {/* Full-width Timeline Scrubber */}
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           <div
             ref={progressBarRef}
             onClick={handleProgressBarClick}
             onMouseMove={handleProgressBarMouseMove}
             onMouseLeave={() => setHoverSeekPos(null)}
-            className="relative w-full bg-white/15 hover:bg-white/25 h-3 rounded-full cursor-pointer overflow-hidden backdrop-blur-md transition-all group"
+            className="relative w-full bg-white/15 hover:bg-white/25 h-2.5 sm:h-3 rounded-full cursor-pointer overflow-hidden backdrop-blur-md transition-all group"
           >
             <div
               className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400 rounded-full transition-all duration-200 shadow-md shadow-sky-400/50"
@@ -343,7 +355,7 @@ export function StudioImmersiveModal({
             />
           </div>
 
-          <div className="flex justify-between text-xs font-mono text-gray-400">
+          <div className="flex justify-between text-[11px] sm:text-xs font-mono text-gray-400">
             <span>{formatTime(hoverSeekPos !== null ? hoverSeekPos : positionMs)}</span>
             <span>{formatTime(effectiveDuration)}</span>
           </div>
@@ -354,45 +366,41 @@ export function StudioImmersiveModal({
           <button
             onClick={() => onToggleLike(currentTrack)}
             aria-label="Toggle Like Track"
-            className={`p-3 rounded-full transition-all cursor-pointer ${
+            className={`p-2.5 sm:p-3 rounded-full transition-all cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center ${
               isLiked ? "text-rose-500 bg-rose-500/10 scale-110" : "text-gray-400 hover:text-white hover:bg-white/10"
             }`}
           >
-            <Heart className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`} />
+            <Heart className={`w-5 h-5 sm:w-6 sm:h-6 ${isLiked ? "fill-current" : ""}`} />
           </button>
 
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <button
               onClick={onPrevious}
               aria-label="Previous Track"
-              className="p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95"
+              className="p-2.5 sm:p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
-              <SkipBack className="w-7 h-7" />
+              <SkipBack className="w-5 h-5 sm:w-7 sm:h-7" />
             </button>
 
             <button
               onClick={onTogglePlay}
               aria-label={isPlaying ? "Pause Track" : "Play Track"}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
+              className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
             >
-              {isPlaying ? (
-                <Pause className="w-8 h-8 fill-current" />
-              ) : (
-                <Play className="w-8 h-8 fill-current ml-1" />
-              )}
+              {isPlaying ? <Pause className="w-6 h-6 sm:w-8 sm:h-8 fill-current" /> : <Play className="w-6 h-6 sm:w-8 sm:h-8 fill-current ml-1" />}
             </button>
 
             <button
               onClick={onNext}
               aria-label="Next Track"
-              className="p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95"
+              className="p-2.5 sm:p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
-              <SkipForward className="w-7 h-7" />
+              <SkipForward className="w-5 h-5 sm:w-7 sm:h-7" />
             </button>
           </div>
 
           {/* Volume Control */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => {
                 if (isMuted) {
@@ -403,7 +411,7 @@ export function StudioImmersiveModal({
                   setIsMuted(true);
                 }
               }}
-              className="p-2 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2.5 text-gray-400 hover:text-white transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
@@ -417,7 +425,7 @@ export function StudioImmersiveModal({
                 setIsMuted(false);
                 onVolumeChange(parseFloat(e.target.value));
               }}
-              className="w-20 sm:w-24 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#00e5ff]"
+              className="hidden sm:block w-20 sm:w-24 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#00e5ff]"
             />
           </div>
         </div>

@@ -90,12 +90,31 @@ export function PlayerBar({
   const isPlaying = status === "playing";
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e18]/95 backdrop-blur-md border-t border-[#152033] px-4 sm:px-8 h-20 flex items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-      <div className="w-full flex items-center justify-between gap-4 sm:gap-8">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e18]/95 backdrop-blur-md border-t border-[#152033] px-3 sm:px-8 h-18 sm:h-20 pb-[max(0.25rem,env(safe-area-inset-bottom))] flex items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      {/* Mobile Top Edge Timeline Scrubber (Visible only on <sm screens) */}
+      <div
+        onClick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          onSeek(Math.floor(pct * effectiveDuration));
+        }}
+        className="sm:hidden absolute top-0 left-0 right-0 h-1 bg-slate-800/80 cursor-pointer overflow-hidden z-20"
+      >
+        <div
+          className="h-full bg-[#00e5ff] shadow-[0_0_8px_#00e5ff] transition-all duration-100"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      <div className="w-full flex items-center justify-between gap-2 sm:gap-8">
         {/* Left Side: Animated Equalizer + Square Album Art + Track Title & Artist */}
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0 max-w-[220px] sm:max-w-[260px] flex-shrink-0">
+        <div
+          onClick={onOpenStudio}
+          title="Tap to open Studio Mode"
+          className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 sm:flex-initial sm:max-w-[260px] flex-shrink cursor-pointer sm:cursor-default"
+        >
           {/* Animated Cyan Equalizer */}
-          <div className="flex items-end gap-0.5 h-4 flex-shrink-0">
+          <div className="hidden xs:flex items-end gap-0.5 h-4 flex-shrink-0">
             <span
               className={`w-0.5 bg-[#00e5ff] rounded-full transition-all ${
                 isPlaying ? "h-4 animate-[sound-wave-1_1s_ease-in-out_infinite]" : "h-1.5 opacity-40"
@@ -114,7 +133,7 @@ export function PlayerBar({
           </div>
 
           {/* Square Album Art */}
-          <div className="w-11 h-11 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 shadow-md">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 shadow-md">
             <TrackArtwork
               coverUrl={currentTrack?.coverUrl}
               trackId={currentTrack?.id}
@@ -135,8 +154,8 @@ export function PlayerBar({
           </div>
         </div>
 
-        {/* Center: Transport Controls (Prev, Play, Next) + Timeline with Cyan Glow */}
-        <div className="flex-1 max-w-2xl mx-auto flex flex-col items-center gap-1.5">
+        {/* Center: Desktop Transport Controls + Timeline with Cyan Glow (Hidden on Mobile) */}
+        <div className="hidden sm:flex flex-1 max-w-2xl mx-auto flex-col items-center gap-1.5">
           {/* Transport Controls */}
           <div className="flex items-center gap-4">
             <button
@@ -239,8 +258,53 @@ export function PlayerBar({
           </div>
         </div>
 
-        {/* Right Side: Queue + Shuffle + Volume + Fullscreen */}
-        <div className="flex items-center justify-end gap-3 sm:gap-4 flex-shrink-0 min-w-0 max-w-[240px]">
+        {/* Mobile Compact Controls: Thumb-friendly 44px tap targets */}
+        <div className="flex sm:hidden items-center gap-1 flex-shrink-0">
+          {currentTrack && (
+            <button
+              onClick={() => onToggleLike(currentTrack)}
+              aria-label={isLiked ? "Unlike song" : "Like song"}
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-400 active:scale-90 transition-all cursor-pointer"
+            >
+              <Heart className={`w-4 h-4 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+            </button>
+          )}
+
+          <button
+            onClick={onTogglePlay}
+            disabled={!currentTrack}
+            aria-label={isPlaying ? "Pause" : "Play"}
+            className="w-10 h-10 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_12px_rgba(0,229,255,0.4)] disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
+          >
+            {isPlaying ? (
+              <Pause className="w-4 h-4 fill-current" />
+            ) : (
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            )}
+          </button>
+
+          <button
+            onClick={onNext}
+            disabled={!currentTrack}
+            aria-label="Next song"
+            className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
+          >
+            <SkipForward className="w-4 h-4" />
+          </button>
+
+          {onOpenStudio && (
+            <button
+              onClick={onOpenStudio}
+              aria-label="Open Studio"
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-[#00e5ff] active:scale-90 transition-all cursor-pointer"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Right Side: Desktop Queue + Shuffle + Volume + Fullscreen */}
+        <div className="hidden sm:flex items-center justify-end gap-3 sm:gap-4 flex-shrink-0 min-w-0 max-w-[240px]">
           {/* Queue Button */}
           {onOpenQueue && (
             <button

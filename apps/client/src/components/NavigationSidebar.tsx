@@ -104,7 +104,7 @@ export function NavigationSidebar({
 
       {/* Left Sidebar Shell */}
       <aside
-        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-72 lg:w-80 flex-shrink-0 bg-[#0c121e] border-r border-[#152033] flex flex-col justify-between py-6 px-5 transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-72 lg:w-80 flex-shrink-0 bg-[#0c121e] border-r border-[#152033] flex flex-col justify-between px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:py-6 transition-transform duration-300 ease-in-out ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
