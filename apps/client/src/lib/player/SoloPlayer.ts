@@ -1,4 +1,5 @@
 import type { Track } from "@soundlounge/shared";
+import { YouTubeIframeBridge } from "./YouTubeIframeBridge";
 
 export interface SoloPlayerState {
   status: "idle" | "playing" | "paused" | "buffering";
@@ -16,6 +17,9 @@ interface WindowWithAudio {
 
 export class SoloPlayer {
   private audioElement: HTMLAudioElement | null = null;
+  private ytBridge: YouTubeIframeBridge = YouTubeIframeBridge.getInstance();
+  private activeEngine: "audio" | "iframe" = "audio";
+
   private state: SoloPlayerState = {
     status: "idle",
     currentTrack: null,
@@ -24,19 +28,37 @@ export class SoloPlayer {
     volume: 0.4,
   };
   private listeners: Set<StateChangeCallback> = new Set();
-  private timeUpdateInterval: ReturnType<typeof setInterval> | null = null;
   private onNextCallback?: () => void;
   private onPreviousCallback?: () => void;
   private onEndedCallback?: () => void;
 
   constructor() {
     this.initAudioElement();
+    this.initYtBridge();
   }
 
   setTransportHandlers(handlers: { onNext?: () => void; onPrevious?: () => void; onEnded?: () => void }): void {
     this.onNextCallback = handlers.onNext;
     this.onPreviousCallback = handlers.onPrevious;
     this.onEndedCallback = handlers.onEnded;
+    this.ytBridge.setOnEnded(() => {
+      if (this.activeEngine === "iframe" && this.onEndedCallback) {
+        this.onEndedCallback();
+      }
+    });
+  }
+
+  private initYtBridge() {
+    this.ytBridge.onStateChange((bridgeState) => {
+      if (this.activeEngine === "iframe") {
+        this.state.status = bridgeState.status;
+        this.state.positionMs = bridgeState.positionMs;
+        if (bridgeState.durationMs > 0) {
+          this.state.durationMs = bridgeState.durationMs;
+        }
+        this.emitState();
+      }
+    });
   }
 
   private initAudioElement() {
@@ -56,56 +78,72 @@ export class SoloPlayer {
         win.__soundlounge_active_audio__ = this.audioElement;
 
         this.audioElement.addEventListener("playing", () => {
-          this.state.status = "playing";
-          this.emitState();
+          if (this.activeEngine === "audio") {
+            this.state.status = "playing";
+            this.emitState();
+          }
         });
 
         this.audioElement.addEventListener("pause", () => {
-          if (this.state.status !== "idle") {
+          if (this.activeEngine === "audio" && this.state.status !== "idle") {
             this.state.status = "paused";
             this.emitState();
           }
         });
 
         this.audioElement.addEventListener("timeupdate", () => {
-          if (this.audioElement) {
+          if (this.activeEngine === "audio" && this.audioElement) {
             this.state.positionMs = Math.floor(this.audioElement.currentTime * 1000);
             this.emitState();
           }
         });
 
         this.audioElement.addEventListener("durationchange", () => {
-          if (this.audioElement && !isNaN(this.audioElement.duration)) {
+          if (this.activeEngine === "audio" && this.audioElement && !isNaN(this.audioElement.duration)) {
             this.state.durationMs = Math.floor(this.audioElement.duration * 1000);
             this.emitState();
           }
         });
 
         this.audioElement.addEventListener("ended", () => {
-          this.state.status = "idle";
-          this.state.positionMs = 0;
-          this.emitState();
-          if (this.onEndedCallback) {
-            this.onEndedCallback();
+          if (this.activeEngine === "audio") {
+            this.state.status = "idle";
+            this.state.positionMs = 0;
+            this.emitState();
+            if (this.onEndedCallback) {
+              this.onEndedCallback();
+            }
           }
         });
 
         this.audioElement.addEventListener("waiting", () => {
-          if (this.state.status === "playing") {
+          if (this.activeEngine === "audio" && this.state.status === "playing") {
             this.state.status = "buffering";
             this.emitState();
           }
         });
 
         this.audioElement.addEventListener("canplay", () => {
-          if (this.state.status === "buffering") {
+          if (this.activeEngine === "audio" && this.state.status === "buffering") {
             this.state.status = "playing";
             this.emitState();
           }
         });
 
         this.audioElement.addEventListener("error", () => {
-          console.warn("SoloPlayer: HTMLAudioElement error:", this.audioElement?.error);
+          console.warn("SoloPlayer: HTMLAudioElement error, checking fallback:", this.audioElement?.error);
+          const currentTrack = this.state.currentTrack;
+          if (currentTrack) {
+            const videoId =
+              YouTubeIframeBridge.extractVideoId(currentTrack.url) ||
+              YouTubeIframeBridge.extractVideoId(currentTrack.id);
+            if (videoId) {
+              console.log("SoloPlayer: Direct audio failed; gracefully activating YouTube IFrame playback for", videoId);
+              this.activeEngine = "iframe";
+              this.ytBridge.loadAndPlay(videoId, this.state.positionMs);
+              return;
+            }
+          }
           this.state.status = "idle";
           this.emitState();
         });
@@ -122,6 +160,10 @@ export class SoloPlayer {
 
   getVolume(): number {
     return this.state.volume;
+  }
+
+  getActiveEngine(): "audio" | "iframe" {
+    return this.activeEngine;
   }
 
   onStateChange(cb: StateChangeCallback): () => void {
@@ -159,53 +201,64 @@ export class SoloPlayer {
             this.seek(details.seekTime * 1000);
           }
         });
-        navigator.mediaSession.setActionHandler("nexttrack", () => {
-          if (this.onNextCallback) this.onNextCallback();
-        });
-        navigator.mediaSession.setActionHandler("previoustrack", () => {
-          if (this.onPreviousCallback) this.onPreviousCallback();
-        });
-      } catch {
-        // Ignored in non-supporting browsers
-      }
+        if (this.onNextCallback) {
+          navigator.mediaSession.setActionHandler("nexttrack", () => this.onNextCallback?.());
+        }
+        if (this.onPreviousCallback) {
+          navigator.mediaSession.setActionHandler("previoustrack", () => this.onPreviousCallback?.());
+        }
+      } catch {}
     }
   }
 
   async play(track: Track, positionMs: number = 0): Promise<void> {
     this.state.currentTrack = track;
+    this.state.durationMs = track.durationMs || 0;
     this.state.positionMs = positionMs;
-    this.state.durationMs = track.durationMs;
     this.state.status = "playing";
 
-    if (this.audioElement) {
-      // 1. Immediately pause before any URL switch to strictly prevent simultaneous audio
-      try {
-        this.audioElement.pause();
-      } catch {}
+    const isVercel =
+      typeof window !== "undefined" &&
+      (window.location.hostname.includes("vercel.app") || window.location.hostname.includes("soundlounge.vercel.app"));
 
-      // 2. Halt any other rogue audio elements across the document
+    const videoId =
+      YouTubeIframeBridge.extractVideoId(track.url) ||
+      YouTubeIframeBridge.extractVideoId(track.id);
+
+    // On Vercel cloud deployments, YouTube datacenter bot blocks prevent serverless streaming.
+    // Use YouTube IFrame directly for zero-latency, 100% reliable sound playback!
+    if (isVercel && videoId) {
+      this.activeEngine = "iframe";
+      if (this.audioElement) {
+        try {
+          this.audioElement.pause();
+          this.audioElement.src = "";
+        } catch {}
+      }
+      this.ytBridge.loadAndPlay(videoId, positionMs);
+      this.updateMediaSession(track);
+      this.emitState();
+      return;
+    }
+
+    // Default audio element playback for local dev and uploaded / R2 assets
+    this.activeEngine = "audio";
+    if (this.audioElement) {
       if (typeof window !== "undefined") {
         const win = window as unknown as WindowWithAudio;
-        if (win.__soundlounge_active_audio__ && win.__soundlounge_active_audio__ !== this.audioElement) {
-          try {
-            win.__soundlounge_active_audio__.pause();
-            win.__soundlounge_active_audio__.src = "";
-          } catch {}
-          win.__soundlounge_active_audio__ = this.audioElement;
-        }
-        if (typeof document !== "undefined") {
-          document.querySelectorAll("audio").forEach((el) => {
-            if (el !== this.audioElement) {
-              try {
-                el.pause();
-                el.currentTime = 0;
-              } catch {}
-            }
-          });
-        }
+        win.__soundlounge_active_audio__ = this.audioElement;
+
+        const allAudios = document.querySelectorAll("audio");
+        allAudios.forEach((el) => {
+          if (el !== this.audioElement) {
+            try {
+              el.pause();
+              el.currentTime = 0;
+            } catch {}
+          }
+        });
       }
 
-      // Ensure title and artist are cleanly added to stream URL without duplicating
       let playUrl = track.url;
       if (playUrl.startsWith("/api/stream/youtube")) {
         try {
@@ -244,6 +297,12 @@ export class SoloPlayer {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.warn("SoloPlayer: play() rejected or interrupted:", message);
+        // If play() failed on a YouTube track, activate iframe fallback
+        if (videoId) {
+          console.log("SoloPlayer: Switching to YouTube IFrame fallback after play() rejection");
+          this.activeEngine = "iframe";
+          this.ytBridge.loadAndPlay(videoId, positionMs);
+        }
       }
     }
 
@@ -254,7 +313,9 @@ export class SoloPlayer {
   async resume(): Promise<void> {
     if (this.state.currentTrack && this.state.status === "paused") {
       this.state.status = "playing";
-      if (this.audioElement) {
+      if (this.activeEngine === "iframe") {
+        this.ytBridge.play();
+      } else if (this.audioElement) {
         try {
           await this.audioElement.play();
         } catch {}
@@ -265,7 +326,9 @@ export class SoloPlayer {
 
   pause(): void {
     this.state.status = "paused";
-    if (this.audioElement) {
+    if (this.activeEngine === "iframe") {
+      this.ytBridge.pause();
+    } else if (this.audioElement) {
       this.audioElement.pause();
       this.state.positionMs = Math.floor(this.audioElement.currentTime * 1000);
     }
@@ -275,7 +338,9 @@ export class SoloPlayer {
   seek(positionMs: number): void {
     const clampedPos = Math.max(0, Math.min(positionMs, this.state.durationMs || positionMs));
     this.state.positionMs = clampedPos;
-    if (this.audioElement) {
+    if (this.activeEngine === "iframe") {
+      this.ytBridge.seekTo(clampedPos);
+    } else if (this.audioElement) {
       this.audioElement.currentTime = clampedPos / 1000;
     }
     this.emitState();
@@ -284,6 +349,7 @@ export class SoloPlayer {
   setVolume(volume: number): void {
     const clamped = Math.max(0.0, Math.min(1.0, volume));
     this.state.volume = clamped;
+    this.ytBridge.setVolume(clamped);
     if (this.audioElement) {
       this.audioElement.volume = clamped;
     }
@@ -295,6 +361,9 @@ export class SoloPlayer {
       this.audioElement.pause();
       this.audioElement.src = "";
       this.audioElement = null;
+    }
+    if (this.activeEngine === "iframe") {
+      this.ytBridge.pause();
     }
     if (typeof window !== "undefined") {
       const win = window as unknown as WindowWithAudio;

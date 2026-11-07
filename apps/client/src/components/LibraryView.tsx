@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Heart, Library, History, Play, Trash2, Plus, Music2, X, Clock } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { Heart, Library, History, Play, Trash2, Plus, Music2, X, Clock, Download, Upload, Search, ArrowUpDown, Sparkles } from "lucide-react";
 import type { Track, Playlist } from "@soundlounge/shared";
 import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { TrackArtwork } from "./TrackArtwork";
@@ -33,6 +33,9 @@ export function LibraryView({
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [showCreateInput, setShowCreateInput] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+  const [likedSearch, setLikedSearch] = useState("");
+  const [likedSort, setLikedSort] = useState<"date" | "title" | "artist" | "duration">("date");
+  const fileImportRef = React.useRef<HTMLInputElement>(null);
 
   // Sync with prop if it changes
   React.useEffect(() => {
@@ -50,6 +53,56 @@ export function LibraryView({
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
+  // Compute Listening Insights
+  const insights = useMemo(() => {
+    const allTracks = [...likedTracks, ...history];
+    const totalDurationMs = allTracks.reduce((acc, t) => acc + (t.durationMs || 0), 0);
+    const totalMinutes = Math.round(totalDurationMs / 60000);
+
+    const artistCount: Record<string, number> = {};
+    allTracks.forEach((t) => {
+      const art = t.artist || "Unknown";
+      artistCount[art] = (artistCount[art] || 0) + 1;
+    });
+
+    let topArtist = "None";
+    let maxCount = 0;
+    Object.entries(artistCount).forEach(([art, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topArtist = art;
+      }
+    });
+
+    return {
+      totalLiked: likedTracks.length,
+      totalMinutes,
+      topArtist,
+      totalHistory: history.length,
+    };
+  }, [likedTracks, history]);
+
+  // Filter and sort liked tracks
+  const processedLikedTracks = useMemo(() => {
+    let result = [...likedTracks];
+
+    if (likedSearch.trim()) {
+      const q = likedSearch.toLowerCase().trim();
+      result = result.filter(
+        (t) => t.title.toLowerCase().includes(q) || (t.artist && t.artist.toLowerCase().includes(q))
+      );
+    }
+
+    result.sort((a, b) => {
+      if (likedSort === "title") return a.title.localeCompare(b.title);
+      if (likedSort === "artist") return (a.artist || "").localeCompare(b.artist || "");
+      if (likedSort === "duration") return (b.durationMs || 0) - (a.durationMs || 0);
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+
+    return result;
+  }, [likedTracks, likedSearch, likedSort]);
+
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPlaylistName.trim()) {
@@ -59,10 +112,65 @@ export function LibraryView({
     }
   };
 
+  const handleExportPlaylists = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(playlists, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `soundlounge-playlists-${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        if (Array.isArray(imported)) {
+          imported.forEach((pl) => {
+            if (pl.name) {
+              onCreatePlaylist(pl.name);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to parse imported playlist JSON", err);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
 
   return (
     <div className="space-y-6">
+      {/* Listening Insights Snapshot */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 via-[#0e1626]/90 to-[#0c1f28]/90 border border-white/10 shadow-lg backdrop-blur-md">
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Liked</span>
+          <span className="text-xl sm:text-2xl font-black text-rose-400 mt-0.5">{insights.totalLiked}</span>
+          <span className="text-[10px] text-slate-500">tracks saved</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Listening Time</span>
+          <span className="text-xl sm:text-2xl font-black text-[#00e5ff] mt-0.5">{insights.totalMinutes}m</span>
+          <span className="text-[10px] text-slate-500">approx listening</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Top Artist</span>
+          <span className="text-sm sm:text-base font-bold text-white mt-1 truncate">{insights.topArtist}</span>
+          <span className="text-[10px] text-slate-500">most played</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Session History</span>
+          <span className="text-xl sm:text-2xl font-black text-indigo-400 mt-0.5">{insights.totalHistory}</span>
+          <span className="text-[10px] text-slate-500">recent plays</span>
+        </div>
+      </div>
+
       {/* Tab Navigation Pill Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
         <div className="flex items-center gap-2">
@@ -103,14 +211,42 @@ export function LibraryView({
           </button>
         </div>
 
-        {currentTab === "playlists" && !showCreateInput && (
-          <button
-            onClick={() => setShowCreateInput(true)}
-            className="flex items-center gap-1.5 text-xs text-[#00e5ff] hover:text-white px-3 py-1.5 rounded-lg bg-[#00e5ff]/10 hover:bg-[#00e5ff]/20 border border-[#00e5ff]/30 transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5 text-[#00e5ff]" />
-            New Playlist
-          </button>
+        {currentTab === "playlists" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileImportRef}
+              onChange={handleImportFile}
+              accept=".json"
+              className="hidden"
+            />
+            <button
+              onClick={() => fileImportRef.current?.click()}
+              title="Import playlists from JSON"
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition-colors cursor-pointer border border-slate-700/50"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Import</span>
+            </button>
+            <button
+              onClick={handleExportPlaylists}
+              disabled={playlists.length === 0}
+              title="Export playlists to JSON"
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition-colors cursor-pointer border border-slate-700/50 disabled:opacity-40"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export</span>
+            </button>
+            {!showCreateInput && (
+              <button
+                onClick={() => setShowCreateInput(true)}
+                className="flex items-center gap-1.5 text-xs text-[#00e5ff] hover:text-white px-3 py-1.5 rounded-lg bg-[#00e5ff]/10 hover:bg-[#00e5ff]/20 border border-[#00e5ff]/30 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#00e5ff]" />
+                New Playlist
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -148,15 +284,52 @@ export function LibraryView({
       {currentTab === "liked" && (
         <>
           {likedTracks.length > 0 ? (
-            <div className="rounded-xl border border-[#171a25] bg-[#090b10] overflow-hidden">
-              <div className="grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
-                <span>#</span>
-                <span>Title & Artist</span>
-                <span className="text-right">Duration</span>
-                <span className="text-right pr-2">Play</span>
+            <div className="space-y-3">
+              {/* Filter and Sort Toolbar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/40 p-2.5 rounded-xl border border-white/5">
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Filter saved tracks..."
+                    value={likedSearch}
+                    onChange={(e) => setLikedSearch(e.target.value)}
+                    className="w-full bg-slate-800/60 border border-slate-700/50 rounded-lg pl-8 pr-3 py-1 text-xs text-white placeholder-slate-500 outline-none focus:border-[#00e5ff]"
+                  />
+                  {likedSearch && (
+                    <button
+                      onClick={() => setLikedSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  <select
+                    value={likedSort}
+                    onChange={(e) => setLikedSort(e.target.value as any)}
+                    className="bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300 rounded-lg px-2.5 py-1 outline-none cursor-pointer hover:border-slate-600"
+                  >
+                    <option value="date">Recently Added</option>
+                    <option value="title">Title (A-Z)</option>
+                    <option value="artist">Artist</option>
+                    <option value="duration">Longest Duration</option>
+                  </select>
+                </div>
               </div>
-              <div className="divide-y divide-[#12151f]">
-                {likedTracks.map((track, idx) => (
+
+              <div className="rounded-xl border border-[#171a25] bg-[#090b10] overflow-hidden">
+                <div className="grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
+                  <span>#</span>
+                  <span>Title & Artist</span>
+                  <span className="text-right">Duration</span>
+                  <span className="text-right pr-2">Play</span>
+                </div>
+                <div className="divide-y divide-[#12151f]">
+                  {processedLikedTracks.map((track, idx) => (
                   <div
                     key={track.id}
                     className="group grid grid-cols-[36px_1fr_80px_60px] items-center px-4 py-2.5 hover:bg-[#10131d] transition-colors"
@@ -204,6 +377,7 @@ export function LibraryView({
                   </div>
                 ))}
               </div>
+            </div>
             </div>
           ) : (
             <div className="text-center py-16 rounded-xl border border-[#171a25] bg-[#090b10] space-y-2">

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useRef } from "react";
-import { ChevronLeft, ChevronRight, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { POPULAR_ARTISTS_MOCKUP, type DisplayArtist } from "../lib/data/mockupData";
 import { ARTISTS_CATALOG, type ArtistProfileData } from "../lib/data/artistsCatalog";
+import { ImageWithFallback } from "./ui/ImageWithFallback";
 
 interface PopularArtistsRowProps {
   onSelectArtist: (artist: ArtistProfileData) => void;
@@ -41,7 +42,6 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
   };
 
   const handleArtistClick = (artist: DisplayArtist) => {
-    // Check if artist is in ARTISTS_CATALOG
     const catalogMatch = ARTISTS_CATALOG.find(
       (a) => a.id === artist.id || a.name.toLowerCase() === artist.name.toLowerCase()
     );
@@ -49,7 +49,6 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
     if (catalogMatch) {
       onSelectArtist(catalogMatch);
     } else {
-      // Build an ephemeral ArtistProfileData so detail view opens smoothly
       const fallbackProfile: ArtistProfileData = {
         id: artist.id,
         name: artist.name,
@@ -80,24 +79,24 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
 
   return (
     <section className="w-full">
-      {/* Header with Title and Minimalist Pagination Arrows */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Header with Title and Minimalist Pagination Arrows matching mockup */}
+      <div className="flex items-center justify-between mb-3.5">
         <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">Popular Artists</h2>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={scrollLeft}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
             aria-label="Scroll left"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={scrollRight}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
             aria-label="Scroll right"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -105,21 +104,41 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
       {/* Horizontal List of Circular Artist Avatars */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-6 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
+        className="flex gap-5 sm:gap-6 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {combinedArtists.map((artist) => (
           <div
             key={artist.id}
             onClick={() => handleArtistClick(artist)}
-            className="group flex-shrink-0 flex flex-col items-center w-[74px] snap-start cursor-pointer"
+            className="group flex-shrink-0 flex flex-col items-center w-[76px] sm:w-[84px] snap-start cursor-pointer focus:outline-none"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleArtistClick(artist);
+              }
+            }}
           >
-            {/* Circular Avatar */}
-            <div className="relative w-[74px] h-[74px] rounded-full overflow-hidden bg-slate-800 ring-2 ring-slate-800/80 group-hover:ring-[#00e5ff] shadow-md transition-all duration-300 group-hover:scale-105">
-              <img src={artist.avatarUrl} alt={artist.name} className="w-full h-full object-cover" loading="lazy" />
+            {/* Circular Avatar with Glowing Ambient Halo on Hover */}
+            <div className="relative w-[76px] h-[76px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-slate-800 ring-2 ring-slate-800/60 group-hover:ring-[#00e5ff] shadow-lg shadow-black/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.35)]">
+              <ImageWithFallback
+                src={artist.avatarUrl}
+                alt={artist.name}
+                fallbackTitle={artist.name}
+                fallbackType="artist"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="lazy"
+              />
+
+              {/* Verified Badge icon on hover */}
+              <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#00e5ff] rounded-full flex items-center justify-center text-slate-950 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                <Check className="w-2.5 h-2.5 stroke-[3]" />
+              </div>
             </div>
 
             {/* Centered Name */}
-            <span className="text-xs font-medium text-slate-300 group-hover:text-white mt-2 text-center truncate w-full transition-colors">
+            <span className="text-xs font-medium text-slate-300 group-hover:text-white mt-2.5 text-center truncate w-full transition-colors leading-tight">
               {artist.name}
             </span>
           </div>

@@ -26,6 +26,7 @@ import { AudioEngineCoordinator, type CoordinatorPlayerState, type PlaybackMode 
 import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
+import { useGlobalAudioHotkeys } from "../hooks/useGlobalAudioHotkeys";
 import type { Track, Playlist, Album } from "@soundlounge/shared";
 
 // Singleton coordinator instance for the browser tab, preserved on window across fast refresh
@@ -374,38 +375,23 @@ export default function SoundloungeApp() {
     });
   }, [queue, currentIndex]);
 
-  // Global desktop studio keyboard shortcuts (Space, Arrow keys, F for Studio Mode)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        return;
-      }
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        handleTogglePlay();
-      } else if (e.code === "ArrowRight" || e.key === "l" || e.key === "L") {
-        e.preventDefault();
-        handleSeek(Math.min(playerState.durationMs || 0, playerState.positionMs + 5000));
-      } else if (e.code === "ArrowLeft" || e.key === "j" || e.key === "J") {
-        e.preventDefault();
-        handleSeek(Math.max(0, playerState.positionMs - 5000));
-      } else if (e.key === "n" || e.key === "N") {
-        e.preventDefault();
-        handleNext();
-      } else if (e.key === "p" || e.key === "P") {
-        e.preventDefault();
-        handlePrevious();
-      } else if (e.key === "f" || e.key === "F") {
-        e.preventDefault();
-        setIsStudioOpen((prev) => !prev);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [playerState.status, playerState.positionMs, playerState.durationMs]);
+  // Global desktop studio keyboard shortcuts (Space, M, Arrow keys, S/F for Studio Mode)
+  useGlobalAudioHotkeys({
+    onTogglePlay: handleTogglePlay,
+    onToggleMute: () => {
+      const currentVol = coordinator.getVolume();
+      coordinator.setVolume(currentVol > 0 ? 0 : 0.4);
+    },
+    onSeekRelative: (deltaMs) => {
+      handleSeek(Math.max(0, Math.min(playerState.durationMs || 0, playerState.positionMs + deltaMs)));
+    },
+    onVolumeRelative: (deltaVol) => {
+      const currentVol = coordinator.getVolume();
+      coordinator.setVolume(Math.max(0, Math.min(1, currentVol + deltaVol)));
+    },
+    onToggleStudio: () => setIsStudioOpen((prev) => !prev),
+    enabled: true,
+  });
 
   if (playerState.mode === "synced" && sync.isAccessDenied) {
     return (

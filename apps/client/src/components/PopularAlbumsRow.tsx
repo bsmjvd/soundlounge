@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useRef } from "react";
-import { ChevronLeft, ChevronRight, Play, Disc } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import type { Album, Track } from "@soundlounge/shared";
 import { POPULAR_ALBUMS_MOCKUP, type DisplayAlbum } from "../lib/data/mockupData";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
+import { ImageWithFallback } from "./ui/ImageWithFallback";
 
 interface PopularAlbumsRowProps {
   onSelectAlbum?: (album: Album | DisplayAlbum) => void;
@@ -14,6 +15,7 @@ interface PopularAlbumsRowProps {
 
 export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: PopularAlbumsRowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   // Combine popular mockup albums with catalog albums with de-duplication
   const combinedAlbums = React.useMemo(() => {
@@ -25,7 +27,6 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       const key = alb.title.toLowerCase().trim();
       if (!seen.has(key)) {
         seen.add(key);
-        // If there is a matching catalog album with more tracks, attach them
         const catalogMatch = ALBUMS_CATALOG.find((c) => c.title.toLowerCase().trim() === key || c.id === alb.id);
         if (catalogMatch && catalogMatch.tracks && catalogMatch.tracks.length > 0) {
           list.push({
@@ -59,6 +60,25 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
     return list;
   }, []);
 
+  const handleScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 0) {
+      setScrollProgress(0);
+      return;
+    }
+    const progress = Math.min(1, Math.max(0, el.scrollLeft / maxScroll));
+    setScrollProgress(progress);
+  };
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({ left: -320, behavior: "smooth" });
@@ -72,7 +92,6 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
   };
 
   const handleAlbumClick = (album: DisplayAlbum) => {
-    // Find matching catalog album if available
     const catalogMatch = ALBUMS_CATALOG.find(
       (a) => a.id === album.id || a.title.toLowerCase() === album.title.toLowerCase()
     );
@@ -124,63 +143,89 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
 
   return (
     <section className="w-full">
-      {/* Header with Title and Minimalist Pagination Arrows */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Header with Title and Minimalist Pagination Arrows matching mockup */}
+      <div className="flex items-center justify-between mb-3.5">
         <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">Popular Albums</h2>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={scrollLeft}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
             aria-label="Scroll left"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={scrollRight}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
             aria-label="Scroll right"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Horizontal Carousel */}
+      {/* Horizontal Carousel with exact 1:1 aspect ratio and rounded card styling matching reference mockup */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-5 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent snap-x snap-mandatory"
+        className="flex gap-3.5 sm:gap-4.5 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {combinedAlbums.map((album) => (
           <div
             key={album.id}
             onClick={() => handleAlbumClick(album)}
-            className="group flex-shrink-0 w-[107px] min-w-[107px] max-w-[107px] snap-start cursor-pointer transition-transform duration-200 hover:-translate-y-1"
+            className="group flex-shrink-0 w-[114px] min-w-[114px] sm:w-[128px] sm:min-w-[128px] md:w-[136px] md:min-w-[136px] lg:w-[140px] lg:min-w-[140px] snap-start cursor-pointer transition-all duration-200 hover:-translate-y-1 focus:outline-none"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleAlbumClick(album);
+              }
+            }}
           >
-            {/* Album Cover Art: clean square with subtle rounded corners matching mockup */}
-            <div className="relative w-[107px] h-[107px] rounded-xl overflow-hidden bg-slate-900 shadow-md shadow-black/50 ring-1 ring-white/5">
-              <img
+            {/* Album Cover Card: 1:1 Square with image filling card completely and smooth rounded corners matching mockup */}
+            <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-slate-900 shadow-md shadow-black/50 ring-1 ring-white/10 group-hover:ring-[#00e5ff]/50 transition-all duration-300">
+              <ImageWithFallback
                 src={album.coverUrl}
                 alt={album.title}
+                fallbackTitle={album.title}
+                fallbackType="album"
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 loading="lazy"
               />
 
+              {/* Subtle bottom gradient scrim matching mockup card depth */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
               {/* Hover Play Button Overlay */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_15px_rgba(0,229,255,0.5)] transform scale-75 group-hover:scale-100 transition-transform">
-                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                <div className="w-10 h-10 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_20px_rgba(0,229,255,0.7)] transform scale-75 group-hover:scale-100 transition-transform">
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
                 </div>
               </div>
             </div>
 
-            {/* Album Title & Artist */}
-            <h3 className="text-xs font-semibold text-white truncate mt-2 group-hover:text-[#00e5ff] transition-colors leading-tight">
+            {/* Album Title & Artist matching mockup typography */}
+            <h3 className="text-xs sm:text-[13px] font-semibold text-white truncate mt-2 group-hover:text-[#00e5ff] transition-colors leading-tight">
               {album.title}
             </h3>
-            <p className="text-[11px] text-slate-400 truncate mt-0.5">{album.subtitle || album.artist}</p>
+            <p className="text-[11px] text-[#7888a5] truncate mt-0.5 font-normal">
+              {album.subtitle || album.artist}
+            </p>
           </div>
         ))}
+      </div>
+
+      {/* Sleek horizontal scroll progress bar matching mockup */}
+      <div className="w-44 sm:w-56 h-[3px] bg-[#0c222c] rounded-full overflow-hidden mt-3.5 relative">
+        <div
+          className="h-full bg-teal-400 rounded-full transition-transform duration-150 ease-out"
+          style={{
+            width: "35%",
+            transform: `translateX(${scrollProgress * (100 / 0.35 - 100)}%)`,
+          }}
+        />
       </div>
     </section>
   );

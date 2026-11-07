@@ -87,6 +87,10 @@ export class AudioEngineCoordinator {
     this.emitState();
   }
 
+  getVolume(): number {
+    return this.volume;
+  }
+
   getState(): CoordinatorPlayerState {
     if (this.mode === "solo") {
       const s = this.soloPlayer.getState();

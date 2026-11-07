@@ -1,19 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
-  Heart,
-  Volume2,
-  VolumeX,
-  Minimize2,
-  Radio,
-  Music2,
-} from "lucide-react";
+import { Play, Pause, SkipForward, SkipBack, Heart, Volume2, VolumeX, Minimize2, Radio, Music2, Disc } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
+import { AudioFrequencyVisualizer } from "./studio/AudioFrequencyVisualizer";
 
 interface StudioImmersiveModalProps {
   isOpen: boolean;
@@ -49,8 +39,10 @@ export function StudioImmersiveModal({
   onVolumeChange,
 }: StudioImmersiveModalProps) {
   const [hoverSeekPos, setHoverSeekPos] = useState<number | null>(null);
+  const [rpmSpeed, setRpmSpeed] = useState<33 | 45>(33);
   const [isMuted, setIsMuted] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const vinylRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -105,6 +97,23 @@ export function StudioImmersiveModal({
     setHoverSeekPos(Math.floor(percent * effectiveDuration));
   };
 
+  // Needle drop seek on vinyl grooves
+  const handleVinylClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!vinylRef.current) return;
+    const rect = vinylRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const radius = rect.width / 2;
+    // Deadwax inner radius ~35%, Outer edge ~98%
+    const normalized = Math.max(0, Math.min(1, (dist - radius * 0.35) / (radius * 0.63)));
+    // Grooves run outside-in: outside is start (0%), inner is end (100%)
+    const seekPercent = 1 - normalized;
+    onSeek(Math.floor(seekPercent * effectiveDuration));
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-[#07090e] text-[#f8fafc] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300">
       {/* 1. Full-Screen Cinematic Backdrop */}
@@ -131,7 +140,7 @@ export function StudioImmersiveModal({
         </div>
       )}
 
-      {/* 2. Top Header Bar */}
+      {/* 2. Top Header Bar with Turntable Speed Controls */}
       <div className="relative z-10 max-w-7xl w-full mx-auto p-6 sm:p-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-600/20">
@@ -148,6 +157,30 @@ export function StudioImmersiveModal({
           </div>
         </div>
 
+        {/* Center RPM Speed Selector Pill */}
+        <div className="hidden sm:flex items-center gap-1 bg-black/40 border border-white/10 rounded-full p-1 backdrop-blur-md shadow-inner">
+          <button
+            onClick={() => setRpmSpeed(33)}
+            className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+              rpmSpeed === 33
+                ? "bg-[#00e5ff] text-[#07090e] shadow-[0_0_12px_rgba(0,229,255,0.6)]"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            33⅓ RPM
+          </button>
+          <button
+            onClick={() => setRpmSpeed(45)}
+            className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+              rpmSpeed === 45
+                ? "bg-[#00e5ff] text-[#07090e] shadow-[0_0_12px_rgba(0,229,255,0.6)]"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            45 RPM
+          </button>
+        </div>
+
         <button
           onClick={onClose}
           aria-label="Exit Studio Mode"
@@ -162,7 +195,7 @@ export function StudioImmersiveModal({
       </div>
 
       {/* 3. Center Stage: Spinning Vinyl & High-Res Album Cover */}
-      <div className="relative z-10 max-w-5xl w-full mx-auto px-6 py-4 flex flex-col items-center justify-center text-center space-y-8 flex-1">
+      <div className="relative z-10 max-w-5xl w-full mx-auto px-6 py-4 flex flex-col items-center justify-center text-center space-y-6 flex-1">
         {/* Centerpiece: Audiophile Gatefold Sleeve, Slideout Vinyl Record & Tonearm */}
         <div className="relative flex items-center justify-center py-4">
           <div
@@ -172,53 +205,60 @@ export function StudioImmersiveModal({
           >
             {/* 1. The Audiophile Vinyl LP Record (emerges from jacket slot on the right) */}
             <div
-              className={`absolute inset-0 z-10 transition-all duration-1000 ease-[cubic-bezier(0.34,1.25,0.64,1)] ${
+              ref={vinylRef}
+              onClick={handleVinylClick}
+              title="Click grooves to drop needle and seek"
+              className={`absolute inset-0 z-10 cursor-pointer transition-all duration-1000 ease-[cubic-bezier(0.34,1.25,0.64,1)] ${
                 isPlaying
-                  ? "translate-x-[48%] sm:translate-x-[52%] opacity-100 scale-100"
-                  : "translate-x-[6%] opacity-75 scale-[0.98]"
+                  ? "translate-x-[52%] sm:translate-x-[56%] opacity-100 scale-100"
+                  : "translate-x-[36%] sm:translate-x-[40%] opacity-90 scale-[0.98]"
               }`}
             >
               <div
                 className={`w-full h-full rounded-full audiophile-vinyl-disc relative flex items-center justify-center ${
-                  isPlaying ? "spin-vinyl-running" : "spin-vinyl-paused"
+                  isPlaying
+                    ? rpmSpeed === 33
+                      ? "spin-vinyl-running-33"
+                      : "spin-vinyl-running-45"
+                    : "spin-vinyl-paused"
                 }`}
               >
                 {/* Physical Song Separation Bands */}
-                <div className="absolute inset-[16%] rounded-full border border-white/[0.07] pointer-events-none" />
-                <div className="absolute inset-[26%] rounded-full border border-white/[0.07] pointer-events-none" />
-                <div className="absolute inset-[35%] rounded-full border border-white/[0.07] pointer-events-none" />
+                <div className="absolute inset-[15%] rounded-full border border-white/[0.08] pointer-events-none" />
+                <div className="absolute inset-[24%] rounded-full border border-white/[0.08] pointer-events-none" />
+                <div className="absolute inset-[33%] rounded-full border border-white/[0.08] pointer-events-none" />
 
-                {/* Dead Wax Run-Out Zone with Etched Matrix Code */}
-                <div className="w-[44%] h-[44%] rounded-full bg-[radial-gradient(circle,#131722_0%,#090c12_100%)] border border-white/10 shadow-[inset_0_0_12px_rgba(0,0,0,0.9)] flex items-center justify-center relative">
-                  <span className="absolute font-mono text-[5px] sm:text-[6px] tracking-[2px] text-white/20 uppercase -rotate-45 select-none pointer-events-none">
-                    SL-2026-HI-FI • SOUNDLOUNGE
+                {/* Dead Wax Run-Out Zone with Hand-Etched Matrix Code */}
+                <div className="w-[44%] h-[44%] rounded-full bg-[radial-gradient(circle,#141923_0%,#080a0f_100%)] border border-white/15 shadow-[inset_0_0_15px_rgba(0,0,0,0.95)] flex items-center justify-center relative">
+                  <span className="absolute font-mono text-[5px] sm:text-[6.5px] tracking-[2.5px] text-white/30 uppercase -rotate-45 select-none pointer-events-none">
+                    SL-2026-HI-FI • SOUNDLOUNGE LATHE CUT
                   </span>
 
-                  {/* Center Record Label Badge */}
-                  <div className="w-[76%] h-[76%] rounded-full overflow-hidden relative shadow-[0_0_14px_rgba(0,0,0,0.95),0_0_0_1.5px_rgba(217,119,6,0.45)] flex items-center justify-center bg-[#0f172a]">
+                  {/* Center Record Label Badge with Gold Foil Stamp */}
+                  <div className="w-[74%] h-[74%] rounded-full overflow-hidden relative shadow-[0_0_16px_rgba(0,0,0,0.95),0_0_0_1.5px_rgba(217,119,6,0.6)] flex items-center justify-center bg-[#0c1322]">
                     {squareCover && (
                       <img
                         src={squareCover}
                         alt="Vinyl Center Label"
-                        className="absolute inset-0 w-full h-full object-cover brightness-[0.65] contrast-110"
+                        className="absolute inset-0 w-full h-full object-cover brightness-[0.55] contrast-125"
                       />
                     )}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(0,0,0,0.25)_20%,rgba(0,0,0,0.85)_100%)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(0,0,0,0.3)_15%,rgba(0,0,0,0.85)_100%)]" />
 
                     <div className="relative z-10 flex flex-col items-center text-center pointer-events-none px-1">
-                      <span className="text-[5px] sm:text-[6px] font-black tracking-widest text-amber-200 font-mono uppercase">
+                      <span className="text-[5.5px] sm:text-[6.5px] font-black tracking-widest text-amber-200 font-mono uppercase drop-shadow-sm">
                         SOUNDLOUNGE
                       </span>
-                      <span className="text-[5px] sm:text-[6px] font-bold text-white max-w-[55px] sm:max-w-[70px] truncate leading-tight mt-0.5">
+                      <span className="text-[5px] sm:text-[6px] font-bold text-white max-w-[60px] sm:max-w-[75px] truncate leading-tight mt-0.5">
                         {currentTrack.title}
                       </span>
-                      <span className="text-[4px] sm:text-[5px] font-mono text-amber-300/80 mt-0.5 tracking-wider">
-                        33⅓ RPM • SIDE A
+                      <span className="text-[4px] sm:text-[5px] font-mono text-amber-300 mt-0.5 tracking-wider font-semibold">
+                        {rpmSpeed}⅓ RPM • STEREO
                       </span>
                     </div>
 
-                    {/* Brass Center Spindle Eyelet */}
-                    <div className="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-[#050608] border-2 border-amber-300/80 shadow-[0_0_4px_rgba(0,0,0,0.9),inset_0_0_3px_rgba(0,0,0,0.95)] z-20" />
+                    {/* Brass Center Spindle Grommet */}
+                    <div className="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-[#050608] border-2 border-amber-300 shadow-[0_0_6px_rgba(0,0,0,0.9),inset_0_0_4px_rgba(0,0,0,0.95)] z-20" />
                   </div>
                 </div>
               </div>
@@ -233,9 +273,9 @@ export function StudioImmersiveModal({
               }`}
             >
               {/* Left Spine Fold Highlight & Crease */}
-              <div className="absolute top-0 left-0 bottom-0 w-3 bg-gradient-to-r from-white/20 via-white/5 to-transparent pointer-events-none z-10" />
+              <div className="absolute top-0 left-0 bottom-0 w-3.5 bg-gradient-to-r from-white/25 via-white/10 to-transparent pointer-events-none z-10" />
               {/* Right Jacket Mouth Inner Slot Shadow */}
-              <div className="absolute top-0 right-0 bottom-0 w-4 sm:w-5 bg-gradient-to-l from-black/95 to-transparent pointer-events-none z-10" />
+              <div className="absolute top-0 right-0 bottom-0 w-5 sm:w-6 bg-gradient-to-l from-black/95 to-transparent pointer-events-none z-10" />
 
               {squareCover ? (
                 <img src={squareCover} alt={currentTrack.title} className="w-full h-full object-cover" />
@@ -272,19 +312,10 @@ export function StudioImmersiveModal({
           </div>
         </div>
 
-        {/* Track Title & Artist Metadata */}
-        <div className="space-y-3 max-w-2xl">
-          {/* Dynamic Frequency Equalizer Waveform */}
-          <div className="flex items-center justify-center gap-1.5 h-6 mb-2">
-            <span className={`w-1.5 bg-sky-400 rounded-full ${isPlaying ? "animate-eq-1" : "h-1"}`} />
-            <span className={`w-1.5 bg-sky-400 rounded-full ${isPlaying ? "animate-eq-2" : "h-2"}`} />
-            <span className={`w-1.5 bg-sky-400 rounded-full ${isPlaying ? "animate-eq-3" : "h-3"}`} />
-            <span className={`w-1.5 bg-indigo-400 rounded-full ${isPlaying ? "animate-eq-4" : "h-1"}`} />
-            <span className={`w-1.5 bg-indigo-400 rounded-full ${isPlaying ? "animate-eq-5" : "h-2.5"}`} />
-            <span className={`w-1.5 bg-indigo-400 rounded-full ${isPlaying ? "animate-eq-1" : "h-1"}`} />
-            <span className={`w-1.5 bg-sky-400 rounded-full ${isPlaying ? "animate-eq-2" : "h-3"}`} />
-            <span className={`w-1.5 bg-sky-400 rounded-full ${isPlaying ? "animate-eq-3" : "h-2"}`} />
-          </div>
+        {/* Track Title & Artist Metadata with Real Audio Spectrum Visualizer */}
+        <div className="space-y-3 max-w-2xl flex flex-col items-center">
+          {/* Responsive Audio Frequency Spectrum Visualizer */}
+          <AudioFrequencyVisualizer isPlaying={isPlaying} />
 
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-xl line-clamp-1">
             {currentTrack.title}
@@ -310,86 +341,71 @@ export function StudioImmersiveModal({
               className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400 rounded-full transition-all duration-200 shadow-md shadow-sky-400/50"
               style={{ width: `${progressPercent}%` }}
             />
-            {hoverSeekPos !== null && (
-              <div
-                className="absolute top-0 bottom-0 w-1 bg-white shadow-xl pointer-events-none"
-                style={{ left: `${(hoverSeekPos / effectiveDuration) * 100}%` }}
-              />
-            )}
           </div>
 
-          <div className="flex items-center justify-between text-xs font-mono tabular-nums text-gray-400">
-            <span>{formatTime(positionMs)}</span>
-            {hoverSeekPos !== null ? (
-              <span className="text-sky-300 font-bold">Seek to {formatTime(hoverSeekPos)}</span>
-            ) : (
-              <span>{formatTime(effectiveDuration)}</span>
-            )}
+          <div className="flex justify-between text-xs font-mono text-gray-400">
+            <span>{formatTime(hoverSeekPos !== null ? hoverSeekPos : positionMs)}</span>
+            <span>{formatTime(effectiveDuration)}</span>
           </div>
         </div>
 
-        {/* Transport Row */}
-        <div className="flex items-center justify-between gap-4">
-          {/* Like button */}
+        {/* Playback Button Bar */}
+        <div className="flex items-center justify-between">
           <button
             onClick={() => onToggleLike(currentTrack)}
-            aria-label={isLiked ? "Unlike track" : "Like track"}
-            className={`p-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer hover:scale-110 active:scale-95 ${
-              isLiked
-                ? "text-rose-400 border-rose-500/40 shadow-lg shadow-rose-500/20"
-                : "text-gray-400 hover:text-white"
+            aria-label="Toggle Like Track"
+            className={`p-3 rounded-full transition-all cursor-pointer ${
+              isLiked ? "text-rose-500 bg-rose-500/10 scale-110" : "text-gray-400 hover:text-white hover:bg-white/10"
             }`}
           >
-            <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
+            <Heart className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`} />
           </button>
 
-          {/* Central Transport Buttons */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
             <button
               onClick={onPrevious}
-              aria-label="Previous track"
-              className="p-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 cursor-pointer"
+              aria-label="Previous Track"
+              className="p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95"
             >
-              <SkipBack className="w-5 h-5" />
+              <SkipBack className="w-7 h-7" />
             </button>
 
             <button
               onClick={onTogglePlay}
-              aria-label={isPlaying ? "Pause" : "Play"}
-              className="w-16 h-16 rounded-full bg-white hover:bg-gray-100 text-black flex items-center justify-center shadow-2xl shadow-white/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              aria-label={isPlaying ? "Pause Track" : "Play Track"}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
             >
-              {isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
+              {isPlaying ? (
+                <Pause className="w-8 h-8 fill-current" />
+              ) : (
+                <Play className="w-8 h-8 fill-current ml-1" />
+              )}
             </button>
 
             <button
               onClick={onNext}
-              aria-label="Next track"
-              className="p-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 cursor-pointer"
+              aria-label="Next Track"
+              className="p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95"
             >
-              <SkipForward className="w-5 h-5" />
+              <SkipForward className="w-7 h-7" />
             </button>
           </div>
 
           {/* Volume Control */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 if (isMuted) {
+                  onVolumeChange(volume || 0.4);
                   setIsMuted(false);
-                  onVolumeChange(volume || 0.8);
                 } else {
-                  setIsMuted(true);
                   onVolumeChange(0);
+                  setIsMuted(true);
                 }
               }}
-              aria-label={isMuted ? "Unmute" : "Mute"}
-              className="p-2.5 rounded-xl text-gray-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 text-gray-400 hover:text-white transition-colors cursor-pointer"
             >
-              {isMuted || volume === 0 ? (
-                <VolumeX className="w-5 h-5 text-rose-400" />
-              ) : (
-                <Volume2 className="w-5 h-5" />
-              )}
+              {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
             <input
               type="range"
@@ -399,9 +415,9 @@ export function StudioImmersiveModal({
               value={isMuted ? 0 : volume}
               onChange={(e) => {
                 setIsMuted(false);
-                onVolumeChange(Number(e.target.value));
+                onVolumeChange(parseFloat(e.target.value));
               }}
-              className="w-20 sm:w-28 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer"
+              className="w-20 sm:w-24 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#00e5ff]"
             />
           </div>
         </div>

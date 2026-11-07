@@ -29,6 +29,7 @@ interface PlayerBarProps {
   mode: PlaybackMode;
   pingMs: number;
   queueCount?: number;
+  bufferedPercent?: number;
   isLiked: boolean;
   onToggleLike: (track: Track) => void;
   onTogglePlay: () => void;
@@ -49,6 +50,7 @@ export function PlayerBar({
   mode,
   pingMs,
   queueCount,
+  bufferedPercent = 65,
   isLiked,
   onToggleLike,
   onTogglePlay,
@@ -62,6 +64,9 @@ export function PlayerBar({
   const [isMuted, setIsMuted] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
+  const [hoverSeekPos, setHoverSeekPos] = useState<number | null>(null);
+  const [hoverSeekLeft, setHoverSeekLeft] = useState<number>(0);
+  const trackBarRef = React.useRef<HTMLDivElement>(null);
 
   const toggleMute = () => {
     if (isMuted) {
@@ -166,18 +171,46 @@ export function PlayerBar({
             </button>
           </div>
 
-          {/* Timeline Progress Bar (Left Cyan Time, Glowing Cyan Bar, Right Gray Time) */}
+          {/* Timeline Progress Bar (Left Cyan Time, Dual-Layer Buffered Scrubber, Right Gray Time) */}
           <div className="w-full flex items-center gap-3">
             <span className="text-[11px] font-mono tabular-nums text-[#00e5ff] font-semibold w-9 text-right select-none">
               {formatTime(positionMs)}
             </span>
 
-            <div className="relative flex-1 group flex items-center">
-              {/* Slate Track */}
-              <div className="relative w-full h-1 bg-slate-800 rounded-full overflow-hidden group-hover:h-1.5 transition-all">
-                {/* Glowing Cyan Fill */}
+            <div
+              ref={trackBarRef}
+              onMouseMove={(e) => {
+                if (!trackBarRef.current) return;
+                const rect = trackBarRef.current.getBoundingClientRect();
+                const offsetX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                const pct = offsetX / rect.width;
+                setHoverSeekPos(Math.floor(pct * effectiveDuration));
+                setHoverSeekLeft(offsetX);
+              }}
+              onMouseLeave={() => setHoverSeekPos(null)}
+              className="relative flex-1 group flex items-center py-2 cursor-pointer"
+            >
+              {/* Floating Seek Tooltip on Hover */}
+              {hoverSeekPos !== null && (
                 <div
-                  className="h-full bg-[#00e5ff] shadow-[0_0_10px_#00e5ff] transition-all duration-100"
+                  className="absolute -top-7 transform -translate-x-1/2 bg-[#0c1626] border border-[#00e5ff]/40 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded shadow-lg pointer-events-none z-30 transition-opacity"
+                  style={{ left: `${hoverSeekLeft}px` }}
+                >
+                  {formatTime(hoverSeekPos)}
+                </div>
+              )}
+
+              {/* Base Track (Dark Slate) */}
+              <div className="relative w-full h-1 bg-slate-800 rounded-full overflow-hidden group-hover:h-1.5 transition-all">
+                {/* Secondary Layer: Loaded Audio Buffer */}
+                <div
+                  className="absolute inset-y-0 left-0 bg-slate-700/60 rounded-full transition-all duration-300 pointer-events-none"
+                  style={{ width: `${Math.min(100, Math.max(progressPercent, bufferedPercent))}%` }}
+                />
+
+                {/* Primary Layer: Glowing Cyan Playhead */}
+                <div
+                  className="relative h-full bg-[#00e5ff] shadow-[0_0_10px_#00e5ff] transition-all duration-100 rounded-full"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>

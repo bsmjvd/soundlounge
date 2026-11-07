@@ -20,12 +20,26 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+/* Dynamic viewport height class */
+.h-dvh {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pb-safe-plus-4 {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+
 /* Tabular numbers for clocks, metrics, and timers */
-.tabular-nums {
+.font-tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom Sleek Petrol-Teal Scrollbars */
+/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -36,56 +50,51 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 229, 201, 0.15);
-  border-radius: 999px;
-  backdrop-filter: blur(8px);
+  background: #1a2c35;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 229, 201, 0.35);
+  background: #243b47;
 }
 
-/* Range input styling for volume and scrubbers */
+/* Range input styling for volume and scrubber */
 input[type="range"] {
-  accent-color: #00e5c9;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
   cursor: pointer;
 }
 
+input[type="range"]:focus {
+  outline: none;
+}
+
 input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #00e5c9;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 229, 201, 0.5);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.25);
-  box-shadow: 0 0 14px rgba(0, 229, 201, 0.7);
+  box-shadow: 0 0 12px rgba(0, 229, 201, 0.8);
 }
 
-/* 3D Perspective for Coverflow Carousel */
-.perspective-1000 {
-  perspective: 1000px;
-}
-
-.preserve-3d {
-  transform-style: preserve-3d;
-}
-
-/* Soft Neumorphic Inset Shadow for Petrol Dashboard */
-.petrol-card {
-  background: #0d181e;
-  border: 1px solid #1a2c35;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.petrol-card-interactive {
-  background: #0d181e;
-  border: 1px solid #1a2c35;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.petrol-card-interactive:hover {
-  background: #112027;
-  border-color: #243c49;
-  box-shadow: 0 12px 35px -8px rgba(0, 229, 201, 0.12);
+input[type="range"]::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #00e5c9;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px rgba(0, 229, 201, 0.5);
 }
 
 /* Audiophile Studio Vinyl Record & Tone Arm */
@@ -100,37 +109,53 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .audiophile-vinyl-disc {
   box-shadow: 
-    0 25px 60px rgba(0, 0, 0, 0.95),
-    inset 0 0 15px rgba(0, 0, 0, 0.95),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+    0 25px 70px rgba(0, 0, 0, 0.98),
+    inset 0 0 25px rgba(0, 0, 0, 0.95),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.9);
   background:
+    radial-gradient(
+      circle at center,
+      transparent 38%,
+      rgba(255, 255, 255, 0.03) 40%,
+      transparent 42%,
+      rgba(255, 255, 255, 0.04) 55%,
+      transparent 57%,
+      rgba(255, 255, 255, 0.03) 72%,
+      transparent 74%,
+      rgba(255, 255, 255, 0.04) 88%,
+      transparent 90%
+    ),
     conic-gradient(
       from 45deg,
-      rgba(255, 255, 255, 0.16) 0deg,
-      rgba(10, 14, 20, 0.96) 35deg,
-      rgba(255, 255, 255, 0.05) 90deg,
-      rgba(10, 14, 20, 0.98) 140deg,
-      rgba(255, 255, 255, 0.16) 180deg,
-      rgba(10, 14, 20, 0.96) 215deg,
-      rgba(255, 255, 255, 0.05) 270deg,
-      rgba(10, 14, 20, 0.98) 325deg,
-      rgba(255, 255, 255, 0.16) 360deg
+      rgba(255, 255, 255, 0.22) 0deg,
+      rgba(8, 11, 16, 0.96) 35deg,
+      rgba(255, 255, 255, 0.06) 90deg,
+      rgba(8, 11, 16, 0.98) 140deg,
+      rgba(255, 255, 255, 0.22) 180deg,
+      rgba(8, 11, 16, 0.96) 215deg,
+      rgba(255, 255, 255, 0.06) 270deg,
+      rgba(8, 11, 16, 0.98) 325deg,
+      rgba(255, 255, 255, 0.22) 360deg
     ),
     repeating-radial-gradient(
       circle at center,
-      #0d1117 0px,
-      #161c24 1px,
-      #0f131a 2px,
-      #18202b 3px
+      #080a0f 0px,
+      #0e121a 1.5px,
+      #080a0f 3px
     );
 }
 
-.spin-vinyl-running {
-  animation: spin-vinyl 16s linear infinite;
+.spin-vinyl-running-33 {
+  animation: spin-vinyl 3.6s linear infinite;
+}
+
+.spin-vinyl-running-45 {
+  animation: spin-vinyl 2.4s linear infinite;
 }
 
 .spin-vinyl-paused {
-  animation: spin-vinyl 16s linear infinite;
+  animation: spin-vinyl 3.6s linear infinite;
   animation-play-state: paused;
 }
 
@@ -161,3 +186,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .animate-eq-3 { animation: eq-pulse-3 0.9s ease-in-out infinite 0.2s; }
 .animate-eq-4 { animation: eq-pulse-4 0.65s ease-in-out infinite 0.15s; }
 .animate-eq-5 { animation: eq-pulse-5 0.85s ease-in-out infinite 0.05s; }
+
+/* Floating social listener reaction animation */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-80px) scale(1.2);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-160px) scale(1);
+    opacity: 0;
+  }
+}

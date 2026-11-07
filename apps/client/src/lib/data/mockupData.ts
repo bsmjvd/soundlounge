@@ -107,7 +107,8 @@ export const FEATURED_SPOTLIGHTS: FeaturedSpotlight[] = [
     tagline: "Billboard #1 Global Smash • 2026",
     title: "Die With a Smile",
     subtitle: "Lady Gaga & Bruno Mars",
-    description: "The record-shattering global anthem that dominated the Billboard Hot 100 and ruled the Global 200 for 18 historic weeks.",
+    description:
+      "The record-shattering global anthem that dominated the Billboard Hot 100 and ruled the Global 200 for 18 historic weeks.",
     artistName: "Lady Gaga & Bruno Mars",
     heroImageUrl: "/heroes/hero-die-with-a-smile.webp",
     accentColor: "#00e5ff",
@@ -127,7 +128,8 @@ export const FEATURED_SPOTLIGHTS: FeaturedSpotlight[] = [
     tagline: "Billboard Hot 100 #1 • 2026",
     title: "GNX: Kendrick Lamar",
     subtitle: "feat. SZA • 'Luther'",
-    description: "Kendrick Lamar and SZA's monumental collaboration from 'GNX', ruling 10 Billboard charts simultaneously with 13 weeks at number one.",
+    description:
+      "Kendrick Lamar and SZA's monumental collaboration from 'GNX', ruling 10 Billboard charts simultaneously with 13 weeks at number one.",
     artistName: "Kendrick Lamar feat. SZA",
     heroImageUrl: "/heroes/hero-gnx-luther.webp",
     accentColor: "#38bdf8",
@@ -147,7 +149,8 @@ export const FEATURED_SPOTLIGHTS: FeaturedSpotlight[] = [
     tagline: "Multi-Billion Global Hit • 2026",
     title: "Hit Me Hard and Soft",
     subtitle: "Billie Eilish • 'BIRDS OF A FEATHER'",
-    description: "Billie Eilish's Grammy-winning global masterwork, capturing billions of streams and dominating worldwide airplay charts.",
+    description:
+      "Billie Eilish's Grammy-winning global masterwork, capturing billions of streams and dominating worldwide airplay charts.",
     artistName: "Billie Eilish",
     heroImageUrl: "/heroes/hero-hit-me-hard.webp",
     accentColor: "#34d399",
@@ -167,7 +170,8 @@ export const FEATURED_SPOTLIGHTS: FeaturedSpotlight[] = [
     tagline: "Worldwide Chart Sensation • 2026",
     title: "Hurry Up Tomorrow",
     subtitle: "The Weeknd & Playboi Carti",
-    description: "The explosive dark-synthwave centerpiece from 'Hurry Up Tomorrow', fusing hypnotic production with magnetic vocal mastery.",
+    description:
+      "The explosive dark-synthwave centerpiece from 'Hurry Up Tomorrow', fusing hypnotic production with magnetic vocal mastery.",
     artistName: "The Weeknd & Playboi Carti",
     heroImageUrl: "/heroes/hero-timeless.webp",
     accentColor: "#f43f5e",
@@ -187,7 +191,8 @@ export const FEATURED_SPOTLIGHTS: FeaturedSpotlight[] = [
     tagline: "Global Streaming Record • 2026",
     title: "The Tortured Poets Department",
     subtitle: "Taylor Swift feat. Post Malone",
-    description: "Taylor Swift's defining multi-week #1 streaming anthem, breaking all-time single-day streaming records worldwide.",
+    description:
+      "Taylor Swift's defining multi-week #1 streaming anthem, breaking all-time single-day streaming records worldwide.",
     artistName: "Taylor Swift feat. Post Malone",
     heroImageUrl: "/heroes/hero-fortnight.webp",
     accentColor: "#c084fc",
@@ -310,7 +315,7 @@ export const POPULAR_ALBUMS_MOCKUP: DisplayAlbum[] = [
   },
   {
     id: "no_sound_without_silence_the_script",
-    title: "No Sound Without Silence",
+    title: "No Sound Without",
     artist: "The Script",
     subtitle: "The Script",
     coverUrl: "/mockup/album-4.webp",
