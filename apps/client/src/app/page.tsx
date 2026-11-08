@@ -546,31 +546,31 @@ export default function SoundloungeApp() {
                 <div className="absolute top-0 left-0 w-[600px] h-[480px] bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#103a4c_40%,transparent_70%)] opacity-20 pointer-events-none z-[2]" />
 
                 {/* 4. THE HERO ARTWORK: WIDE, EXPANSIVE, AND SEAMLESSLY BLENDED ON ALL SIDES (NO HARSH LINES OR VERTICAL BOXES) */}
-                <div className="absolute top-0 right-0 w-full sm:w-[88%] lg:w-[78%] xl:w-[70%] h-[900px] sm:h-[1050px] pointer-events-none z-[3] overflow-hidden">
+                <div className="absolute inset-0 w-full h-[950px] sm:h-[1100px] pointer-events-none z-[3] overflow-hidden">
                   <img
                     key={currentSpotlight.id}
                     src={currentSpotlight.heroImageUrl}
                     alt={currentSpotlight.title}
-                    className="w-full h-full object-cover object-center sm:object-[75%_center] select-none animate-in fade-in duration-700"
+                    className="w-full h-full object-cover object-[center_top] sm:object-[82%_top] select-none animate-in fade-in duration-700"
                   />
 
                   {/* Dark scrim overlay to balance bright/light-colored album covers */}
-                  <div className="absolute inset-0 bg-[#060b13]/25 z-[1]" />
+                  <div className="absolute inset-0 bg-[#060b13]/30 z-[1]" />
 
-                  {/* A. LEFT LATERAL BLEND: Wide 55% gradient completely dissolving the left edge into the page background */}
-                  <div className="absolute inset-y-0 left-0 w-full sm:w-[65%] lg:w-[50%] bg-gradient-to-r from-[#060b13] via-[#060b13]/85 via-[#060b13]/40 to-transparent z-[2]" />
+                  {/* A. LEFT LATERAL BLEND: Spans smoothly from screen left to completely dissolve the artwork behind left controls */}
+                  <div className="absolute inset-y-0 left-0 w-full sm:w-[70%] lg:w-[58%] bg-gradient-to-r from-[#060b13] via-[#060b13]/90 via-[#060b13]/50 to-transparent z-[2]" />
 
-                  {/* B. RIGHT LATERAL BLEND: Soft feathering on the right so it doesn't hit the screen edge abruptly */}
-                  <div className="absolute inset-y-0 right-0 w-28 sm:w-48 bg-gradient-to-l from-[#060b13] via-[#060b13]/70 to-transparent z-[2]" />
+                  {/* B. RIGHT LATERAL BLEND: Soft feathering on the right so it melts into dark canvas on wide viewports */}
+                  <div className="absolute inset-y-0 right-0 w-36 sm:w-64 lg:w-80 bg-gradient-to-l from-[#060b13] via-[#060b13]/85 to-transparent z-[2]" />
 
                   {/* C. TOP BLEND: Scrim behind TopBar */}
-                  <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#060b13] via-[#060b13]/60 to-transparent z-[2]" />
+                  <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#060b13] via-[#060b13]/75 to-transparent z-[2]" />
 
-                  {/* D. BOTTOM VERTICAL BLEND: Deep 480px dissolve into dark canvas behind content cards */}
-                  <div className="absolute inset-x-0 bottom-0 h-[480px] bg-gradient-to-b from-transparent via-[#060b13]/50 via-[#060b13]/90 to-[#060b13] z-[2]" />
+                  {/* D. BOTTOM VERTICAL BLEND: Deep 520px dissolve into dark canvas behind content cards */}
+                  <div className="absolute inset-x-0 bottom-0 h-[520px] bg-gradient-to-b from-transparent via-[#060b13]/55 via-[#060b13]/95 to-[#060b13] z-[2]" />
 
                   {/* E. RADIAL SOFT VIGNETTE: Softens all corners and transitions */}
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_65%_35%,transparent_30%,#060b13_92%)] opacity-70 z-[2]" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_35%,transparent_25%,#060b13_90%)] opacity-80 z-[2]" />
                 </div>
 
                 {/* TopBar sitting seamlessly over the hero stage */}
