@@ -197,27 +197,20 @@ export function StudioImmersiveModal({
         <div className="w-10 h-1 rounded-full bg-white/25 active:bg-white/45 transition-colors" />
       </div>
 
-      {/* 1. Full-Screen Cinematic Backdrop */}
+      {/* 1. Full-Screen Ambient Studio Backdrop */}
       {bannerUrl && (
-        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
-          {/* Saturated atmospheric glow */}
+        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden bg-[#06080e]">
+          {/* Ethereal atmospheric glow (Never pixelated or harsh) */}
           <div
-            className={`absolute inset-0 bg-cover bg-center filter blur-[120px] saturate-[240%] transition-all duration-1000 scale-125 ${
-              isPlaying ? "opacity-50 brightness-75" : "opacity-30 brightness-50"
+            className={`absolute inset-0 bg-cover bg-center filter blur-[80px] sm:blur-[120px] saturate-[200%] transition-opacity duration-1000 scale-110 ${
+              isPlaying ? "opacity-45 brightness-90" : "opacity-25 brightness-60"
             }`}
             style={{ backgroundImage: `url(${bannerUrl})` }}
           />
 
-          {/* Panoramic Widescreen Image */}
-          <div
-            className={`absolute inset-0 bg-cover bg-center transition-transform duration-10000 ${
-              isPlaying ? "scale-105 opacity-60" : "scale-100 opacity-40"
-            }`}
-            style={{ backgroundImage: `url(${bannerUrl})` }}
-          />
-
-          {/* Deep Cinematic Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#07090e] via-[#07090e]/60 to-[#07090e]/80" />
+          {/* Radial & vertical cinematic ambient shading */}
+          <div className="absolute inset-0 bg-radial from-transparent via-[#06080e]/60 to-[#06080e]/95" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06080e] via-[#06080e]/50 to-[#06080e]/80" />
         </div>
       )}
 

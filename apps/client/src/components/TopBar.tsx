@@ -263,7 +263,7 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-[100] w-full bg-transparent px-3 sm:px-8 py-2.5 sm:py-3.5 transition-colors">
+    <header className="sticky top-0 z-[100] w-full bg-[#080d14]/90 backdrop-blur-md px-3 sm:px-8 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2.5 sm:pb-3.5 transition-colors border-b border-white/[0.04]">
       <div className="flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: Mobile Trigger & Desktop Navigation Tabs */}
         <div className="flex items-center gap-2 sm:gap-6 flex-shrink-0">

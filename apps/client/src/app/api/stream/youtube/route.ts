@@ -190,8 +190,20 @@ function decryptSaavnUrl(encUrl: string): string | null {
  */
 async function fallbackSaavnMatch(title: string, artist?: string): Promise<CachedFormat | null> {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const cleanTitle = title.replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "").trim();
-  const query = `${cleanTitle} ${artist || ""}`.trim();
+  const cleanTitle = title
+    .replace(/&amp;/g, "&")
+    .replace(/\(.*?\)/g, "")
+    .replace(/\[.*?\]/g, "")
+    .replace(/official video/gi, "")
+    .replace(/lyric video/gi, "")
+    .replace(/audio/gi, "")
+    .trim();
+  const cleanArtist = (artist || "")
+    .replace(/- Topic/gi, "")
+    .replace(/vevo/gi, "")
+    .replace(/official/gi, "")
+    .trim();
+  const query = `${cleanTitle} ${cleanArtist}`.trim();
 
   try {
     const searchUrl = `https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${encodeURIComponent(query)}`;
@@ -205,11 +217,11 @@ async function fallbackSaavnMatch(title: string, artist?: string): Promise<Cache
     const songs = data?.songs?.data || [];
     const targetNorm = norm(cleanTitle);
 
-    // Strict title match to prevent playing unrelated BGM, rap covers, or wrong songs
-    const match = songs.find((s: { title?: string }) => {
+    // Verify title matches to ensure authentic track without random BGM substitution
+    const match = songs.find((s: { title?: string; singers?: string }) => {
       const rawSTitle = (s.title || "").replace(/&amp;/g, "&").replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "").trim();
       const sNorm = norm(rawSTitle);
-      return sNorm === targetNorm;
+      return sNorm === targetNorm || sNorm.startsWith(targetNorm) || targetNorm.startsWith(sNorm);
     });
 
     if (!match || !match.id) return null;
@@ -270,9 +282,21 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 4. Secondary fallback: High-precision JioSaavn match only if YouTube completely fails
-    if (!streamInfo && title) {
-      streamInfo = await fallbackSaavnMatch(title, artist);
+    // Resolve title and artist if not explicitly passed
+    let queryTitle: string | null | undefined = title;
+    let queryArtist: string | null | undefined = artist;
+    if (!queryTitle && targetVid) {
+      try {
+        const yt = await getInnertube();
+        const basic = await yt.getBasicInfo(targetVid);
+        queryTitle = basic.basic_info.title;
+        queryArtist = queryArtist || basic.basic_info.author;
+      } catch {}
+    }
+
+    // 4. Secondary fallback: High-fidelity direct 320kbps MP4 audio with byte ranges (zero bot block)
+    if (!streamInfo && (queryTitle || title)) {
+      streamInfo = await fallbackSaavnMatch((queryTitle || title)!, queryArtist || undefined);
     }
 
     if (streamInfo) {

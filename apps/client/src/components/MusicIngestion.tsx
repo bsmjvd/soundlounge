@@ -510,11 +510,11 @@ export function MusicIngestion({
       {searchResults.length > 0 && (
         <div className="rounded-2xl border border-[#182b36] bg-[#0c161d] overflow-hidden shadow-xl">
           {/* Table Header */}
-          <div className="grid grid-cols-[40px_1fr_140px_80px_130px] items-center px-4 py-3 border-b border-[#162732] text-[10px] font-semibold text-[#5c707d] uppercase tracking-wider bg-[#091217]">
+          <div className="grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#162732] text-[10px] font-semibold text-[#5c707d] uppercase tracking-wider bg-[#091217]">
             <span>#</span>
             <span>Title & Artist</span>
-            <span className="text-center">Popularity</span>
-            <span className="text-right">Duration</span>
+            <span className="hidden sm:inline text-center">Popularity</span>
+            <span className="hidden sm:inline text-right">Duration</span>
             <span className="text-right pr-2">Actions</span>
           </div>
 
@@ -529,7 +529,7 @@ export function MusicIngestion({
                 <div
                   key={track.id}
                   onClick={() => handleSelectTrack(track, true, false)}
-                  className="group grid grid-cols-[40px_1fr_140px_80px_130px] items-center px-4 py-3 hover:bg-[#12232e] transition-colors cursor-pointer"
+                  className="group grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-[#12232e] transition-colors cursor-pointer"
                 >
                   {/* Number / Quick Play on Hover */}
                   <div className="text-xs font-mono text-[#5c707d]">
@@ -547,24 +547,27 @@ export function MusicIngestion({
                   </div>
 
                   {/* Artwork + Title + Artist */}
-                  <div className="flex items-center gap-3 overflow-hidden min-w-0 pr-4">
+                  <div className="flex items-center gap-2.5 sm:gap-3 overflow-hidden min-w-0 pr-2 sm:pr-4">
                     <TrackArtwork
                       coverUrl={track.coverUrl}
                       trackId={track.id}
                       title={track.title}
-                      className="w-11 h-11 rounded-lg"
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg shrink-0 shadow-md"
                       iconClassName="w-5 h-5"
                     />
-                    <div className="truncate">
-                      <p className="text-xs font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
+                    <div className="truncate min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
                         {track.title}
                       </p>
-                      <p className="text-[11px] text-[#718593] truncate mt-0.5">{track.artist}</p>
+                      <p className="text-[11px] text-[#718593] truncate mt-0.5">
+                        {track.artist}
+                        <span className="sm:hidden text-[#4a5f6e]"> • {formatDuration(track.durationMs)}</span>
+                      </p>
                     </div>
                   </div>
 
                   {/* Popularity / Views Badge */}
-                  <div className="text-center">
+                  <div className="hidden sm:block text-center">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#10232c] text-[#00e5c9] text-[11px] font-mono font-medium border border-[#1b3a48]">
                       <Flame className="w-3 h-3 text-orange-400 fill-orange-400/20" />
                       <span>{track.viewsFormatted || "Popular"} views</span>
@@ -572,7 +575,7 @@ export function MusicIngestion({
                   </div>
 
                   {/* Duration (font-mono tabular-nums) */}
-                  <div className="text-right text-xs font-mono tabular-nums text-[#718593]">
+                  <div className="hidden sm:block text-right text-xs font-mono tabular-nums text-[#718593]">
                     {formatDuration(track.durationMs)}
                   </div>
 

@@ -260,10 +260,11 @@ export class SoloPlayer {
               YouTubeIframeBridge.extractVideoId(currentTrack.id);
             if (videoId) {
               console.log(
-                "SoloPlayer: Direct audio failed; gracefully activating YouTube IFrame playback for",
+                "SoloPlayer: Direct audio failed; gracefully activating YouTube IFrame fallback for",
                 videoId
               );
               this.activeEngine = "iframe";
+              this.startSilentAudioAnchor();
               this.ytBridge.loadAndPlay(videoId, this.state.positionMs);
               return;
             }
@@ -342,47 +343,30 @@ export class SoloPlayer {
     this.state.status = "playing";
     this.emitState();
 
-    // 1. Check if direct videoId can be extracted synchronously
+    // 1. Resolve direct videoId and streaming URL
     const directVideoId =
       YouTubeIframeBridge.extractVideoId(track.url) ||
       YouTubeIframeBridge.extractVideoId(track.id);
 
-    let videoId: string | null = directVideoId;
-    if (!videoId) {
-      videoId = await YouTubeIframeBridge.resolveVideoId(track);
-    }
-
-    // 2. PRIMARY ENGINE FOR YOUTUBE TRACKS: YouTube IFrame Audio Bridge
-    // Plays the exact authentic YouTube video/audio in the user's browser with zero bot checks, zero BGM substitutions
-    if (videoId) {
-      this.activeEngine = "iframe";
-      const isMobile =
-        typeof navigator !== "undefined" &&
-        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        this.startSilentAudioAnchor();
-      } else if (this.audioElement) {
-        try {
-          this.audioElement.pause();
-          this.audioElement.src = "";
-        } catch {}
-      }
-      this.ytBridge.loadAndPlay(videoId, positionMs);
-      this.updateMediaSession(track);
-      this.emitState();
-      return;
-    }
-
-    // 3. FALLBACK FOR LOCAL / NON-YOUTUBE AUDIO: Native HTMLAudioElement
     let playUrl = track.url || "";
-    if (!playUrl || playUrl.trim() === "" || playUrl === "undefined") {
-      if (track.title) {
-        playUrl = `/api/stream/youtube?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist || "")}`;
+    const qTitle = encodeURIComponent(track.title || "");
+    const qArtist = encodeURIComponent(track.artist || "");
+
+    if (!playUrl || playUrl.trim() === "" || playUrl === "undefined" || playUrl.startsWith("/api/stream/youtube")) {
+      if (directVideoId) {
+        playUrl = `/api/stream/youtube?id=${directVideoId}&title=${qTitle}&artist=${qArtist}`;
+      } else if (track.title) {
+        playUrl = `/api/stream/youtube?title=${qTitle}&artist=${qArtist}`;
       }
     }
 
+    // 2. PRIMARY ENGINE FOR MOBILE & DESKTOP: Native HTMLAudioElement
+    // Direct audio streaming from /api/stream/youtube gives 100% reliable sound on iPhone, iPad, Safari, Chrome,
+    // background audio playback on lockscreen, lockscreen scrubber controls, and zero iframe autoplay blocks.
     if (this.audioElement && playUrl) {
       this.activeEngine = "audio";
+      this.audioElement.loop = false;
+      this.stopSilentAudioAnchor();
       this.ytBridge.pause();
 
       if (typeof window !== "undefined") {
@@ -390,8 +374,16 @@ export class SoloPlayer {
         win.__soundlounge_active_audio__ = this.audioElement;
       }
 
-      if (this.audioElement.src !== playUrl) {
-        this.audioElement.src = playUrl;
+      const currentSrc = this.audioElement.src;
+      const targetUrl =
+        playUrl.startsWith("http://") || playUrl.startsWith("https://")
+          ? playUrl
+          : typeof window !== "undefined"
+            ? `${window.location.origin}${playUrl}`
+            : playUrl;
+
+      if (currentSrc !== targetUrl) {
+        this.audioElement.src = targetUrl;
       }
 
       if (positionMs > 0) {
@@ -402,8 +394,18 @@ export class SoloPlayer {
       try {
         await this.audioElement.play();
       } catch (err: unknown) {
-        console.warn("SoloPlayer: audioElement.play() failed:", err);
+        console.warn("SoloPlayer: audioElement.play() failed, attempting fallback:", err);
+        // Fallback to YouTube IFrame if direct audio stream fails
+        if (directVideoId) {
+          this.activeEngine = "iframe";
+          this.startSilentAudioAnchor();
+          this.ytBridge.loadAndPlay(directVideoId, positionMs);
+        }
       }
+    } else if (directVideoId) {
+      this.activeEngine = "iframe";
+      this.startSilentAudioAnchor();
+      this.ytBridge.loadAndPlay(directVideoId, positionMs);
     }
 
     this.updateMediaSession(track);

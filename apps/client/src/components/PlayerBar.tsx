@@ -124,11 +124,13 @@ export function PlayerBar({
   const progressPercent = Math.min(100, Math.max(0, (positionMs / effectiveDuration) * 100));
   const isPlaying = status === "playing";
 
+  if (!currentTrack) return null;
+
   return (
     <footer
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e18]/95 backdrop-blur-md border-t border-[#152033] px-3 sm:px-8 h-18 sm:h-20 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)] select-none"
+      className="fixed bottom-[max(0.6rem,env(safe-area-inset-bottom))] left-2.5 right-2.5 sm:left-0 sm:right-0 sm:bottom-0 z-50 bg-[#090e18]/95 backdrop-blur-xl border border-white/10 sm:border-x-0 sm:border-b-0 sm:border-t sm:border-[#152033] rounded-2xl sm:rounded-none px-3 sm:px-8 h-18 sm:h-20 flex items-center shadow-[0_12px_36px_rgba(0,0,0,0.7)] sm:shadow-[0_-10px_30px_rgba(0,0,0,0.5)] select-none transition-all"
     >
       {/* Mobile Top Edge Timeline Scrubber (Visible only on <sm screens) */}
       <div

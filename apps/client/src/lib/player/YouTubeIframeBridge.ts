@@ -115,6 +115,12 @@ export class YouTubeIframeBridge {
   public initIframeApi(): void {
     if (typeof window === "undefined" || typeof document === "undefined") return;
     if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") return;
+    if (!document.body) {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => this.initIframeApi(), { once: true });
+      }
+      return;
+    }
 
     // Check if player container already exists
     let container = document.getElementById("soundlounge-yt-dock");

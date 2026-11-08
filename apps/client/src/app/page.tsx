@@ -719,7 +719,7 @@ export default function SoundloungeApp() {
                 />
 
                 {/* Stage Canvas for non-discover views */}
-                <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-32 sm:pb-24">
+                <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:pb-28">
                   {/* Detailed Artist Profile & Discography View */}
                   {selectedArtist ? (
                     <ArtistDetailView
