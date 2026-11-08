@@ -71,6 +71,59 @@ async function searchExactYouTubeSong(title: string, artist?: string): Promise<s
   return null;
 }
 
+const CANONICAL_TRACK_IDS: Record<string, string> = {
+  // Karan Aujla
+  "softly": "cWMxCE2HTag",
+  "winningspeech": "0DS5jYQeiw0",
+  "winning speech": "0DS5jYQeiw0",
+  // Diljit Dosanjh
+  "lover": "3K66ntQkJko",
+  "naina": "3u6lLWGjFLY",
+  // Sidhu Moose Wala
+  "thelastride": "6xoB4ZiKKn0",
+  "the last ride": "6xoB4ZiKKn0",
+  "so high": "cl0a3i2wFcc",
+  "sohigh": "cl0a3i2wFcc",
+  "295": "n_FCrCQ6-b4",
+  // A.R. Rahman
+  "jai ho": "2R3XstG35sE",
+  "jaiho": "2R3XstG35sE",
+  // Asha Bhosle / R.D. Burman
+  "dum maro dum": "kOrRYDJ4AuY",
+  "dummarodum": "kOrRYDJ4AuY",
+  "mehbooba mehbooba": "Nl9-rpuwp3E",
+  "mehboobamehbooba": "Nl9-rpuwp3E",
+  // Lata Mangeshkar
+  "tujhe dekha toh": "cNV5hLSa9H8",
+  "tujhedekhatoh": "cNV5hLSa9H8",
+  "kabhi kabhie mere dil mein": "o-j2hFfLOSE",
+  "kabhie kabhie mere dil mein": "o-j2hFfLOSE",
+  "kabhi kabhi mere dil mein": "o-j2hFfLOSE",
+  "kis liye maine pyaar kiya": "KuWK-u493PU",
+  "kis liye maine pyar kiya": "KuWK-u493PU",
+  // Atif Aslam
+  "woh lamhe": "bJY37eZjW74",
+  "wohlamhe": "bJY37eZjW74",
+  "aadat": "rgqpWCbANjM",
+  "jeene laga hoon": "qpIdoaaPa6U",
+  "jeenelagahoon": "qpIdoaaPa6U",
+  "pehli nazar mein": "BadBAMnPX0I",
+  "pehlinazarmein": "BadBAMnPX0I",
+  "tajdar-e-haram": "a18py61_F_w",
+  "tajdar e haram": "a18py61_F_w",
+  "tajdareharam": "a18py61_F_w",
+};
+
+const MISMATCHED_ID_CORRECTIONS: Record<string, { targetId: string; notArtistKeywords: string[] }> = {
+  // Train IDs mistakenly used in Indian tracks
+  TaG9SDxwPBg: { targetId: "cWMxCE2HTag", notArtistKeywords: ["train"] },
+  ghZt2cILcCU: { targetId: "0DS5jYQeiw0", notArtistKeywords: ["train"] },
+  "7Xf-Lesrkuc": { targetId: "kOrRYDJ4AuY", notArtistKeywords: ["train"] },
+  oxqnFJ3lp5k: { targetId: "Nl9-rpuwp3E", notArtistKeywords: ["train"] },
+  "kVpv8-5XWOI": { targetId: "2R3XstG35sE", notArtistKeywords: ["train"] },
+  cl0a3i2wFcc: { targetId: "3K66ntQkJko", notArtistKeywords: ["sidhu", "moose"] },
+};
+
 /**
  * Resolves input into a verified 11-char YouTube video ID
  */
@@ -81,20 +134,39 @@ async function resolveVideoId(
   query?: string | null
 ): Promise<string | null> {
   const cleanId = (idInput || "").replace(/^yt_/, "").trim();
+  const lowerTitle = (title || "").toLowerCase().trim();
+  const lowerArtist = (artist || "").toLowerCase().trim();
 
-  // Known catalog aliases
+  // 1. Direct canonical track resolution by title
+  if (lowerTitle && CANONICAL_TRACK_IDS[lowerTitle]) {
+    return CANONICAL_TRACK_IDS[lowerTitle];
+  }
+
+  // 2. Intercept known legacy copy-paste mismatched IDs
+  if (cleanId && MISMATCHED_ID_CORRECTIONS[cleanId]) {
+    const correction = MISMATCHED_ID_CORRECTIONS[cleanId];
+    const isExcluded = lowerArtist && correction.notArtistKeywords.some((k) => lowerArtist.includes(k));
+    if (!isExcluded) {
+      return correction.targetId;
+    }
+  }
+
+  // 3. Known catalog aliases and slugs
   if (cleanId === "TheLastRide" || cleanId.toLowerCase() === "thelastride") {
     return "6xoB4ZiKKn0";
   }
 
-  const isLikelySlug = (/^[a-zA-Z]+$/.test(cleanId) && /[a-z][A-Z]/.test(cleanId)) || cleanId === "kabira_yjhd";
+  const isLikelySlug =
+    (/^[a-zA-Z0-9_-]+$/.test(cleanId) && (cleanId.includes("_") || cleanId.length > 11)) ||
+    (/^[a-zA-Z]+$/.test(cleanId) && /[a-z][A-Z]/.test(cleanId)) ||
+    cleanId === "kabira_yjhd";
 
-  // If cleanId is an authentic 11-char YouTube ID (not a slug)
+  // 4. If cleanId is an authentic 11-char YouTube ID (not a slug or corrupt ID)
   if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId) && !isLikelySlug) {
     return cleanId;
   }
 
-  // If title or query is provided, search YouTube for the exact song
+  // 5. If title or query is provided, search YouTube for the exact song
   if (title && title.trim()) {
     const found = await searchExactYouTubeSong(title.trim(), artist || undefined);
     if (found) return found;
@@ -108,7 +180,7 @@ async function resolveVideoId(
   if (cleanId) {
     const naturalQuery = cleanId
       .replace(/([A-Z])/g, " $1")
-      .replace(/[_\-]+/g, " ")
+      .replace(/[_-]+/g, " ")
       .trim();
     const found = await searchExactYouTubeSong(naturalQuery, artist || undefined);
     if (found) return found;
