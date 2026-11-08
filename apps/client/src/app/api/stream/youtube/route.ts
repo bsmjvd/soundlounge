@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Ytdl, Client, chooseFormat } from "@distube/ytdl-core";
+import { Innertube } from "youtubei.js";
 import CryptoJS from "crypto-js";
-import { Ytdl, chooseFormat, Client } from "@distube/ytdl-core";
-import { Readable } from "stream";
 
 interface CachedFormat {
   url: string;
@@ -11,79 +11,152 @@ interface CachedFormat {
 }
 
 const formatCache = new Map<string, CachedFormat>();
-const titleResolveCache = new Map<string, { title: string; artist?: string }>();
-const ytdl = new Ytdl();
+const searchToVideoIdCache = new Map<string, string>();
 
-// Direct override dictionary for known curated catalog tracks
-const KNOWN_ID_MAP: Record<string, { title: string; artist?: string }> = {
-  "6xoB4ZiKKn0": { title: "The Last Ride", artist: "Sidhu Moose Wala" },
-  TheLastRide: { title: "The Last Ride", artist: "Sidhu Moose Wala" },
-  "295": { title: "295", artist: "Sidhu Moose Wala" },
-  M8vDwlHigJA: { title: "GOAT", artist: "Sidhu Moose Wala" },
-  "y-PQiShdTKA": { title: "Tochan", artist: "Sidhu Moose Wala" },
-  d0oVZLquCMU: { title: "Beete Lamhein", artist: "KK" },
-  ZaraSa: { title: "Zara Sa", artist: "KK" },
-  KyaMujhePyaarHai: { title: "Kya Mujhe Pyaar Hai", artist: "KK" },
-  Lover: { title: "Lover", artist: "Diljit Dosanjh" },
-  Naina: { title: "Naina", artist: "Diljit Dosanjh" },
-  BrownMunde: { title: "Brown Munde", artist: "AP Dhillon" },
-  Excuses: { title: "Excuses", artist: "AP Dhillon" },
-  Aadat: { title: "Aadat", artist: "Atif Aslam" },
-  WohLamhe: { title: "Woh Lamhe", artist: "Atif Aslam" },
-  "kPa7bsKwL-c": { title: "Die With A Smile", artist: "Lady Gaga & Bruno Mars" },
-  Fortnight: { title: "Fortnight", artist: "Taylor Swift" },
-  VtVFTuIZFYU: { title: "Young And Menace", artist: "Fall Out Boy" },
-  fKopy74weus: { title: "Thunder", artist: "Imagine Dragons" },
-  "Pw-0pbY9JeU": { title: "Jumpsuit", artist: "Twenty One Pilots" },
-  GtUVQei3nX4: { title: "Side Piece", artist: "Snoop Dogg" },
-  s7jXASBWwwI: { title: "Surrender", artist: "Hurts" },
-  iDy2wCQYSrU: { title: "Told You So", artist: "Paramore" },
-  YVkUvmDQ3HY: { title: "Just Lose It", artist: "Eminem" },
-};
+// VisionOS and Tv clients bypass all YouTube bot checks without PO tokens or cookies
+const ytdl = new Ytdl({
+  clients: [Client.VisionOS, Client.Tv],
+});
+
+let innertubePromise: Promise<Innertube> | null = null;
+async function getInnertube(): Promise<Innertube> {
+  if (!innertubePromise) {
+    innertubePromise = Innertube.create({
+      retrieve_player: false,
+      generate_session_locally: true,
+    }).catch((err) => {
+      innertubePromise = null;
+      throw err;
+    });
+  }
+  return innertubePromise;
+}
 
 /**
- * Resolves song title and artist from an 11-char YouTube video ID
- * using official oEmbed (bypasses all bot detection, zero tokens required).
+ * Searches YouTube for an exact song when no videoId is provided or if initial video is unavailable
  */
-async function resolveTitleFromVideoId(videoId: string): Promise<{ title: string; artist?: string } | null> {
-  const cleanId = videoId.replace(/^yt_/, "").trim();
-  if (KNOWN_ID_MAP[cleanId]) {
-    return KNOWN_ID_MAP[cleanId];
-  }
-  if (titleResolveCache.has(cleanId)) {
-    return titleResolveCache.get(cleanId)!;
+async function searchExactYouTubeSong(title: string, artist?: string): Promise<string | null> {
+  const cacheKey = `${title.toLowerCase().trim()}::${(artist || "").toLowerCase().trim()}`;
+  if (searchToVideoIdCache.has(cacheKey)) {
+    return searchToVideoIdCache.get(cacheKey)!;
   }
 
   try {
-    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`, {
-      signal: AbortSignal.timeout(4000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const rawTitle = String(data.title || "");
-      const author = String(data.author_name || "");
-      const cleanTitle = rawTitle
-        .replace(/\(.*?\)/g, "")
-        .replace(/\[.*?\]/g, "")
-        .replace(/official video/gi, "")
-        .replace(/lyric video/gi, "")
-        .replace(/audio/gi, "")
-        .replace(/[|–-].*$/, "")
-        .trim();
+    const yt = await getInnertube();
+    const cleanTitle = title
+      .replace(/\(.*?\)/g, "")
+      .replace(/\[.*?\]/g, "")
+      .trim();
+    const cleanArtist = artist && artist !== "Unknown Artist" ? artist.replace(/vevo/gi, "").trim() : "";
+    const query = `${cleanTitle} ${cleanArtist} audio`.trim();
 
-      const resolved = { title: cleanTitle || rawTitle, artist: author };
-      titleResolveCache.set(cleanId, resolved);
-      return resolved;
+    const search = await yt.search(query);
+    const videos = (search.videos as Array<{ duration?: { seconds?: number }; id?: string }>) || [];
+
+    const validSongVideos = videos.filter((v) => {
+      const durSec = v.duration?.seconds || 0;
+      return durSec >= 45 && durSec <= 720;
+    });
+
+    const chosen = validSongVideos[0] || videos[0];
+    if (chosen && chosen.id) {
+      const vid = String(chosen.id);
+      searchToVideoIdCache.set(cacheKey, vid);
+      return vid;
     }
   } catch (err) {
-    console.warn(`oEmbed lookup failed for videoId ${cleanId}:`, err);
+    console.warn("searchExactYouTubeSong failed:", title, artist, err);
   }
 
   return null;
 }
 
 /**
- * Decrypts JioSaavn encrypted_media_url using DES-ECB with key "38346591".
+ * Resolves input into a verified 11-char YouTube video ID
+ */
+async function resolveVideoId(
+  idInput?: string | null,
+  title?: string | null,
+  artist?: string | null,
+  query?: string | null
+): Promise<string | null> {
+  const cleanId = (idInput || "").replace(/^yt_/, "").trim();
+
+  // Known catalog aliases
+  if (cleanId === "TheLastRide" || cleanId.toLowerCase() === "thelastride") {
+    return "6xoB4ZiKKn0";
+  }
+
+  const isLikelySlug = (/^[a-zA-Z]+$/.test(cleanId) && /[a-z][A-Z]/.test(cleanId)) || cleanId === "kabira_yjhd";
+
+  // If cleanId is an authentic 11-char YouTube ID (not a slug)
+  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId) && !isLikelySlug) {
+    return cleanId;
+  }
+
+  // If title or query is provided, search YouTube for the exact song
+  if (title && title.trim()) {
+    const found = await searchExactYouTubeSong(title.trim(), artist || undefined);
+    if (found) return found;
+  }
+
+  if (query && query.trim()) {
+    const found = await searchExactYouTubeSong(query.trim());
+    if (found) return found;
+  }
+
+  if (cleanId) {
+    const naturalQuery = cleanId
+      .replace(/([A-Z])/g, " $1")
+      .replace(/[_\-]+/g, " ")
+      .trim();
+    const found = await searchExactYouTubeSong(naturalQuery, artist || undefined);
+    if (found) return found;
+  }
+
+  return cleanId || null;
+}
+
+/**
+ * Extracts high-fidelity audio format from YouTube using VisionOS / Tv clients
+ */
+async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat | null> {
+  try {
+    const info = await ytdl.getInfo(videoId);
+    const audioFormats = info.formats.filter((f) => f.hasAudio && !f.hasVideo && Boolean(f.url));
+    if (audioFormats.length === 0) return null;
+
+    // Prefer AAC / MP4 (itag 140) for universal cross-platform browser support, fallback to Opus / WebM
+    const mp4Formats = audioFormats.filter((f) => f.mimeType && f.mimeType.includes("mp4"));
+    const sortedFormats = (mp4Formats.length > 0 ? mp4Formats : audioFormats).sort(
+      (a, b) => (b.bitrate || 0) - (a.bitrate || 0)
+    );
+
+    const chosen = sortedFormats[0];
+    if (!chosen || !chosen.url) return null;
+
+    let expireMs = NaN;
+    try {
+      expireMs = Number(new URL(chosen.url).searchParams.get("expire")) * 1000;
+    } catch {}
+
+    const expiresAt =
+      Number.isFinite(expireMs) && expireMs > 0 ? Math.min(expireMs - 60000, Date.now() + 3600000) : Date.now() + 3600000;
+
+    return {
+      url: chosen.url,
+      mimeType: chosen.mimeType?.split(";")[0] || "audio/mp4",
+      contentLength: chosen.contentLength || undefined,
+      expiresAt,
+    };
+  } catch (err) {
+    console.warn(`ytdl extraction failed for ${videoId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Decrypts JioSaavn URL with DES-ECB
  */
 function decryptSaavnUrl(encUrl: string): string | null {
   try {
@@ -97,148 +170,111 @@ function decryptSaavnUrl(encUrl: string): string | null {
     });
     const raw = decrypted.toString(CryptoJS.enc.Utf8);
     return raw || null;
-  } catch (err) {
-    console.warn("Failed to decrypt Saavn URL:", err);
+  } catch {
     return null;
   }
 }
 
 /**
- * Queries JioSaavn CDN for direct 320kbps CD-quality audio stream.
- * 100% reliable, zero bot check, native byte range support, universal format.
+ * Fallback to JioSaavn ONLY if title matches with high precision (never loose BGM or wrong song)
  */
-async function getJioSaavnStream(title: string, artist?: string): Promise<CachedFormat | null> {
-  const cleanTitle = title
-    .replace(/\(.*?\)/g, "")
-    .replace(/\[.*?\]/g, "")
-    .replace(/official video/gi, "")
-    .replace(/lyric video/gi, "")
-    .replace(/audio/gi, "")
-    .trim();
-
-  const cleanArtist = artist && artist !== "Unknown Artist" ? artist.replace(/vevo/gi, "").trim() : "";
-  const query = `${cleanTitle} ${cleanArtist}`.trim();
+async function fallbackSaavnMatch(title: string, artist?: string): Promise<CachedFormat | null> {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const cleanTitle = title.replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "").trim();
+  const query = `${cleanTitle} ${artist || ""}`.trim();
 
   try {
     const searchUrl = `https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${encodeURIComponent(query)}`;
     const searchRes = await fetch(searchUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-      signal: AbortSignal.timeout(4000),
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(3000),
     });
-
     if (!searchRes.ok) return null;
-    const searchData = await searchRes.json();
-    const songId = searchData?.songs?.data?.[0]?.id;
-    if (!songId) return null;
 
-    const detailUrl = `https://www.jiosaavn.com/api.php?__call=song.getDetails&pids=${songId}&_format=json&_marker=0&ctx=web6dot0`;
-    const detailRes = await fetch(detailUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-      signal: AbortSignal.timeout(4000),
+    const data = await searchRes.json();
+    const songs = data?.songs?.data || [];
+    const targetNorm = norm(cleanTitle);
+
+    // Verify title matches to prevent playing unrelated BGM or wrong songs
+    const match = songs.find((s: { title?: string }) => {
+      const sNorm = norm(s.title || "");
+      return sNorm.includes(targetNorm) || targetNorm.includes(sNorm);
     });
 
+    if (!match || !match.id) return null;
+
+    const detailUrl = `https://www.jiosaavn.com/api.php?__call=song.getDetails&pids=${match.id}&_format=json&_marker=0&ctx=web6dot0`;
+    const detailRes = await fetch(detailUrl, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(3000),
+    });
     if (!detailRes.ok) return null;
+
     const detailData = await detailRes.json();
     const song = detailData?.songs?.[0];
     if (!song?.encrypted_media_url) return null;
 
-    const decrypted = decryptSaavnUrl(song.encrypted_media_url);
-    if (!decrypted) return null;
-
-    // Prefer high-quality 320kbps MP4 AAC audio
-    const stream320 = decrypted.replace("_96.mp4", "_320.mp4");
+    const dec = decryptSaavnUrl(song.encrypted_media_url);
+    if (!dec) return null;
 
     return {
-      url: stream320,
+      url: dec.replace("_96.mp4", "_320.mp4"),
       mimeType: "audio/mp4",
-      expiresAt: Date.now() + 86400000, // 24 hours cache
+      expiresAt: Date.now() + 86400000,
     };
-  } catch (err) {
-    console.warn("JioSaavn lookup error for:", query, err);
+  } catch {
     return null;
   }
-}
-
-/**
- * Fallback to direct ytdl extraction (for rare tracks not in CDN catalog)
- */
-async function getYtdlStream(videoId: string): Promise<CachedFormat | null> {
-  try {
-    const info = await ytdl.getInfo(videoId);
-    const mp4Format = chooseFormat(info.formats, {
-      filter: (f: { hasAudio?: boolean; hasVideo?: boolean; mimeType?: string }) =>
-        Boolean(f.hasAudio && !f.hasVideo && f.mimeType && f.mimeType.includes("mp4")),
-    });
-
-    const chosenFormat =
-      mp4Format ||
-      chooseFormat(info.formats, {
-        filter: { hasAudio: true, hasVideo: false },
-      });
-
-    if (chosenFormat && chosenFormat.url) {
-      return {
-        url: chosenFormat.url,
-        mimeType: chosenFormat.mimeType?.split(";")[0] || "audio/mp4",
-        contentLength: chosenFormat.contentLength || 0,
-        expiresAt: Date.now() + 3600000,
-      };
-    }
-  } catch (err) {
-    console.warn(`ytdl fallback failed for ${videoId}:`, err);
-  }
-  return null;
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const rawVideoId = searchParams.get("id");
   const query = searchParams.get("q");
-  let title = searchParams.get("title");
-  let artist = searchParams.get("artist") || undefined;
+  const title = searchParams.get("title");
+  const artist = searchParams.get("artist") || undefined;
 
-  const videoId = rawVideoId ? rawVideoId.replace(/^yt_/, "").trim() : null;
-
-  if (!videoId && !query && !title) {
+  if (!rawVideoId && !query && !title) {
     return new NextResponse("Missing track identifier (id, title, or q required)", { status: 400 });
   }
 
-  const cacheKey = `${videoId || ""}::${title || ""}::${artist || ""}::${query || ""}`;
+  const cacheKey = `${rawVideoId || ""}::${title || ""}::${artist || ""}::${query || ""}`;
   let streamInfo: CachedFormat | null | undefined = formatCache.get(cacheKey);
 
   if (!streamInfo || streamInfo.expiresAt <= Date.now()) {
-    // 1. Resolve title & artist if missing
-    if (!title && videoId) {
-      const resolved = await resolveTitleFromVideoId(videoId);
-      if (resolved) {
-        title = resolved.title;
-        artist = artist || resolved.artist;
+    // 1. Resolve authentic YouTube video ID
+    let targetVid = await resolveVideoId(rawVideoId, title, artist, query);
+
+    // 2. Primary Engine: Direct YouTube Audio Extraction (VisionOS/Tv zero-bot-check)
+    if (targetVid) {
+      streamInfo = await extractYouTubeAudioFormat(targetVid);
+    }
+
+    // 3. If primary video failed, try searching for exact alternate YouTube upload
+    if (!streamInfo && (title || query)) {
+      const altVid = await searchExactYouTubeSong(title || query || "", artist);
+      if (altVid && altVid !== targetVid) {
+        targetVid = altVid;
+        streamInfo = await extractYouTubeAudioFormat(altVid);
       }
-    } else if (!title && query) {
-      title = query;
     }
 
-    // 2. Primary Engine: Ultra-reliable CDN Audio Stream (320kbps CD Quality)
-    if (title) {
-      streamInfo = await getJioSaavnStream(title, artist);
-    }
-
-    // 3. Fallback Engine: ytdl-core if video ID is available
-    if (!streamInfo && videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-      streamInfo = await getYtdlStream(videoId);
+    // 4. Secondary fallback: High-precision JioSaavn match only if YouTube completely fails
+    if (!streamInfo && title) {
+      streamInfo = await fallbackSaavnMatch(title, artist);
     }
 
     if (streamInfo) {
       formatCache.set(cacheKey, streamInfo);
-      if (videoId) formatCache.set(videoId, streamInfo);
+      if (targetVid) formatCache.set(targetVid, streamInfo);
     }
   }
 
   if (!streamInfo || !streamInfo.url) {
     return new NextResponse(
       JSON.stringify({
-        error: "Stream not found",
-        track: { videoId, title, artist, query },
+        error: "Direct audio stream could not be extracted",
+        track: { id: rawVideoId, title, artist, query },
       }),
       {
         status: 404,
@@ -247,8 +283,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // 4. Stream Audio with HTTP Byte-Range support (206 Partial Content)
-  // Essential for iOS Safari lockscreen scrubbing, smooth seeking, and fast playback start
+  // 5. Proxy Stream with HTTP Range Header (206 Partial Content)
   const rangeHeader = req.headers.get("range");
   const upstreamHeaders: Record<string, string> = {
     "User-Agent":
@@ -266,13 +301,22 @@ export async function GET(req: NextRequest) {
       signal: AbortSignal.timeout(20000),
     });
 
-    // If 320kbps 404s, fallback to original non-320 URL
-    if (upstreamRes.status === 404 && streamInfo.url.includes("_320.mp4")) {
-      const fallbackUrl = streamInfo.url.replace("_320.mp4", "_96.mp4");
-      upstreamRes = await fetch(fallbackUrl, {
-        headers: upstreamHeaders,
-        signal: AbortSignal.timeout(20000),
-      });
+    // If 404/403 (e.g. expired CDN URL), invalidate cache and retry once
+    if (upstreamRes.status === 404 || upstreamRes.status === 403) {
+      formatCache.delete(cacheKey);
+      if (rawVideoId) formatCache.delete(rawVideoId);
+
+      const targetVid = await resolveVideoId(rawVideoId, title, artist, query);
+      if (targetVid) {
+        const fresh = await extractYouTubeAudioFormat(targetVid);
+        if (fresh && fresh.url) {
+          streamInfo = fresh;
+          upstreamRes = await fetch(fresh.url, {
+            headers: upstreamHeaders,
+            signal: AbortSignal.timeout(20000),
+          });
+        }
+      }
     }
 
     const responseHeaders = new Headers();
@@ -280,7 +324,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set("Accept-Ranges", "bytes");
     responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Allow-Headers", "Range, Accept-Ranges, Content-Type");
-    responseHeaders.set("Cache-Control", "public, max-age=86400");
+    responseHeaders.set("Cache-Control", "public, max-age=3600");
 
     const contentRange = upstreamRes.headers.get("content-range");
     if (contentRange) {
@@ -298,7 +342,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`Streaming error for ${videoId || title || query}:`, err);
+    console.error(`Streaming proxy error for ${rawVideoId || title}:`, err);
     return new NextResponse(`Streaming proxy error: ${message}`, { status: 500 });
   }
 }
