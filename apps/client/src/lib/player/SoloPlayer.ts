@@ -230,16 +230,16 @@ export class SoloPlayer {
     this.state.durationMs = track.durationMs || 0;
     this.state.positionMs = positionMs;
     this.state.status = "playing";
+    this.emitState();
 
-    const isVercel =
-      typeof window !== "undefined" &&
-      (window.location.hostname.includes("vercel.app") || window.location.hostname.includes("soundlounge.vercel.app"));
+    // 1. Resolve videoId for YouTube-sourced or streaming tracks
+    let videoId: string | null = null;
+    if (track.source === "youtube" || track.url.includes("youtube") || track.id.startsWith("yt_")) {
+      videoId = await YouTubeIframeBridge.resolveVideoId(track);
+    }
 
-    const videoId = YouTubeIframeBridge.extractVideoId(track.url) || YouTubeIframeBridge.extractVideoId(track.id);
-
-    // On Vercel cloud deployments, YouTube datacenter bot blocks prevent serverless streaming.
-    // Use YouTube IFrame directly for zero-latency, 100% reliable sound playback!
-    if (isVercel && videoId) {
+    // 2. Play via YouTube IFrame Audio Bridge for YouTube tracks (100% reliable, zero bot block)
+    if (videoId) {
       this.activeEngine = "iframe";
       if (this.audioElement) {
         try {
@@ -249,11 +249,10 @@ export class SoloPlayer {
       }
       this.ytBridge.loadAndPlay(videoId, positionMs);
       this.updateMediaSession(track);
-      this.emitState();
       return;
     }
 
-    // Default audio element playback for local dev and uploaded / R2 assets
+    // 3. Fallback to HTMLAudioElement for local audio, uploaded audio, or direct CDN streams
     this.activeEngine = "audio";
     if (this.audioElement) {
       if (typeof window !== "undefined") {
@@ -309,11 +308,11 @@ export class SoloPlayer {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.warn("SoloPlayer: play() rejected or interrupted:", message);
-        // If play() failed on a YouTube track, activate iframe fallback
-        if (videoId) {
+        const fallbackVid = await YouTubeIframeBridge.resolveVideoId(track);
+        if (fallbackVid) {
           console.log("SoloPlayer: Switching to YouTube IFrame fallback after play() rejection");
           this.activeEngine = "iframe";
-          this.ytBridge.loadAndPlay(videoId, positionMs);
+          this.ytBridge.loadAndPlay(fallbackVid, positionMs);
         }
       }
     }

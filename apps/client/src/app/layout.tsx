@@ -41,6 +41,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
+      <head>
+        <script src="https://www.youtube.com/iframe_api" async />
+      </head>
       <body className="min-h-screen bg-[#07090e] text-[#f3f4f6] font-sans antialiased selection:bg-[#00e5ff]/30 selection:text-white">
         {children}
         <SpeedInsights />

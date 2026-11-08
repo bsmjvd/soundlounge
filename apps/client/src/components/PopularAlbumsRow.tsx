@@ -17,34 +17,50 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
-  // Combine popular mockup albums with catalog albums with de-duplication
+  // Combine catalog albums (with authentic artwork and 2026 hits) with popular releases
   const combinedAlbums = React.useMemo(() => {
     const seen = new Set<string>();
     const list: DisplayAlbum[] = [];
 
-    // 1. First add the curated popular albums
-    for (const alb of POPULAR_ALBUMS_MOCKUP) {
-      const key = alb.title.toLowerCase().trim();
-      if (!seen.has(key)) {
-        seen.add(key);
-        const catalogMatch = ALBUMS_CATALOG.find((c) => c.title.toLowerCase().trim() === key || c.id === alb.id);
-        if (catalogMatch && catalogMatch.tracks && catalogMatch.tracks.length > 0) {
-          list.push({
-            ...alb,
-            tracksCount: Math.max(alb.tracksCount || 0, catalogMatch.tracks.length),
-            tracks: catalogMatch.tracks,
-          });
-        } else {
-          list.push(alb);
-        }
+    // Prioritized 2026 & iconic catalog albums for the top carousel
+    const priorityIds = [
+      "short_n_sweet_sabrina_carpenter",
+      "gnx_kendrick_lamar",
+      "hurry_up_tomorrow_the_weeknd",
+      "hit_me_hard_and_soft_2024",
+      "the_train_2007_mithoon",
+      "train_2009_save_me_san_francisco",
+      "train_2001_drops_of_jupiter",
+      "the_unforgettables_1976",
+      "starboy_2016",
+      "discovery_2001_daft_punk",
+    ];
+
+    // 1. Add prioritized albums first
+    for (const id of priorityIds) {
+      const match = ALBUMS_CATALOG.find((a) => a.id === id);
+      if (match) {
+        const titleKey = match.title.toLowerCase().trim();
+        seen.add(match.id);
+        seen.add(titleKey);
+        list.push({
+          id: match.id,
+          title: match.title,
+          artist: match.primaryArtist,
+          subtitle: match.primaryArtist,
+          coverUrl: match.coverUrl || "/albums/rockstar.webp",
+          tracksCount: match.tracks.length,
+          tracks: match.tracks,
+        });
       }
     }
 
-    // 2. Add remaining rich catalog albums
+    // 2. Add remaining authentic catalog albums
     for (const a of ALBUMS_CATALOG) {
-      const key = a.title.toLowerCase().trim();
-      if (!seen.has(key)) {
-        seen.add(key);
+      const titleKey = a.title.toLowerCase().trim();
+      if (!seen.has(a.id) && !seen.has(titleKey)) {
+        seen.add(a.id);
+        seen.add(titleKey);
         list.push({
           id: a.id,
           title: a.title,
@@ -54,6 +70,16 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
           tracksCount: a.tracks.length,
           tracks: a.tracks,
         });
+      }
+    }
+
+    // 3. Add additional mockup releases if not already present
+    for (const alb of POPULAR_ALBUMS_MOCKUP) {
+      const titleKey = alb.title.toLowerCase().trim();
+      if (!seen.has(alb.id) && !seen.has(titleKey)) {
+        seen.add(alb.id);
+        seen.add(titleKey);
+        list.push(alb);
       }
     }
 

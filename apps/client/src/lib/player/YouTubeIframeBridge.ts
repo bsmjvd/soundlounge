@@ -1,3 +1,5 @@
+import type { Track } from "@soundlounge/shared";
+
 /**
  * YouTube IFrame Audio Bridge
  *
@@ -13,6 +15,8 @@ declare global {
       Player: new (
         elementId: string | HTMLElement,
         options: {
+          width?: string | number;
+          height?: string | number;
           videoId?: string;
           playerVars?: Record<string, unknown>;
           events?: {
@@ -60,6 +64,7 @@ export interface IframeBridgeState {
 
 export class YouTubeIframeBridge {
   private static instance: YouTubeIframeBridge | null = null;
+  private static videoIdCache = new Map<string, string>();
   private player: YTPlayerInstance | null = null;
   private isReady = false;
   private currentVideoId: string | null = null;
@@ -92,7 +97,7 @@ export class YouTubeIframeBridge {
   /**
    * Loads the YouTube IFrame API script tag once and initializes the hidden container
    */
-  private initIframeApi(): void {
+  public initIframeApi(): void {
     if (typeof window === "undefined" || typeof document === "undefined") return;
     if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") return;
 
@@ -101,15 +106,15 @@ export class YouTubeIframeBridge {
     if (!container) {
       container = document.createElement("div");
       container.id = "soundlounge-yt-bridge";
-      // Hidden offscreen with zero visual impact
+      // 200x200 positioned fixed at bottom with 0.001 opacity - satisfies YouTube embed policy and browser audio subsystems
       container.style.position = "fixed";
-      container.style.width = "1px";
-      container.style.height = "1px";
-      container.style.left = "-9999px";
-      container.style.top = "-9999px";
-      container.style.opacity = "0";
+      container.style.bottom = "0px";
+      container.style.right = "0px";
+      container.style.width = "200px";
+      container.style.height = "200px";
+      container.style.opacity = "0.001";
       container.style.pointerEvents = "none";
-      container.style.zIndex = "-9999";
+      container.style.zIndex = "-1";
       try {
         document.body.appendChild(container);
       } catch {}
@@ -144,14 +149,18 @@ export class YouTubeIframeBridge {
 
     try {
       this.player = new window.YT.Player("soundlounge-yt-bridge", {
+        width: "200",
+        height: "200",
         playerVars: {
-          autoplay: 0,
+          autoplay: 1,
           controls: 0,
           disablekb: 1,
           fs: 0,
           modestbranding: 1,
           playsinline: 1,
           rel: 0,
+          origin: typeof window !== "undefined" ? window.location.origin : undefined,
+          enablejsapi: 1,
         },
         events: {
           onReady: () => {
@@ -219,9 +228,9 @@ export class YouTubeIframeBridge {
         try {
           const currSec = this.player.getCurrentTime() || 0;
           const durSec = this.player.getDuration() || 0;
-          this.state.positionMs = Math.round(currSec * 1000);
+          this.state.positionMs = Math.floor(currSec * 1000);
           if (durSec > 0) {
-            this.state.durationMs = Math.round(durSec * 1000);
+            this.state.durationMs = Math.floor(durSec * 1000);
           }
           this.emitState();
         } catch {}
@@ -260,9 +269,11 @@ export class YouTubeIframeBridge {
           videoId,
           startSeconds: startSec,
         });
+        this.player.playVideo();
       }
-      this.player.playVideo();
-      this.player.setVolume(Math.round(this.volume * 100));
+      if (typeof this.player.setVolume === "function") {
+        this.player.setVolume(Math.round(this.volume * 100));
+      }
       this.state.status = "buffering";
       this.emitState();
     } catch (err) {
@@ -329,6 +340,53 @@ export class YouTubeIframeBridge {
   }
 
   /**
+   * Resolves any Track into a verified 11-char YouTube video ID.
+   * Checks direct ID, query params, URL path, and caches results.
+   * If slug/title is given, queries /api/search dynamically.
+   */
+  public static async resolveVideoId(track: Track): Promise<string | null> {
+    if (!track) return null;
+
+    // 1. Direct check in track.url
+    const fromUrl = this.extractVideoId(track.url);
+    if (fromUrl) return fromUrl;
+
+    // 2. Direct check in track.id
+    const fromId = this.extractVideoId(track.id);
+    if (fromId) return fromId;
+
+    // 3. Cache lookup
+    const cacheKey = `${track.id || ""}::${track.title || ""}::${track.artist || ""}`;
+    if (this.videoIdCache.has(cacheKey)) {
+      return this.videoIdCache.get(cacheKey)!;
+    }
+
+    // 4. Query /api/search for exact track
+    const query = `${track.title} ${track.artist || ""}`.trim();
+    if (!query) return null;
+
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=1`);
+      if (res.ok) {
+        const data = await res.json();
+        const found = data.tracks?.[0];
+        if (found) {
+          const vid = this.extractVideoId(found.id) || this.extractVideoId(found.url);
+          if (vid) {
+            this.videoIdCache.set(cacheKey, vid);
+            if (track.id) this.videoIdCache.set(track.id, vid);
+            return vid;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("YouTubeIframeBridge: Failed to resolve video ID:", query, err);
+    }
+
+    return null;
+  }
+
+  /**
    * Extracts clean 11-char YouTube ID from any track URL or track ID
    */
   public static extractVideoId(trackIdOrUrl: string): string | null {
@@ -345,12 +403,12 @@ export class YouTubeIframeBridge {
       }
     } catch {}
 
-    // Check direct /stream/youtube/VIDEO_ID
-    const streamMatch = trackIdOrUrl.match(/\/stream\/youtube\/([a-zA-Z0-9_-]{11})/);
+    // Check direct /stream/youtube/VIDEO_ID or /watch?v=VIDEO_ID or /embed/VIDEO_ID
+    const streamMatch = trackIdOrUrl.match(/(?:\/stream\/youtube\/|v=|\/embed\/)([a-zA-Z0-9_-]{11})/);
     if (streamMatch) return streamMatch[1];
 
     // Check clean yt_ prefix
-    const cleanId = trackIdOrUrl.replace(/^yt_/, "");
+    const cleanId = trackIdOrUrl.replace(/^yt_/, "").trim();
     if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
       return cleanId;
     }
