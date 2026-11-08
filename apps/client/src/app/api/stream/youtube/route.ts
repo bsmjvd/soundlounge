@@ -261,6 +261,62 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Missing track identifier (id, title, or q required)", { status: 400 });
   }
 
+  // 1. If an external stream proxy (e.g. residential tunnel or dedicated proxy) is configured, route through it
+  const rawStreamProxy = process.env.STREAM_PROXY_URL || process.env.NEXT_PUBLIC_STREAM_PROXY_URL;
+  const streamProxy = rawStreamProxy
+    ? rawStreamProxy
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .trim()
+        .replace(/\/+$/, "")
+    : null;
+
+  if (streamProxy) {
+    try {
+      const targetUrl = new URL(`${streamProxy}/api/stream/youtube`);
+      targetUrl.search = searchParams.toString();
+
+      const upstreamHeaders: Record<string, string> = {
+        "User-Agent":
+          req.headers.get("user-agent") ||
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      };
+      const rangeHeader = req.headers.get("range");
+      if (rangeHeader) {
+        upstreamHeaders["Range"] = rangeHeader;
+      }
+
+      const proxyRes = await fetch(targetUrl.toString(), {
+        headers: upstreamHeaders,
+        signal: AbortSignal.timeout(20000),
+      });
+
+      if (proxyRes.ok || proxyRes.status === 206) {
+        const responseHeaders = new Headers();
+        const contentType = proxyRes.headers.get("content-type") || "audio/mp4";
+        responseHeaders.set("Content-Type", contentType);
+        responseHeaders.set("Accept-Ranges", "bytes");
+        responseHeaders.set("Access-Control-Allow-Origin", "*");
+        responseHeaders.set("Access-Control-Allow-Headers", "Range, Accept-Ranges, Content-Type");
+        responseHeaders.set("Cache-Control", "public, max-age=3600");
+
+        const contentRange = proxyRes.headers.get("content-range");
+        if (contentRange) responseHeaders.set("Content-Range", contentRange);
+
+        const contentLength = proxyRes.headers.get("content-length");
+        if (contentLength) responseHeaders.set("Content-Length", contentLength);
+
+        return new Response(proxyRes.body, {
+          status: proxyRes.status,
+          headers: responseHeaders,
+        });
+      } else {
+        console.warn(`Stream proxy returned HTTP ${proxyRes.status} ${proxyRes.statusText}`);
+      }
+    } catch (proxyErr) {
+      console.warn("Stream proxy failed, falling back to direct extraction:", proxyErr);
+    }
+  }
+
   const cacheKey = `${rawVideoId || ""}::${title || ""}::${artist || ""}::${query || ""}`;
   let streamInfo: CachedFormat | null | undefined = formatCache.get(cacheKey);
 

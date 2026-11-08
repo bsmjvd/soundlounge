@@ -30,7 +30,6 @@ import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
 import { useGlobalAudioHotkeys } from "../hooks/useGlobalAudioHotkeys";
 import { FallingLeavesAmbient } from "../components/ui/FallingLeavesAmbient";
-import { YouTubeIframeBridge } from "../lib/player/YouTubeIframeBridge";
 import type { Track, Playlist, Album } from "@soundlounge/shared";
 
 // Singleton coordinator instance for the browser tab, preserved on window across fast refresh
@@ -142,10 +141,6 @@ export default function SoundloungeApp() {
     });
   };
 
-  // Pre-initialize YouTube IFrame player on page mount for instant audio readiness
-  useEffect(() => {
-    YouTubeIframeBridge.getInstance().initIframeApi();
-  }, []);
 
   // Player state subscription
   const [playerState, setPlayerState] = useState<CoordinatorPlayerState>(() => coordinator.getState());

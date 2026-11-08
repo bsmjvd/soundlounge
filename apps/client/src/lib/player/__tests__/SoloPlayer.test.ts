@@ -103,6 +103,6 @@ describe("SoloPlayer Engine", () => {
     const state = player.getState();
     expect(state.status).toBe("playing");
     expect(state.currentTrack?.id).toBe("yt_6xoB4ZiKKn0");
-    expect(player.getActiveEngine()).toBe("iframe");
+    expect(player.getActiveEngine()).toBe("audio");
   });
 });
