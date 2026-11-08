@@ -446,66 +446,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // 5. Proxy Stream with HTTP Range Header (206 Partial Content)
-  const rangeHeader = req.headers.get("range");
-  const upstreamHeaders: Record<string, string> = {
-    "User-Agent":
-      req.headers.get("user-agent") ||
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  };
-
-  if (rangeHeader) {
-    upstreamHeaders["Range"] = rangeHeader;
-  }
-
-  try {
-    let upstreamRes = await fetch(streamInfo.url, {
-      headers: upstreamHeaders,
-      signal: AbortSignal.timeout(20000),
-    });
-
-    // If 404/403 (e.g. expired CDN URL), invalidate cache and retry once
-    if (upstreamRes.status === 404 || upstreamRes.status === 403) {
-      formatCache.delete(cacheKey);
-      if (rawVideoId) formatCache.delete(rawVideoId);
-
-      const targetVid = await resolveVideoId(rawVideoId, title, artist, query);
-      if (targetVid) {
-        const fresh = await extractYouTubeAudioFormat(targetVid);
-        if (fresh && fresh.url) {
-          streamInfo = fresh;
-          upstreamRes = await fetch(fresh.url, {
-            headers: upstreamHeaders,
-            signal: AbortSignal.timeout(20000),
-          });
-        }
-      }
-    }
-
-    const responseHeaders = new Headers();
-    responseHeaders.set("Content-Type", streamInfo.mimeType || "audio/mp4");
-    responseHeaders.set("Accept-Ranges", "bytes");
-    responseHeaders.set("Access-Control-Allow-Origin", "*");
-    responseHeaders.set("Access-Control-Allow-Headers", "Range, Accept-Ranges, Content-Type");
-    responseHeaders.set("Cache-Control", "public, max-age=3600");
-
-    const contentRange = upstreamRes.headers.get("content-range");
-    if (contentRange) {
-      responseHeaders.set("Content-Range", contentRange);
-    }
-
-    const contentLength = upstreamRes.headers.get("content-length");
-    if (contentLength) {
-      responseHeaders.set("Content-Length", contentLength);
-    }
-
-    return new Response(upstreamRes.body, {
-      status: upstreamRes.status,
-      headers: responseHeaders,
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`Streaming proxy error for ${rawVideoId || title}:`, err);
-    return new NextResponse(`Streaming proxy error: ${message}`, { status: 500 });
-  }
+  // 5. Direct Edge Streaming via HTTP 307 Redirect
+  // Cleanly bypasses Vercel datacenter IP restrictions & timeouts, streaming directly to browser
+  const redirectRes = NextResponse.redirect(streamInfo.url, 307);
+  redirectRes.headers.set("Access-Control-Allow-Origin", "*");
+  redirectRes.headers.set("Access-Control-Allow-Headers", "Range, Accept-Ranges, Content-Type");
+  redirectRes.headers.set("Cache-Control", "public, max-age=3600");
+  return redirectRes;
 }
