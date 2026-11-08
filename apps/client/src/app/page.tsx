@@ -530,7 +530,7 @@ export default function SoundloungeApp() {
               /* SEAMLESS FULL-BLEED DISCOVER STAGE (TopBar + Hero + Taste + Albums + Artists) */
               <div className="relative w-full overflow-hidden min-h-[340px] sm:min-h-[380px] bg-[#060b13] pb-32 sm:pb-24">
                 {/* 1. Ambient Blurred Full-Bleed Color Wash reflecting the current spotlight artwork across the ENTIRE page */}
-                <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-25">
+                <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-20">
                   <img
                     key={`ambient-${currentSpotlight.id}`}
                     src={currentSpotlight.heroImageUrl}
@@ -540,22 +540,37 @@ export default function SoundloungeApp() {
                 </div>
 
                 {/* 2. Deep luxury gradient backdrop transition spanning seamlessly down */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0e2736]/75 via-[#0a1524]/85 via-[#080e18]/95 to-[#060b13] pointer-events-none z-[1]" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0a1524]/60 via-[#070d18]/80 to-[#060b13] pointer-events-none z-[1]" />
 
-                {/* 3. Glowing cyan/teal atmospheric spotlight at top left behind title and controls */}
-                <div className="absolute top-0 left-0 w-[680px] h-[520px] bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#175d69_45%,transparent_75%)] opacity-30 pointer-events-none z-[2]" />
-                <div className="absolute -top-10 right-0 w-[680px] h-[560px] bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-35 pointer-events-none z-[2]" />
+                {/* 3. Subtle ambient top-left glow for typography contrast */}
+                <div className="absolute top-0 left-0 w-[600px] h-[480px] bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#103a4c_40%,transparent_70%)] opacity-20 pointer-events-none z-[2]" />
 
-                {/* 4. THE HERO ARTWORK / ALBUM COVER NATURALLY FLOWING AND DISSOLVING SEAMLESSLY DOWN THE STAGE */}
-                <div className="absolute top-0 right-0 w-[68%] sm:w-[60%] lg:w-[54%] max-w-6xl pointer-events-none z-[3] overflow-hidden flex items-start justify-end h-[1050px] sm:h-[1200px]">
+                {/* 4. THE HERO ARTWORK: WIDE, EXPANSIVE, AND SEAMLESSLY BLENDED ON ALL SIDES (NO HARSH LINES OR VERTICAL BOXES) */}
+                <div className="absolute top-0 right-0 w-full sm:w-[88%] lg:w-[78%] xl:w-[70%] h-[900px] sm:h-[1050px] pointer-events-none z-[3] overflow-hidden">
                   <img
                     key={currentSpotlight.id}
                     src={currentSpotlight.heroImageUrl}
                     alt={currentSpotlight.title}
-                    className="w-full h-full object-cover object-top sm:object-[75%_top] select-none animate-in fade-in duration-700 [mask-image:linear-gradient(to_left,black_45%,transparent_100%),linear-gradient(to_bottom,black_40%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_45%,transparent_100%),linear-gradient(to_bottom,black_40%,transparent_100%)]"
+                    className="w-full h-full object-cover object-center sm:object-[75%_center] select-none animate-in fade-in duration-700"
                   />
-                  {/* Subtle vertical vignette overlay ensuring frosted glass cards and typography pop with crystalline contrast */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#060b13]/40 via-[#060b13]/80 to-[#060b13]" />
+
+                  {/* Dark scrim overlay to balance bright/light-colored album covers */}
+                  <div className="absolute inset-0 bg-[#060b13]/25 z-[1]" />
+
+                  {/* A. LEFT LATERAL BLEND: Wide 55% gradient completely dissolving the left edge into the page background */}
+                  <div className="absolute inset-y-0 left-0 w-full sm:w-[65%] lg:w-[50%] bg-gradient-to-r from-[#060b13] via-[#060b13]/85 via-[#060b13]/40 to-transparent z-[2]" />
+
+                  {/* B. RIGHT LATERAL BLEND: Soft feathering on the right so it doesn't hit the screen edge abruptly */}
+                  <div className="absolute inset-y-0 right-0 w-28 sm:w-48 bg-gradient-to-l from-[#060b13] via-[#060b13]/70 to-transparent z-[2]" />
+
+                  {/* C. TOP BLEND: Scrim behind TopBar */}
+                  <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#060b13] via-[#060b13]/60 to-transparent z-[2]" />
+
+                  {/* D. BOTTOM VERTICAL BLEND: Deep 480px dissolve into dark canvas behind content cards */}
+                  <div className="absolute inset-x-0 bottom-0 h-[480px] bg-gradient-to-b from-transparent via-[#060b13]/50 via-[#060b13]/90 to-[#060b13] z-[2]" />
+
+                  {/* E. RADIAL SOFT VIGNETTE: Softens all corners and transitions */}
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_65%_35%,transparent_30%,#060b13_92%)] opacity-70 z-[2]" />
                 </div>
 
                 {/* TopBar sitting seamlessly over the hero stage */}
