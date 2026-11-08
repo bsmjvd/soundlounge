@@ -80,6 +80,7 @@ export class YouTubeIframeBridge {
   private pendingVideoId: string | null = null;
   private pendingStartMs: number = 0;
   private volume: number = 0.4;
+  private desiredStatus: "idle" | "playing" | "paused" = "idle";
 
   public static getInstance(): YouTubeIframeBridge {
     if (!YouTubeIframeBridge.instance) {
@@ -91,7 +92,19 @@ export class YouTubeIframeBridge {
   private constructor() {
     if (typeof window !== "undefined") {
       this.initIframeApi();
+      this.initVisibilityListener();
     }
+  }
+
+  private initVisibilityListener(): void {
+    if (typeof document === "undefined") return;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && this.desiredStatus === "playing" && this.isReady) {
+        try {
+          this.player?.playVideo();
+        } catch {}
+      }
+    });
   }
 
   /**
@@ -199,6 +212,13 @@ export class YouTubeIframeBridge {
         this.startPolling();
         break;
       case YTState.PAUSED:
+        // Detect unwanted pause caused by screen turning off or mobile lock while user intended to play
+        if (typeof document !== "undefined" && document.hidden && this.desiredStatus === "playing") {
+          try {
+            this.player?.playVideo();
+          } catch {}
+          return;
+        }
         this.state.status = "paused";
         this.stopPolling();
         break;
@@ -246,6 +266,7 @@ export class YouTubeIframeBridge {
   }
 
   public loadAndPlay(videoId: string, startMs: number = 0): void {
+    this.desiredStatus = "playing";
     this.currentVideoId = videoId;
     this.state.videoId = videoId;
     this.state.positionMs = startMs;
@@ -282,6 +303,7 @@ export class YouTubeIframeBridge {
   }
 
   public play(): void {
+    this.desiredStatus = "playing";
     if (this.player && this.isReady) {
       try {
         this.player.playVideo();
@@ -290,6 +312,7 @@ export class YouTubeIframeBridge {
   }
 
   public pause(): void {
+    this.desiredStatus = "paused";
     if (this.player && this.isReady) {
       try {
         this.player.pauseVideo();

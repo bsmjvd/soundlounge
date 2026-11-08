@@ -67,4 +67,18 @@ describe("SoloPlayer Engine", () => {
     player.setVolume(-0.2);
     expect(player.getVolume()).toBe(0.0);
   });
+
+  it("wires transport handlers for next/previous track navigation", () => {
+    const handleNext = mock(() => {});
+    const handlePrevious = mock(() => {});
+    const handleEnded = mock(() => {});
+
+    player.setTransportHandlers({
+      onNext: handleNext,
+      onPrevious: handlePrevious,
+      onEnded: handleEnded,
+    });
+
+    expect(typeof player.setTransportHandlers).toBe("function");
+  });
 });

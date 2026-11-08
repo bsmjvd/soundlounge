@@ -46,6 +46,71 @@ export class SoloPlayer {
         this.onEndedCallback();
       }
     });
+    this.registerMediaSessionActions();
+  }
+
+  /**
+   * Registers mediaSession actions unconditionally so lock screens (iOS / Android)
+   * display Previous & Next track buttons instead of default +10s / -10s seek buttons.
+   */
+  private registerMediaSessionActions(): void {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+    try {
+      navigator.mediaSession.setActionHandler("play", () => this.resume());
+      navigator.mediaSession.setActionHandler("pause", () => this.pause());
+      navigator.mediaSession.setActionHandler("seekto", (details) => {
+        if (details.seekTime !== undefined) {
+          this.seek(details.seekTime * 1000);
+        }
+      });
+
+      // ALWAYS bind nexttrack and previoustrack unconditionally
+      navigator.mediaSession.setActionHandler("nexttrack", () => {
+        if (this.onNextCallback) {
+          this.onNextCallback();
+        }
+      });
+
+      navigator.mediaSession.setActionHandler("previoustrack", () => {
+        if (this.onPreviousCallback) {
+          this.onPreviousCallback();
+        }
+      });
+
+      // Explicitly remove seekbackward and seekforward handlers so lock screen media widgets
+      // prioritize the Previous Track and Next Track controls
+      try {
+        navigator.mediaSession.setActionHandler("seekbackward", null);
+        navigator.mediaSession.setActionHandler("seekforward", null);
+      } catch {}
+    } catch (err) {
+      console.warn("Failed to register mediaSession actions:", err);
+    }
+  }
+
+  /**
+   * Preserves mobile OS (iOS Safari / Android) active background audio session
+   * by running an inaudible silent audio carrier loop on this.audioElement.
+   */
+  private startSilentAudioAnchor(): void {
+    if (!this.audioElement) return;
+    try {
+      const SILENT_WAV_DATA_URI =
+        "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
+      if (this.audioElement.src !== SILENT_WAV_DATA_URI) {
+        this.audioElement.src = SILENT_WAV_DATA_URI;
+        this.audioElement.loop = true;
+        this.audioElement.volume = 0.001; // Non-zero volume grants active iOS AVAudioSession
+      }
+      this.audioElement.play().catch(() => {});
+    } catch {}
+  }
+
+  private stopSilentAudioAnchor(): void {
+    if (!this.audioElement) return;
+    try {
+      this.audioElement.pause();
+    } catch {}
   }
 
   private initYtBridge() {
@@ -192,24 +257,13 @@ export class SoloPlayer {
             ? [
                 { src: track.coverUrl, sizes: "96x96", type: "image/png" },
                 { src: track.coverUrl, sizes: "128x128", type: "image/png" },
+                { src: track.coverUrl, sizes: "256x256", type: "image/png" },
                 { src: track.coverUrl, sizes: "512x512", type: "image/png" },
               ]
             : undefined,
         });
 
-        navigator.mediaSession.setActionHandler("play", () => this.resume());
-        navigator.mediaSession.setActionHandler("pause", () => this.pause());
-        navigator.mediaSession.setActionHandler("seekto", (details) => {
-          if (details.seekTime !== undefined) {
-            this.seek(details.seekTime * 1000);
-          }
-        });
-        if (this.onNextCallback) {
-          navigator.mediaSession.setActionHandler("nexttrack", () => this.onNextCallback?.());
-        }
-        if (this.onPreviousCallback) {
-          navigator.mediaSession.setActionHandler("previoustrack", () => this.onPreviousCallback?.());
-        }
+        this.registerMediaSessionActions();
 
         navigator.mediaSession.playbackState = "playing";
         if (track.durationMs && track.durationMs > 0) {
@@ -241,12 +295,7 @@ export class SoloPlayer {
     // 2. Play via YouTube IFrame Audio Bridge for YouTube tracks (100% reliable, zero bot block)
     if (videoId) {
       this.activeEngine = "iframe";
-      if (this.audioElement) {
-        try {
-          this.audioElement.pause();
-          this.audioElement.src = "";
-        } catch {}
-      }
+      this.startSilentAudioAnchor();
       this.ytBridge.loadAndPlay(videoId, positionMs);
       this.updateMediaSession(track);
       return;
@@ -255,6 +304,7 @@ export class SoloPlayer {
     // 3. Fallback to HTMLAudioElement for local audio, uploaded audio, or direct CDN streams
     this.activeEngine = "audio";
     if (this.audioElement) {
+      this.audioElement.loop = false;
       if (typeof window !== "undefined") {
         const win = window as unknown as WindowWithAudio;
         win.__soundlounge_active_audio__ = this.audioElement;
@@ -325,6 +375,7 @@ export class SoloPlayer {
     if (this.state.currentTrack && this.state.status === "paused") {
       this.state.status = "playing";
       if (this.activeEngine === "iframe") {
+        this.startSilentAudioAnchor();
         this.ytBridge.play();
       } else if (this.audioElement) {
         try {
@@ -343,6 +394,7 @@ export class SoloPlayer {
   pause(): void {
     this.state.status = "paused";
     if (this.activeEngine === "iframe") {
+      this.stopSilentAudioAnchor();
       this.ytBridge.pause();
     } else if (this.audioElement) {
       this.audioElement.pause();
