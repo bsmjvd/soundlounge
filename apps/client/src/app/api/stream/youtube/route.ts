@@ -233,9 +233,11 @@ async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null
             ? Math.min(expireMs - 60000, Date.now() + 3600000)
             : Date.now() + 3600000;
 
-        // Route stream through Invidious /videoplayback proxy to eliminate 403 IP binding
+        // Route stream through Invidious /videoplayback proxy matching exact issuer node to eliminate cluster 403
         const gUrl = new URL(chosen.url);
-        const proxyStreamUrl = `${inst}/videoplayback${gUrl.search}`;
+        const issuer = gUrl.searchParams.get("issuer");
+        const proxyHost = issuer ? `https://${issuer}` : inst;
+        const proxyStreamUrl = `${proxyHost}/videoplayback${gUrl.search}`;
 
         return {
           url: proxyStreamUrl,
