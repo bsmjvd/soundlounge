@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Ytdl, chooseFormat } from "@distube/ytdl-core";
+import { Ytdl, Client, chooseFormat } from "@distube/ytdl-core";
 import { Innertube } from "youtubei.js";
 
 interface CachedFormat {
@@ -11,7 +11,9 @@ interface CachedFormat {
 
 const formatCache = new Map<string, CachedFormat>();
 const searchToVideoIdCache = new Map<string, string>();
-const ytdl = new Ytdl();
+const ytdl = new Ytdl({
+  clients: [Client.Tv, Client.WebEmbedded],
+});
 
 let innertubePromise: Promise<Innertube> | null = null;
 async function getInnertube(): Promise<Innertube> {
