@@ -122,7 +122,71 @@ async function resolveVideoId(
  */
 let lastExtractionError = "";
 
+/**
+ * Extracts direct GoogleVideo audio format via verified Invidious instances,
+ * cleanly bypassing datacenter IP bot challenges.
+ */
+async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null> {
+  const instances = ["https://yt.chocolatemoo53.com"];
+
+  for (const inst of instances) {
+    try {
+      const res = await fetch(`${inst}/api/v1/videos/${encodeURIComponent(videoId)}`, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (!res.ok) continue;
+
+      const data: any = await res.json();
+      const adaptive = data?.adaptiveFormats || [];
+      const audios = adaptive.filter((f: any) => f.type && f.type.startsWith("audio"));
+      if (audios.length === 0) continue;
+
+      // Prefer audio/mp4 for universal cross-platform mobile & desktop playback
+      const mp4Audio = audios.find((f: any) => f.type.includes("mp4"));
+      const chosen = mp4Audio || audios[0];
+
+      if (chosen && chosen.url) {
+        let expireMs = NaN;
+        try {
+          expireMs = Number(new URL(chosen.url).searchParams.get("expire")) * 1000;
+        } catch {}
+
+        const expiresAt =
+          Number.isFinite(expireMs) && expireMs > 0
+            ? Math.min(expireMs - 60000, Date.now() + 3600000)
+            : Date.now() + 3600000;
+
+        // Route stream through Invidious /videoplayback proxy to eliminate 403 IP binding
+        const gUrl = new URL(chosen.url);
+        const proxyStreamUrl = `${inst}/videoplayback${gUrl.search}`;
+
+        return {
+          url: proxyStreamUrl,
+          mimeType: chosen.type?.split(";")[0] || "audio/mp4",
+          contentLength: chosen.clen ? Number(chosen.clen) : chosen.contentLength ? Number(chosen.contentLength) : undefined,
+          expiresAt,
+        };
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`Invidious extraction failed for ${videoId} on ${inst}:`, msg);
+    }
+  }
+
+  return null;
+}
+
 async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat | null> {
+  // 1. Try Invidious zero-bot-challenge engine first
+  const inv = await fetchInvidiousAudio(videoId);
+  if (inv) return inv;
+
+  // 2. Fallback to ytdl
   try {
     const info = await ytdl.getInfo(videoId);
     const audioFormats = info.formats.filter((f) => f.hasAudio && !f.hasVideo && Boolean(f.url));
@@ -160,7 +224,9 @@ async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     lastExtractionError = msg;
-    console.warn(`ytdl extraction failed for ${videoId}:`, msg);
+    console.warn(`ytdl extraction failed for ${videoId}, falling back to Invidious:`, msg);
+    const inv = await fetchInvidiousAudio(videoId);
+    if (inv) return inv;
     return null;
   }
 }
@@ -348,6 +414,11 @@ export async function GET(req: NextRequest) {
         queryTitle = basic.basic_info.title;
         queryArtist = queryArtist || basic.basic_info.author;
       } catch {}
+    }
+
+        // 3.5 Fallback to Invidious if streamInfo is missing
+    if (!streamInfo && targetVid) {
+      streamInfo = await fetchInvidiousAudio(targetVid);
     }
 
     // 4. Secondary fallback: High-fidelity direct 320kbps MP4 audio with byte ranges (zero bot block)

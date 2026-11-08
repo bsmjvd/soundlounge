@@ -510,11 +510,11 @@ export function MusicIngestion({
       {searchResults.length > 0 && (
         <div className="rounded-2xl border border-[#182b36] bg-[#0c161d] overflow-hidden shadow-xl">
           {/* Table Header */}
-          <div className="grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#162732] text-[10px] font-semibold text-[#5c707d] uppercase tracking-wider bg-[#091217]">
+          <div className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#162732] text-[10px] font-semibold text-[#5c707d] uppercase tracking-wider bg-[#091217]">
             <span>#</span>
             <span>Title & Artist</span>
-            <span className="hidden sm:inline text-center">Popularity</span>
-            <span className="hidden sm:inline text-right">Duration</span>
+            <span className="hidden md:inline text-center">Popularity</span>
+            <span className="hidden md:inline text-right">Duration</span>
             <span className="text-right pr-2">Actions</span>
           </div>
 
@@ -529,7 +529,7 @@ export function MusicIngestion({
                 <div
                   key={track.id}
                   onClick={() => handleSelectTrack(track, true, false)}
-                  className="group grid grid-cols-[32px_1fr_auto] sm:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-[#12232e] transition-colors cursor-pointer"
+                  className="group grid grid-cols-[28px_1fr_auto] md:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-[#12232e] transition-colors cursor-pointer"
                 >
                   {/* Number / Quick Play on Hover */}
                   <div className="text-xs font-mono text-[#5c707d]">
@@ -552,7 +552,7 @@ export function MusicIngestion({
                       coverUrl={track.coverUrl}
                       trackId={track.id}
                       title={track.title}
-                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg shrink-0 shadow-md"
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg shrink-0 shadow-md aspect-square"
                       iconClassName="w-5 h-5"
                     />
                     <div className="truncate min-w-0 flex-1">
@@ -561,13 +561,13 @@ export function MusicIngestion({
                       </p>
                       <p className="text-[11px] text-[#718593] truncate mt-0.5">
                         {track.artist}
-                        <span className="sm:hidden text-[#4a5f6e]"> • {formatDuration(track.durationMs)}</span>
+                        <span className="md:hidden text-[#4a5f6e]"> • {formatDuration(track.durationMs)}</span>
                       </p>
                     </div>
                   </div>
 
                   {/* Popularity / Views Badge */}
-                  <div className="hidden sm:block text-center">
+                  <div className="hidden md:block text-center">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#10232c] text-[#00e5c9] text-[11px] font-mono font-medium border border-[#1b3a48]">
                       <Flame className="w-3 h-3 text-orange-400 fill-orange-400/20" />
                       <span>{track.viewsFormatted || "Popular"} views</span>
@@ -575,7 +575,7 @@ export function MusicIngestion({
                   </div>
 
                   {/* Duration (font-mono tabular-nums) */}
-                  <div className="hidden sm:block text-right text-xs font-mono tabular-nums text-[#718593]">
+                  <div className="hidden md:block text-right text-xs font-mono tabular-nums text-[#718593]">
                     {formatDuration(track.durationMs)}
                   </div>
 

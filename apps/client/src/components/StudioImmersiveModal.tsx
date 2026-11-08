@@ -200,17 +200,22 @@ export function StudioImmersiveModal({
       {/* 1. Full-Screen Ambient Studio Backdrop */}
       {bannerUrl && (
         <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden bg-[#06080e]">
-          {/* Ethereal atmospheric glow (Never pixelated or harsh) */}
+          {/* Ethereal atmospheric glow (Subtle, dark, never pixelated or harsh) */}
           <div
-            className={`absolute inset-0 bg-cover bg-center filter blur-[80px] sm:blur-[120px] saturate-[200%] transition-opacity duration-1000 scale-110 ${
-              isPlaying ? "opacity-45 brightness-90" : "opacity-25 brightness-60"
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
+              isPlaying ? "opacity-20 brightness-75" : "opacity-10 brightness-50"
             }`}
-            style={{ backgroundImage: `url(${bannerUrl})` }}
+            style={{
+              backgroundImage: `url(${bannerUrl})`,
+              filter: "blur(60px)",
+              WebkitFilter: "blur(60px)",
+              transform: "scale(1.2)",
+            }}
           />
 
           {/* Radial & vertical cinematic ambient shading */}
-          <div className="absolute inset-0 bg-radial from-transparent via-[#06080e]/60 to-[#06080e]/95" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#06080e] via-[#06080e]/50 to-[#06080e]/80" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(6,8,14,0.75)_60%,rgba(6,8,14,0.98)_100%)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06080e] via-[#06080e]/60 to-[#06080e]/90" />
         </div>
       )}
 
