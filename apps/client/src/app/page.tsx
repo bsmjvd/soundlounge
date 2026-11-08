@@ -250,7 +250,23 @@ export default function SoundloungeApp() {
     queue.forEach((t) => addTrackToPlaylist(plId, t));
   };
 
+  // One-time global touch listener to unlock audio on iOS Safari upon first gesture
+  useEffect(() => {
+    const handleFirstTouch = () => {
+      coordinator.primeAudioSession();
+      window.removeEventListener("touchstart", handleFirstTouch, true);
+      window.removeEventListener("click", handleFirstTouch, true);
+    };
+    window.addEventListener("touchstart", handleFirstTouch, { capture: true, once: true });
+    window.addEventListener("click", handleFirstTouch, { capture: true, once: true });
+    return () => {
+      window.removeEventListener("touchstart", handleFirstTouch, true);
+      window.removeEventListener("click", handleFirstTouch, true);
+    };
+  }, [coordinator]);
+
   const handlePlaySingleTrack = (track: Track) => {
+    coordinator.primeAudioSession(track);
     addToHistory(track);
     recordPlay(track);
     if (playerState.mode === "synced") {
@@ -542,14 +558,16 @@ export default function SoundloungeApp() {
                   />
                 </div>
 
-                {/* 3. THE HERO ARTWORK / ARTIST PORTRAIT: EXTENDS SEAMLESSLY DOWN BEHIND POPULAR ALBUMS */}
-                <div className="absolute top-0 right-0 w-full sm:w-[68%] lg:w-[60%] xl:w-[54%] h-[820px] sm:h-[880px] pointer-events-none z-[2] overflow-hidden flex items-start justify-end">
+                {/* 3. THE HERO ARTWORK / ARTIST PORTRAIT: EXTENDS SEAMLESSLY DOWN BEHIND POPULAR ALBUMS (FLAWLESS MULTI-EDGE BLEND) */}
+                <div className="absolute top-0 right-0 w-full sm:w-[70%] lg:w-[62%] xl:w-[56%] h-[580px] sm:h-[880px] pointer-events-none z-[2] overflow-hidden flex items-start justify-end">
                   <img
                     key={currentSpotlight.id}
                     src={currentSpotlight.heroImageUrl}
                     alt={currentSpotlight.title}
-                    className="w-full h-full object-cover object-top sm:object-[center_top] select-none [mask-image:linear-gradient(to_left,black_65%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_65%,transparent_100%)] animate-in fade-in duration-700"
+                    className="w-full h-full object-cover object-top sm:object-[center_top] select-none [mask-image:linear-gradient(to_bottom,black_35%,transparent_95%)] sm:[mask-image:radial-gradient(ellipse_at_70%_35%,black_38%,rgba(0,0,0,0.85)_60%,transparent_88%)] [webkit-mask-image:linear-gradient(to_bottom,black_35%,transparent_95%)] sm:[webkit-mask-image:radial-gradient(ellipse_at_70%_35%,black_38%,rgba(0,0,0,0.85)_60%,transparent_88%)] animate-in fade-in duration-700 opacity-70 sm:opacity-100"
                   />
+                  {/* Subtle right-edge lateral fade protecting ultra-wide viewports */}
+                  <div className="absolute inset-y-0 right-0 w-16 sm:w-28 bg-gradient-to-l from-[#0c192c] to-transparent pointer-events-none" />
                 </div>
 
                 {/* 4. Ambient Bottom-Edge Smooth Gradient Fade into Deep Canvas (Only below Popular Albums) */}

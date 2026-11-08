@@ -52,7 +52,20 @@ export function DynamicTasteHomeSections({
     }
   };
 
-  const recentList = historyTracks.slice(0, 10);
+  const recentList = React.useMemo(() => {
+    const seen = new Set<string>();
+    const res: Track[] = [];
+    for (const t of historyTracks) {
+      if (!t) continue;
+      const key = `${t.id}::${(t.title || "").toLowerCase().trim()}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        res.push(t);
+      }
+      if (res.length >= 10) break;
+    }
+    return res;
+  }, [historyTracks]);
 
   // If the user has zero history and zero taste yet, don't show empty boxes
   if (!hasTaste && recentList.length === 0) {
@@ -92,7 +105,7 @@ export function DynamicTasteHomeSections({
 
           <div
             ref={jumpBackScrollRef}
-            className="flex gap-3.5 sm:gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory"
+            className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory touch-pan-x [-webkit-overflow-scrolling:touch]"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {recentList.map((track) => {
@@ -103,7 +116,7 @@ export function DynamicTasteHomeSections({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className={`group flex-shrink-0 flex items-center gap-3 w-[240px] sm:w-[280px] p-2.5 rounded-xl transition-all duration-200 cursor-pointer snap-start ${
+                  className={`group flex-shrink-0 flex items-center gap-2.5 sm:gap-3 w-[210px] xs:w-[240px] sm:w-[280px] p-2 sm:p-2.5 rounded-xl transition-all duration-200 cursor-pointer snap-start ${
                     isOverHero
                       ? "bg-[#0c1424]/80 hover:bg-[#121c32]/95 backdrop-blur-md border border-white/15 hover:border-[#00e5ff]/50 shadow-lg shadow-black/40"
                       : "bg-[#131b2e]/80 hover:bg-[#1a253f] border border-slate-800/80 hover:border-slate-700"
@@ -207,7 +220,7 @@ export function DynamicTasteHomeSections({
 
           <div
             ref={becauseScrollRef}
-            className="flex gap-4 sm:gap-5 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory"
+            className="flex gap-3.5 sm:gap-5 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory touch-pan-x [-webkit-overflow-scrolling:touch]"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {becauseSection.tracks.map((track) => {
@@ -218,7 +231,7 @@ export function DynamicTasteHomeSections({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className="group flex-shrink-0 flex flex-col w-[150px] sm:w-[170px] snap-start cursor-pointer focus:outline-none"
+                  className="group flex-shrink-0 flex flex-col w-[130px] xs:w-[150px] sm:w-[170px] snap-start cursor-pointer focus:outline-none"
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {

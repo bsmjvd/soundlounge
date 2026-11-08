@@ -144,7 +144,7 @@ export function QueueView({
       {queue.length > 0 ? (
         <div className="rounded-xl border border-[#171a25] bg-[#090b10] overflow-hidden">
           {/* Table Header */}
-          <div className="grid grid-cols-[36px_1fr_80px_100px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
+          <div className="hidden sm:grid grid-cols-[36px_1fr_80px_100px] items-center px-4 py-2.5 border-b border-[#141722] text-[10px] font-semibold text-[#545c70] uppercase tracking-wider">
             <span>#</span>
             <span>Title & Artist</span>
             <span className="text-right">Duration</span>
@@ -159,7 +159,7 @@ export function QueueView({
               return (
                 <div
                   key={`${track.id}_${idx}`}
-                  className={`group grid grid-cols-[36px_1fr_80px_100px] items-center px-4 py-2.5 transition-colors ${
+                  className={`group grid grid-cols-[32px_1fr_auto] sm:grid-cols-[36px_1fr_80px_100px] items-center px-3 sm:px-4 py-2 sm:py-2.5 transition-colors ${
                     isPlaying ? "bg-[#111522]" : "hover:bg-[#10131d]"
                   }`}
                 >
@@ -215,7 +215,7 @@ export function QueueView({
                   </div>
 
                   {/* Duration */}
-                  <div className="text-right text-xs font-mono tabular-nums text-[#71788d]">
+                  <div className="hidden sm:block text-right text-xs font-mono tabular-nums text-[#71788d]">
                     {formatTime(track.durationMs)}
                   </div>
 

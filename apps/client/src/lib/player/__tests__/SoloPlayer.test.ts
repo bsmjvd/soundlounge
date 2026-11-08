@@ -81,4 +81,28 @@ describe("SoloPlayer Engine", () => {
 
     expect(typeof player.setTransportHandlers).toBe("function");
   });
+
+  it("primes audio session synchronously for mobile iOS Safari", () => {
+    expect(typeof player.primeAudioSession).toBe("function");
+    // Calling primeAudioSession should not throw and should handle null/valid tracks
+    expect(() => player.primeAudioSession()).not.toThrow();
+    expect(() => player.primeAudioSession(sampleTrack)).not.toThrow();
+  });
+
+  it("plays YouTube track with direct video ID immediately without error", async () => {
+    const ytTrack: Track = {
+      id: "yt_6xoB4ZiKKn0",
+      title: "The Last Ride",
+      artist: "Sidhu Moose Wala",
+      durationMs: 260000,
+      url: "https://www.youtube.com/watch?v=6xoB4ZiKKn0",
+      source: "youtube",
+    };
+
+    await player.play(ytTrack, 0);
+    const state = player.getState();
+    expect(state.status).toBe("playing");
+    expect(state.currentTrack?.id).toBe("yt_6xoB4ZiKKn0");
+    expect(player.getActiveEngine()).toBe("iframe");
+  });
 });

@@ -116,14 +116,14 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
       {/* Horizontal List of Circular Artist Avatars */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-5 sm:gap-6 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory"
+        className="flex gap-4 sm:gap-6 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory touch-pan-x [-webkit-overflow-scrolling:touch]"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {combinedArtists.map((artist) => (
           <div
             key={artist.id}
             onClick={() => handleArtistClick(artist)}
-            className="group flex-shrink-0 flex flex-col items-center w-[76px] sm:w-[84px] snap-start cursor-pointer focus:outline-none"
+            className="group flex-shrink-0 flex flex-col items-center w-[68px] sm:w-[84px] snap-start cursor-pointer focus:outline-none"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -133,7 +133,7 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
             }}
           >
             {/* Circular Avatar with Glowing Ambient Halo on Hover */}
-            <div className="relative w-[76px] h-[76px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-[#0c1424]/70 backdrop-blur-md ring-2 ring-white/15 group-hover:ring-[#00e5ff] shadow-xl shadow-black/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.4)]">
+            <div className="relative w-[68px] h-[68px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-[#0c1424]/70 backdrop-blur-md ring-2 ring-white/15 group-hover:ring-[#00e5ff] shadow-xl shadow-black/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.4)]">
               <ImageWithFallback
                 src={artist.avatarUrl}
                 alt={artist.name}

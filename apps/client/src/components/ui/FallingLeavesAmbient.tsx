@@ -407,13 +407,13 @@ export function FallingLeavesAmbient({ enabled = true }: FallingLeavesAmbientPro
     };
 
     const isMobile = width < 768;
-    // Serene, majestic count matching reference art: visible leaves with presence, not tiny confetti dust
-    const particleCount = isMobile ? 12 : 18;
+    // Serene, majestic count matching reference art: clearly visible foliage with presence, never crowded or distracting
+    const particleCount = isMobile ? 8 : 12;
     const particles: MapleParticle[] = [];
 
     const initParticle = (p?: Partial<MapleParticle>, startRandomY: boolean = false): MapleParticle => {
       const style = styleList[Math.floor(Math.random() * styleList.length)];
-      const depth = 0.45 + Math.random() * 0.55; // 0.45 background to 1.0 foreground
+      const depth = 0.5 + Math.random() * 0.5; // 0.5 background to 1.0 foreground
 
       // Natural aerodynamic sway parameters
       let swayAmp = 1.2 + Math.random() * 1.4;
@@ -426,9 +426,9 @@ export function FallingLeavesAmbient({ enabled = true }: FallingLeavesAmbientPro
         swaySpeed *= 1.1;
       }
 
-      // Clearly visible maple leaves with crisp white veins & stems:
-      // Desktop: 52px to 76px. Mobile: 36px to 52px.
-      const baseSize = isMobile ? 36 + Math.random() * 16 : 52 + Math.random() * 24;
+      // Clearly visible maple leaves with crisp white veins & stems matching reference art:
+      // Desktop: 56px to 82px. Mobile: 38px to 52px.
+      const baseSize = isMobile ? 38 + Math.random() * 14 : 56 + Math.random() * 26;
 
       return {
         x: Math.random() * width,

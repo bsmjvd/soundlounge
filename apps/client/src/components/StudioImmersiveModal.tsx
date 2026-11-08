@@ -309,7 +309,7 @@ export function StudioImmersiveModal({
         {/* Centerpiece: Audiophile Gatefold Sleeve, Slideout Vinyl Record & Tonearm */}
         <div className="relative flex items-center justify-center py-1 sm:py-2 overflow-visible">
           <div
-            className={`relative w-40 h-40 xs:w-48 xs:h-48 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 max-h-[36vh] max-w-[36vh] aspect-square flex items-center justify-center transition-transform duration-1000 ease-out ${
+            className={`relative w-36 h-36 xs:w-44 xs:h-44 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 max-h-[32vh] max-w-[32vh] aspect-square flex items-center justify-center transition-transform duration-1000 ease-out ${
               isPlaying ? "-translate-x-3 sm:-translate-x-10 md:-translate-x-14" : "translate-x-0"
             }`}
           >
@@ -320,8 +320,8 @@ export function StudioImmersiveModal({
               title="Click grooves to drop needle and seek"
               className={`absolute inset-0 z-10 cursor-pointer transition-all duration-1000 ease-[cubic-bezier(0.34,1.25,0.64,1)] ${
                 isPlaying
-                  ? "translate-x-[46%] sm:translate-x-[56%] opacity-100 scale-100"
-                  : "translate-x-[26%] sm:translate-x-[40%] opacity-90 scale-[0.98]"
+                  ? "translate-x-[36%] sm:translate-x-[56%] opacity-100 scale-100"
+                  : "translate-x-[22%] sm:translate-x-[40%] opacity-90 scale-[0.98]"
               }`}
             >
               <div

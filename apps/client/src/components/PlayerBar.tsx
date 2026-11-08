@@ -137,10 +137,10 @@ export function PlayerBar({
           const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
           onSeek(Math.floor(pct * effectiveDuration));
         }}
-        className="sm:hidden absolute top-0 left-0 right-0 h-1 bg-slate-800/80 cursor-pointer overflow-hidden z-20"
+        className="sm:hidden absolute top-0 left-0 right-0 h-1.5 active:h-2.5 bg-slate-800/90 cursor-pointer overflow-hidden z-20 transition-all"
       >
         <div
-          className="h-full bg-[#00e5ff] shadow-[0_0_8px_#00e5ff] transition-all duration-100"
+          className="h-full bg-[#00e5ff] shadow-[0_0_10px_#00e5ff] transition-all duration-100"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -306,9 +306,9 @@ export function PlayerBar({
                 onToggleLike(currentTrack);
               }}
               aria-label={isLiked ? "Unlike song" : "Like song"}
-              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-400 active:scale-90 transition-all cursor-pointer"
+              className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-rose-400 active:scale-90 transition-all cursor-pointer"
             >
-              <Heart className={`w-4 h-4 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+              <Heart className={`w-4.5 h-4.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`} />
             </button>
           )}
 
@@ -319,9 +319,9 @@ export function PlayerBar({
             }}
             disabled={!currentTrack}
             aria-label={isPlaying ? "Pause" : "Play"}
-            className="w-10 h-10 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_12px_rgba(0,229,255,0.4)] disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
+            className="w-11 h-11 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_12px_rgba(0,229,255,0.4)] disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
           >
-            {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+            {isPlaying ? <Pause className="w-4.5 h-4.5 fill-current" /> : <Play className="w-4.5 h-4.5 fill-current ml-0.5" />}
           </button>
 
           <button
@@ -331,9 +331,9 @@ export function PlayerBar({
             }}
             disabled={!currentTrack}
             aria-label="Next song"
-            className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
+            className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
           >
-            <SkipForward className="w-4 h-4" />
+            <SkipForward className="w-4.5 h-4.5" />
           </button>
 
           {onOpenStudio && (
@@ -343,9 +343,9 @@ export function PlayerBar({
                 onOpenStudio();
               }}
               aria-label="Open Studio"
-              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-[#00e5ff] active:scale-90 transition-all cursor-pointer"
+              className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-[#00e5ff] active:scale-90 transition-all cursor-pointer"
             >
-              <Maximize2 className="w-4 h-4" />
+              <Maximize2 className="w-4.5 h-4.5" />
             </button>
           )}
         </div>

@@ -45,6 +45,8 @@ export interface YTPlayerInstance {
   seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
   setVolume: (volume: number) => void;
   getVolume: () => number;
+  unMute?: () => void;
+  isMuted?: () => boolean;
   getCurrentTime: () => number;
   getDuration: () => number;
   getPlayerState: () => number;
@@ -285,6 +287,9 @@ export class YouTubeIframeBridge {
           videoId,
           startSeconds: startSec,
         });
+        try {
+          this.player.playVideo();
+        } catch {}
       } else if (typeof this.player.cueVideoById === "function") {
         this.player.cueVideoById({
           videoId,
@@ -292,6 +297,9 @@ export class YouTubeIframeBridge {
         });
         this.player.playVideo();
       }
+      try {
+        this.player.unMute?.();
+      } catch {}
       if (typeof this.player.setVolume === "function") {
         this.player.setVolume(Math.round(this.volume * 100));
       }
@@ -337,6 +345,9 @@ export class YouTubeIframeBridge {
     this.volume = Math.max(0, Math.min(1, volume0to1));
     if (this.player && this.isReady) {
       try {
+        if (this.volume > 0) {
+          this.player.unMute?.();
+        }
         this.player.setVolume(Math.round(this.volume * 100));
       } catch {}
     }

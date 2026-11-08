@@ -89,18 +89,42 @@ export class SoloPlayer {
   }
 
   /**
+   * Synchronously primes and unlocks the HTMLAudioElement within a user gesture.
+   * Required for iOS Safari to avoid NotAllowedError on delayed/async playback calls.
+   */
+  public primeAudioSession(track?: Track): void {
+    if (typeof window === "undefined") return;
+    if (this.audioElement) {
+      try {
+        if (this.audioElement.paused) {
+          if (!this.audioElement.src || this.audioElement.src === "" || this.audioElement.src.endsWith("/")) {
+            this.audioElement.src = "/audio/silence.mp3";
+            this.audioElement.loop = true;
+            this.audioElement.volume = 0.001;
+          }
+          this.audioElement.play().catch(() => {});
+        }
+      } catch {}
+    }
+    if (track) {
+      this.updateMediaSession(track);
+    }
+  }
+
+  /**
    * Preserves mobile OS (iOS Safari / Android) active background audio session
-   * by running an inaudible silent audio carrier loop on this.audioElement.
+   * by running an inaudible continuous 5s silent MP3 loop on this.audioElement.
+   * Unlike 0s data URIs, an authentic MP3 audio file prevents iOS from suspending
+   * the browser process and keeps the Lock Screen Now Playing widget active.
    */
   private startSilentAudioAnchor(): void {
     if (!this.audioElement) return;
     try {
-      const SILENT_WAV_DATA_URI =
-        "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-      if (this.audioElement.src !== SILENT_WAV_DATA_URI) {
-        this.audioElement.src = SILENT_WAV_DATA_URI;
+      const SILENT_MP3_PATH = "/audio/silence.mp3";
+      if (!this.audioElement.src.endsWith(SILENT_MP3_PATH)) {
+        this.audioElement.src = SILENT_MP3_PATH;
         this.audioElement.loop = true;
-        this.audioElement.volume = 0.001; // Non-zero volume grants active iOS AVAudioSession
+        this.audioElement.volume = 0.001; // Non-zero volume grants active iOS AVAudioSessionCategoryPlayback
       }
       this.audioElement.play().catch(() => {});
     } catch {}
@@ -122,6 +146,20 @@ export class SoloPlayer {
           this.state.durationMs = bridgeState.durationMs;
         }
         this.emitState();
+
+        // Keep MediaSession and iOS Lock Screen scrubber in sync during iframe playback
+        if (typeof window !== "undefined" && "mediaSession" in navigator) {
+          try {
+            navigator.mediaSession.playbackState = bridgeState.status === "playing" ? "playing" : "paused";
+            if (bridgeState.durationMs > 0) {
+              navigator.mediaSession.setPositionState({
+                duration: bridgeState.durationMs / 1000,
+                position: Math.max(0, bridgeState.positionMs / 1000),
+                playbackRate: 1,
+              });
+            }
+          } catch {}
+        }
       }
     });
   }
@@ -280,19 +318,35 @@ export class SoloPlayer {
   }
 
   async play(track: Track, positionMs: number = 0): Promise<void> {
+    // 0. Synchronously prime audio element and media session within the immediate user gesture
+    this.primeAudioSession(track);
+
     this.state.currentTrack = track;
     this.state.durationMs = track.durationMs || 0;
     this.state.positionMs = positionMs;
     this.state.status = "playing";
     this.emitState();
 
-    // 1. Resolve videoId for YouTube-sourced or streaming tracks
+    // 1. Check if direct videoId can be extracted synchronously (zero user gesture expiration)
+    const directVideoId =
+      YouTubeIframeBridge.extractVideoId(track.url) ||
+      YouTubeIframeBridge.extractVideoId(track.id);
+
+    if (directVideoId) {
+      this.activeEngine = "iframe";
+      this.startSilentAudioAnchor();
+      this.ytBridge.loadAndPlay(directVideoId, positionMs);
+      this.updateMediaSession(track);
+      return;
+    }
+
+    // 2. Resolve videoId if track needs dynamic search resolution
     let videoId: string | null = null;
     if (track.source === "youtube" || track.url.includes("youtube") || track.id.startsWith("yt_")) {
       videoId = await YouTubeIframeBridge.resolveVideoId(track);
     }
 
-    // 2. Play via YouTube IFrame Audio Bridge for YouTube tracks (100% reliable, zero bot block)
+    // 3. Play via YouTube IFrame Audio Bridge for YouTube tracks (100% reliable, zero bot block)
     if (videoId) {
       this.activeEngine = "iframe";
       this.startSilentAudioAnchor();

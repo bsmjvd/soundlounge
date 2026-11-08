@@ -217,14 +217,14 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       {/* Horizontal Carousel with exact 1:1 aspect ratio and rounded card styling matching reference mockup */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-3.5 sm:gap-4.5 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory"
+        className="flex gap-3 sm:gap-4.5 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory touch-pan-x [-webkit-overflow-scrolling:touch]"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {combinedAlbums.map((album) => (
           <div
             key={album.id}
             onClick={() => handleAlbumClick(album)}
-            className="group flex-shrink-0 w-[114px] min-w-[114px] sm:w-[128px] sm:min-w-[128px] md:w-[136px] md:min-w-[136px] lg:w-[140px] lg:min-w-[140px] snap-start cursor-pointer transition-all duration-200 hover:-translate-y-1 focus:outline-none"
+            className="group flex-shrink-0 w-[108px] min-w-[108px] xs:w-[114px] xs:min-w-[114px] sm:w-[128px] sm:min-w-[128px] md:w-[136px] md:min-w-[136px] lg:w-[140px] lg:min-w-[140px] snap-start cursor-pointer transition-all duration-200 hover:-translate-y-1 focus:outline-none"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {

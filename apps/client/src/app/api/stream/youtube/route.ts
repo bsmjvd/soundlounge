@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Ytdl, chooseFormat } from "@distube/ytdl-core";
+import { Ytdl, chooseFormat, Client } from "@distube/ytdl-core";
 import { Innertube } from "youtubei.js";
+import { Readable } from "stream";
 
 interface CachedFormat {
   url: string;
@@ -259,46 +260,66 @@ export async function GET(req: NextRequest) {
 
   // 2. Direct internal extraction fallback
   try {
-    const streamInfo = await getAudioStreamUrl(videoId, title, artist, query);
-    const rangeHeader = req.headers.get("range");
-
-    const upstreamHeaders: Record<string, string> = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Referer: "https://www.youtube.com/",
-    };
-
-    if (rangeHeader) {
-      upstreamHeaders["Range"] = rangeHeader;
-    }
-
-    const upstreamRes = await fetch(streamInfo.url, {
-      headers: upstreamHeaders,
+    const targetVid = await resolveToValidVideoId(videoId, title, artist, query);
+    const multiYtdl = new Ytdl({ clients: [Client.Mweb, Client.Tv, Client.VisionOS] });
+    const nodeStream = await multiYtdl.download(targetVid, {
+      filter: (f) => f.hasAudio && !f.hasVideo,
+      quality: "highestaudio",
     });
-
+    const webStream = Readable.toWeb(nodeStream);
     const responseHeaders = new Headers();
-    responseHeaders.set("Content-Type", streamInfo.mimeType);
+    responseHeaders.set("Content-Type", "audio/mp4");
     responseHeaders.set("Accept-Ranges", "bytes");
     responseHeaders.set("Cache-Control", "public, max-age=3600");
 
-    const contentRange = upstreamRes.headers.get("content-range");
-    if (contentRange) {
-      responseHeaders.set("Content-Range", contentRange);
-    }
-
-    const contentLength =
-      upstreamRes.headers.get("content-length") || (streamInfo.contentLength ? String(streamInfo.contentLength) : null);
-    if (contentLength) {
-      responseHeaders.set("Content-Length", contentLength);
-    }
-
-    return new Response(upstreamRes.body, {
-      status: upstreamRes.status,
+    return new Response(webStream as ReadableStream, {
+      status: 200,
       headers: responseHeaders,
     });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`Streaming error for ${videoId || title || query}:`, err);
-    return new NextResponse(`Streaming error: ${message}`, { status: 500 });
+  } catch (downloadErr) {
+    console.warn("Direct ytdl.download failed, attempting getAudioStreamUrl fallback:", downloadErr);
+    try {
+      const streamInfo = await getAudioStreamUrl(videoId, title, artist, query);
+      const rangeHeader = req.headers.get("range");
+
+      const upstreamHeaders: Record<string, string> = {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Referer: "https://www.youtube.com/",
+      };
+
+      if (rangeHeader) {
+        upstreamHeaders["Range"] = rangeHeader;
+      }
+
+      const upstreamRes = await fetch(streamInfo.url, {
+        headers: upstreamHeaders,
+      });
+
+      const responseHeaders = new Headers();
+      responseHeaders.set("Content-Type", streamInfo.mimeType);
+      responseHeaders.set("Accept-Ranges", "bytes");
+      responseHeaders.set("Cache-Control", "public, max-age=3600");
+
+      const contentRange = upstreamRes.headers.get("content-range");
+      if (contentRange) {
+        responseHeaders.set("Content-Range", contentRange);
+      }
+
+      const contentLength =
+        upstreamRes.headers.get("content-length") || (streamInfo.contentLength ? String(streamInfo.contentLength) : null);
+      if (contentLength) {
+        responseHeaders.set("Content-Length", contentLength);
+      }
+
+      return new Response(upstreamRes.body, {
+        status: upstreamRes.status,
+        headers: responseHeaders,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`Streaming error for ${videoId || title || query}:`, err);
+      return new NextResponse(`Streaming error: ${message}`, { status: 500 });
+    }
   }
 }

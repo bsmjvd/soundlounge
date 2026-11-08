@@ -286,7 +286,7 @@ export function AlbumDetailView({
             return (
               <div
                 key={track.id}
-                className={`group grid grid-cols-[44px_1fr_80px_90px] items-center px-4 py-3 transition-colors ${
+                className={`group grid grid-cols-[36px_1fr_auto] sm:grid-cols-[44px_1fr_80px_90px] items-center px-3 sm:px-4 py-2.5 sm:py-3 transition-colors ${
                   active ? "bg-[#111724]" : "hover:bg-[#0e121b]"
                 }`}
               >
@@ -313,12 +313,12 @@ export function AlbumDetailView({
                 </div>
 
                 {/* Track Details & Singer Breakdown */}
-                <div className="flex items-center gap-3 min-w-0 pr-4">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2 sm:pr-4">
                   <TrackArtwork
                     coverUrl={track.coverUrl || album.coverUrl}
                     trackId={track.id}
                     title={track.title}
-                    className="w-10 h-10 rounded-lg shrink-0"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg shrink-0"
                     iconClassName="w-4 h-4"
                   />
                   <div className="truncate">
@@ -334,7 +334,7 @@ export function AlbumDetailView({
                 </div>
 
                 {/* Duration */}
-                <div className="text-right text-xs font-mono text-[#718096] tabular-nums">
+                <div className="hidden sm:block text-right text-xs font-mono text-[#718096] tabular-nums">
                   {formatTime(track.durationMs)}
                 </div>
 

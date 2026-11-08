@@ -113,21 +113,21 @@ export function DiscoverHero({
       className="relative w-full overflow-visible pt-2 pb-10 sm:pb-8 group select-none outline-none focus-visible:ring-1 focus-visible:ring-[#00e5ff]/50 rounded-2xl"
     >
       {/* Hero Content: display typography & action buttons */}
-      <div className="relative z-10 px-2 sm:px-4 flex flex-col justify-center min-h-[200px] sm:min-h-[260px] max-w-xl">
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-3 drop-shadow-sm font-sans transition-all duration-300">
+      <div className="relative z-10 px-1 sm:px-4 flex flex-col justify-center min-h-[180px] sm:min-h-[260px] max-w-xl">
+        <h1 className="text-2xl xs:text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-2.5 sm:mb-3 drop-shadow-sm font-sans transition-all duration-300">
           {spotlight.title}
         </h1>
 
-        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed mb-6 sm:mb-8 max-w-md transition-opacity duration-300">
+        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed mb-5 sm:mb-8 max-w-md line-clamp-3 sm:line-clamp-none transition-opacity duration-300">
           {spotlight.description}
         </p>
 
         {/* Action Buttons: PLAY and FOLLOW */}
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-4">
           <button
             onClick={handlePlayHero}
             aria-label={isTrackPlaying ? "Pause featured track" : "Play featured track"}
-            className="flex items-center gap-2.5 bg-[#00e5ff] hover:bg-[#00d0e6] text-[#0a0e17] font-bold text-xs uppercase tracking-wider sm:tracking-widest px-6 sm:px-9 py-3 sm:py-3.5 rounded-full shadow-[0_0_24px_rgba(0,229,255,0.45)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] transition-all cursor-pointer active:scale-95 min-h-[44px]"
+            className="flex items-center gap-2.5 bg-[#00e5ff] hover:bg-[#00d0e6] text-[#0a0e17] font-bold text-xs uppercase tracking-wider sm:tracking-widest px-5 sm:px-9 py-2.5 sm:py-3.5 rounded-full shadow-[0_0_24px_rgba(0,229,255,0.45)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] transition-all cursor-pointer active:scale-95 min-h-[44px]"
           >
             {isTrackPlaying ? (
               <>
@@ -151,7 +151,7 @@ export function DiscoverHero({
           <button
             onClick={() => setIsFollowing((f) => !f)}
             aria-label={isFollowing ? "Following featured artist" : "Follow featured artist"}
-            className={`flex items-center gap-2 border-2 font-bold text-xs uppercase tracking-wider sm:tracking-widest px-6 sm:px-9 py-3 sm:py-3.5 rounded-full transition-all cursor-pointer active:scale-95 min-h-[44px] ${
+            className={`flex items-center gap-2 border-2 font-bold text-xs uppercase tracking-wider sm:tracking-widest px-5 sm:px-9 py-2.5 sm:py-3.5 rounded-full transition-all cursor-pointer active:scale-95 min-h-[44px] ${
               isFollowing
                 ? "border-emerald-400 text-emerald-400 bg-emerald-500/10"
                 : "border-[#00e5ff] text-[#00e5ff] hover:bg-[#00e5ff]/10"
@@ -171,7 +171,7 @@ export function DiscoverHero({
 
       {/* Spotlights Carousel Controls & Slide Indicator Pills */}
       {activeSpotlights.length > 1 && (
-        <div className="absolute bottom-2 right-4 sm:right-6 z-20 flex items-center gap-3">
+        <div className="relative sm:absolute sm:bottom-2 sm:right-6 z-20 flex items-center justify-between sm:justify-end gap-3 mt-5 sm:mt-0 pt-1 sm:pt-0">
           <HeroCarouselIndicators
             total={activeSpotlights.length}
             activeIndex={safeIndex}

@@ -62,6 +62,14 @@ export class AudioEngineCoordinator {
     this.soloPlayer.setTransportHandlers(handlers);
   }
 
+  /**
+   * Synchronously primes the audio subsystem within direct user touch/click.
+   * Eliminates iOS Safari NotAllowedError audio blocks.
+   */
+  primeAudioSession(track?: Track): void {
+    this.soloPlayer.primeAudioSession(track);
+  }
+
   getSoloPlayer(): SoloPlayer {
     return this.soloPlayer;
   }
@@ -120,6 +128,9 @@ export class AudioEngineCoordinator {
   }
 
   async play(track: Track, positionMs: number = 0): Promise<void> {
+    // Synchronously prime audio session in the direct user gesture
+    this.primeAudioSession(track);
+
     if (this.mode === "solo") {
       this.syncedPlayer.pause();
       await this.soloPlayer.play(track, positionMs);

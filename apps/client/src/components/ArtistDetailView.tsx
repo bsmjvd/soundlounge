@@ -214,7 +214,7 @@ export function ArtistDetailView({
           </div>
 
           {/* Track Table Header */}
-          <div className="grid grid-cols-[36px_1fr_90px_110px] items-center px-3 py-2 text-[10px] font-semibold text-[#5c707d] uppercase tracking-wider border-b border-[#132129]">
+          <div className="hidden sm:grid grid-cols-[36px_1fr_90px_110px] items-center px-3 py-2 text-[10px] font-semibold text-[#5c707d] uppercase tracking-wider border-b border-[#132129]">
             <span>#</span>
             <span>Title & Artist</span>
             <span className="text-right">Duration</span>
@@ -230,7 +230,7 @@ export function ArtistDetailView({
               return (
                 <div
                   key={track.id}
-                  className={`group grid grid-cols-[36px_1fr_90px_110px] items-center px-3 py-2.5 rounded-xl transition-colors ${
+                  className={`group grid grid-cols-[32px_1fr_auto] sm:grid-cols-[36px_1fr_90px_110px] items-center px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl transition-colors ${
                     isThisTrack ? "bg-[#112129]" : "hover:bg-[#101e25]"
                   }`}
                 >
@@ -276,7 +276,7 @@ export function ArtistDetailView({
                   </div>
 
                   {/* Duration */}
-                  <div className="text-right text-xs font-mono tabular-nums text-[#697d8b]">
+                  <div className="hidden sm:block text-right text-xs font-mono tabular-nums text-[#697d8b]">
                     {formatTime(track.durationMs)}
                   </div>
 

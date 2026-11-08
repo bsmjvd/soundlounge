@@ -664,26 +664,44 @@ export class TasteProfileEngine {
 
     const seenIds = new Set<string>();
     const seenTitles = new Set<string>();
+    const seenCovers = new Set<string>();
+    const artistTrackCount = new Map<string, number>();
     const tracks: Track[] = [];
 
-    const addTrack = (t: Track) => {
+    const addTrack = (t: Track, maxPerArtist: number = 2) => {
+      if (!t) return;
       const norm = normalizeSongTitle(t.title, t.artist);
-      if (seenIds.has(t.id) || (norm && seenTitles.has(norm))) return;
+      const cleanCover = (t.coverUrl || "").trim();
+      const artKey = (t.artist || "").toLowerCase().trim();
+
+      if (seenIds.has(t.id)) return;
+      if (norm && seenTitles.has(norm)) return;
+      // Guarantee no duplicate identical cover artwork side-by-side
+      if (cleanCover && seenCovers.has(cleanCover)) return;
+
+      const currentArtistCount = artistTrackCount.get(artKey) || 0;
+      if (currentArtistCount >= maxPerArtist) return;
+
       seenIds.add(t.id);
       if (norm) seenTitles.add(norm);
+      if (cleanCover) seenCovers.add(cleanCover);
+      artistTrackCount.set(artKey, currentArtistCount + 1);
       tracks.push(t);
     };
 
-    // 1. Tracks from dominant artist
+    // 1. Featured tracks from dominant artist (up to 2 unique tracks with distinct covers)
     if (dominantArtist) {
       const artistMatch = ARTISTS_CATALOG.find(
-        (a) => a.name.toLowerCase() === dominantArtist.toLowerCase()
+        (a) =>
+          a.name.toLowerCase() === dominantArtist.toLowerCase() ||
+          dominantArtist.toLowerCase().includes(a.name.toLowerCase()) ||
+          a.name.toLowerCase().includes(dominantArtist.toLowerCase())
       );
       if (artistMatch) {
-        artistMatch.topTracks.slice(0, 4).forEach(addTrack);
+        artistMatch.topTracks.slice(0, 4).forEach((t) => addTrack(t, 2));
       }
 
-      // 2. Tracks from peer artists
+      // 2. Peer artists: Pass 1 — add 1 distinct track per peer artist for maximum diversity
       const peerNames = getPeerArtistsForArtist(dominantArtist);
       for (const peer of peerNames) {
         if (tracks.length >= 8) break;
@@ -691,15 +709,25 @@ export class TasteProfileEngine {
           (a) => a.name.toLowerCase() === peer.toLowerCase()
         );
         if (peerArtist && peerArtist.topTracks.length > 0) {
-          addTrack(peerArtist.topTracks[0]);
-          if (peerArtist.topTracks.length > 1 && tracks.length < 8) {
-            addTrack(peerArtist.topTracks[1]);
+          addTrack(peerArtist.topTracks[0], 1);
+        }
+      }
+
+      // Pass 2: If still room, add secondary tracks from peers with distinct covers
+      if (tracks.length < 8) {
+        for (const peer of peerNames) {
+          if (tracks.length >= 8) break;
+          const peerArtist = ARTISTS_CATALOG.find(
+            (a) => a.name.toLowerCase() === peer.toLowerCase()
+          );
+          if (peerArtist && peerArtist.topTracks.length > 1) {
+            addTrack(peerArtist.topTracks[1], 2);
           }
         }
       }
     }
 
-    // 3. Fallback to dominant genre peers
+    // 3. Fallback to dominant genre peers (1 distinct track per artist)
     if (tracks.length < 5 && dominantGenre) {
       const genrePeers = getPeerArtistsForGenre(dominantGenre);
       for (const peer of genrePeers) {
@@ -708,7 +736,7 @@ export class TasteProfileEngine {
           (a) => a.name.toLowerCase() === peer.toLowerCase()
         );
         if (peerArtist && peerArtist.topTracks.length > 0) {
-          addTrack(peerArtist.topTracks[0]);
+          addTrack(peerArtist.topTracks[0], 1);
         }
       }
     }

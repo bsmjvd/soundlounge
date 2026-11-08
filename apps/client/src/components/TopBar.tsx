@@ -347,7 +347,7 @@ export function TopBar({
                 onFocus={() => {
                   setIsDropdownOpen(true);
                 }}
-                className="w-full h-8.5 sm:h-9 bg-slate-800/60 hover:bg-slate-800 focus:bg-slate-800/90 border border-slate-700/60 focus:border-[#00e5ff] rounded-full pl-8 sm:pl-9 pr-8 sm:pr-14 text-xs text-white placeholder-slate-400 outline-none transition-all shadow-inner"
+                className="w-full h-8.5 sm:h-9 bg-slate-800/60 hover:bg-slate-800 focus:bg-slate-800/90 border border-slate-700/60 focus:border-[#00e5ff] rounded-full pl-8 sm:pl-9 pr-8 sm:pr-14 text-base sm:text-xs text-white placeholder-slate-400 outline-none transition-all shadow-inner"
               />
 
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
