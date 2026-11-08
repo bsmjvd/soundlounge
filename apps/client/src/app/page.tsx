@@ -534,7 +534,7 @@ export default function SoundloungeApp() {
                 <div className="absolute -top-10 right-0 w-[680px] h-full bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-40 pointer-events-none z-[1]" />
 
                 {/* THE HERO ARTWORK / ALBUM COVER FILLED SEAMLESSLY IN THE BACKGROUND */}
-                <div className="absolute top-0 right-0 bottom-0 w-[55%] sm:w-[50%] lg:w-[48%] pointer-events-none z-0 overflow-hidden flex items-start justify-end">
+                <div className="absolute top-0 right-0 bottom-0 w-[58%] sm:w-[52%] lg:w-[48%] pointer-events-none z-0 overflow-hidden flex items-start justify-end">
                   <img
                     key={currentSpotlight.id}
                     src={currentSpotlight.heroImageUrl}
@@ -544,7 +544,7 @@ export default function SoundloungeApp() {
                 </div>
 
                 {/* Ambient bottom-edge smooth gradient fade into main content */}
-                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-b from-transparent to-[#0e1422] pointer-events-none z-10" />
+                <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-b from-transparent via-[#0e1422]/60 to-[#0e1422] pointer-events-none z-10" />
 
                 {/* TopBar sitting seamlessly over the hero stage */}
                 <div className="relative z-20">
@@ -596,7 +596,7 @@ export default function SoundloungeApp() {
                 </div>
 
                 {/* Hero Typography & Action Controls */}
-                <div className="relative z-10 px-4 sm:px-8 lg:px-12 pt-2 sm:pt-4 pb-12">
+                <div className="relative z-10 px-4 sm:px-8 lg:px-12 pt-2 sm:pt-4 pb-8">
                   <DiscoverHero
                     onPlayTrack={handlePlaySingleTrack}
                     currentTrack={activeTrack}
@@ -604,6 +604,28 @@ export default function SoundloungeApp() {
                     activeIndex={safeSpotlightIndex}
                     onActiveIndexChange={setHeroSpotlightIndex}
                     spotlights={dynamicSpotlights}
+                  />
+                </div>
+
+                {/* DYNAMIC TASTE SECTIONS EXTENDED SEAMLESSLY OVER HERO BACKDROP */}
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pb-12 pt-2">
+                  <DynamicTasteHomeSections
+                    onPlayTrack={handlePlaySingleTrack}
+                    onPlayMix={handlePlayMix}
+                    onSelectArtist={(artistName) => {
+                      const match = ARTISTS_CATALOG.find(
+                        (a) => a.name.toLowerCase() === artistName.toLowerCase()
+                      );
+                      if (match) {
+                        recordArtistView(match.name);
+                        setSelectedArtist(match);
+                      }
+                    }}
+                    onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
+                    currentTrack={activeTrack}
+                    isPlaying={playerState.status === "playing"}
+                    historyTracks={history}
+                    isOverHero={true}
                   />
                 </div>
               </div>
@@ -771,27 +793,8 @@ export default function SoundloungeApp() {
                   />
                 </div>
               ) : (
-                /* DYNAMIC PERSONALIZED DISCOVERY VIEW: Jump Back In + Because You Listened + Popular Albums + Popular Artists */
-                <div className="space-y-10 pt-2">
-                  {/* Dynamic Taste Sections: Jump Back In & Because You Listened */}
-                  <DynamicTasteHomeSections
-                    onPlayTrack={handlePlaySingleTrack}
-                    onPlayMix={handlePlayMix}
-                    onSelectArtist={(artistName) => {
-                      const match = ARTISTS_CATALOG.find(
-                        (a) => a.name.toLowerCase() === artistName.toLowerCase()
-                      );
-                      if (match) {
-                        recordArtistView(match.name);
-                        setSelectedArtist(match);
-                      }
-                    }}
-                    onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
-                    currentTrack={activeTrack}
-                    isPlaying={playerState.status === "playing"}
-                    historyTracks={history}
-                  />
-
+                /* Main Discovery Stage: Popular Albums + Popular Artists */
+                <div className="space-y-10 pt-4">
                   {/* Popular Albums Section (Dynamically re-ranked by taste) */}
                   <PopularAlbumsRow
                     onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}

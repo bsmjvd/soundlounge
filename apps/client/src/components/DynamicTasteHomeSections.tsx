@@ -15,6 +15,7 @@ interface DynamicTasteHomeSectionsProps {
   currentTrack: Track | null;
   isPlaying: boolean;
   historyTracks?: Track[];
+  isOverHero?: boolean;
 }
 
 export function DynamicTasteHomeSections({
@@ -25,6 +26,7 @@ export function DynamicTasteHomeSections({
   currentTrack,
   isPlaying,
   historyTracks = [],
+  isOverHero = false,
 }: DynamicTasteHomeSectionsProps) {
   const { hasTaste, dominantArtist, dominantGenre, getBecauseYouListenedSection } = useTasteProfile();
   const jumpBackScrollRef = useRef<HTMLDivElement>(null);
@@ -101,10 +103,14 @@ export function DynamicTasteHomeSections({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className={`group flex-shrink-0 flex items-center gap-3 w-[240px] sm:w-[280px] p-2.5 rounded-xl bg-[#131b2e]/80 hover:bg-[#1a253f] border transition-all duration-200 cursor-pointer snap-start ${
+                  className={`group flex-shrink-0 flex items-center gap-3 w-[240px] sm:w-[280px] p-2.5 rounded-xl transition-all duration-200 cursor-pointer snap-start ${
+                    isOverHero
+                      ? "bg-[#0c1424]/80 hover:bg-[#121c32]/95 backdrop-blur-md border border-white/15 hover:border-[#00e5ff]/50 shadow-lg shadow-black/40"
+                      : "bg-[#131b2e]/80 hover:bg-[#1a253f] border border-slate-800/80 hover:border-slate-700"
+                  } ${
                     isCurrent
-                      ? "border-[#00e5ff]/50 shadow-[0_0_15px_rgba(0,229,255,0.15)]"
-                      : "border-slate-800/80 hover:border-slate-700"
+                      ? "!border-[#00e5ff] shadow-[0_0_15px_rgba(0,229,255,0.25)]"
+                      : ""
                   }`}
                   role="button"
                   tabIndex={0}
@@ -222,7 +228,13 @@ export function DynamicTasteHomeSections({
                     }
                   }}
                 >
-                  <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-800/80 shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]">
+                  <div
+                    className={`relative aspect-square w-full rounded-xl overflow-hidden shadow-md group-hover:shadow-2xl transition-all duration-300 group-hover:scale-[1.03] ${
+                      isOverHero
+                        ? "bg-[#0c1424]/60 backdrop-blur-sm ring-1 ring-white/15 group-hover:ring-[#00e5ff]/60"
+                        : "bg-slate-800/80 ring-1 ring-slate-800/60"
+                    }`}
+                  >
                     <ImageWithFallback
                       src={track.coverUrl || "/albums/rockstar.webp"}
                       alt={track.title}

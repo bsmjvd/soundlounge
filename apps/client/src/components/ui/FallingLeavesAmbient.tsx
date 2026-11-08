@@ -6,20 +6,23 @@ interface FallingLeavesAmbientProps {
   enabled?: boolean;
 }
 
-type LeafSpecies = "maple" | "oak" | "ginkgo" | "birch" | "beech";
+export type MapleLeafStyle =
+  | "maple_open_gold"
+  | "maple_open_orange"
+  | "maple_folded_3d"
+  | "maple_side_glide";
 
-interface LeafSpritePair {
+interface MapleSpritePair {
   topside: HTMLCanvasElement;
   underside: HTMLCanvasElement;
 }
 
-interface LeafParticle {
+interface MapleParticle {
   x: number;
   y: number;
-  depth: number; // 0.25 (distant) to 1.0 (foreground)
+  depth: number; // 0.35 (background) to 1.0 (foreground)
   baseSize: number;
-  species: LeafSpecies;
-  spriteIndex: number;
+  style: MapleLeafStyle;
   pitch: number;
   roll: number;
   yaw: number;
@@ -37,298 +40,312 @@ interface LeafParticle {
 }
 
 /**
- * Procedural Botanical Canvas Rendering
- * Creates photorealistic leaf sprites with organic contours, multi-stop gradients,
- * translucent primary/secondary venation, and distinct topside/underside textures.
+ * Procedural Vector Autumn Maple Leaf Sprites
+ * Accurately reproduces the stylized autumn foliage from the reference illustrations:
+ * - 5-lobed Canadian Sugar Maple silhouette with sharp trident tips and deep sinuses
+ * - Distinct, curved dark espresso/charcoal stem (petiole) at the base
+ * - Delicate pale-cream/white radial venation branching to each lobe
+ * - 3D folded leaves with dual-tone curl shading (golden amber exterior with rich burnt-orange curl flap)
  */
-function createBotanicalSprite(species: LeafSpecies, isUnderside: boolean, variant: number): HTMLCanvasElement {
+function createMapleSprite(style: MapleLeafStyle, isUnderside: boolean): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
-  const size = 128;
+  const size = 256;
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
 
-  const r = size / 2;
   ctx.save();
-  ctx.translate(r, r);
+  // Center is at (128, 128)
+  const cx = 128;
+  const cy = 128;
+  ctx.translate(cx, cy);
 
-  switch (species) {
-    case "maple": {
-      // Japanese Red Maple (Momiji) - 5 serrated lobed foliage
-      const grad = ctx.createRadialGradient(0, r * 0.15, r * 0.1, 0, 0, r * 0.95);
-      if (isUnderside) {
-        grad.addColorStop(0, variant === 0 ? "#ea580c" : "#d97706");
-        grad.addColorStop(0.4, variant === 0 ? "#c2410c" : "#b45309");
-        grad.addColorStop(0.85, variant === 0 ? "#991b1b" : "#78350f");
-        grad.addColorStop(1, "#5b1414");
-      } else {
-        grad.addColorStop(0, variant === 0 ? "#f97316" : "#f59e0b");
-        grad.addColorStop(0.3, variant === 0 ? "#dc2626" : "#ea580c");
-        grad.addColorStop(0.7, variant === 0 ? "#991b1b" : "#b91c1c");
-        grad.addColorStop(1, "#450a0a");
-      }
+  // If underside, horizontally flip for authentic reverse perspective
+  if (isUnderside) {
+    ctx.scale(-1, 1);
+  }
 
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.72);
-      // Bottom left lobe
-      ctx.bezierCurveTo(-r * 0.25, r * 0.6, -r * 0.55, r * 0.5, -r * 0.75, r * 0.35);
-      ctx.bezierCurveTo(-r * 0.65, r * 0.25, -r * 0.5, r * 0.25, -r * 0.45, r * 0.2);
-      // Mid left lobe
-      ctx.bezierCurveTo(-r * 0.65, r * 0.1, -r * 0.85, -r * 0.1, -r * 0.9, -r * 0.25);
-      ctx.bezierCurveTo(-r * 0.75, -r * 0.25, -r * 0.55, -r * 0.15, -r * 0.45, -r * 0.1);
-      // Top left lobe
-      ctx.bezierCurveTo(-r * 0.6, -r * 0.35, -r * 0.65, -r * 0.65, -r * 0.6, -r * 0.8);
-      ctx.bezierCurveTo(-r * 0.45, -r * 0.65, -r * 0.3, -r * 0.45, -r * 0.2, -r * 0.4);
-      // Center top lobe (tallest)
-      ctx.bezierCurveTo(-r * 0.25, -r * 0.65, -r * 0.15, -r * 0.9, 0, -r * 0.98);
-      ctx.bezierCurveTo(r * 0.15, -r * 0.9, r * 0.25, -r * 0.65, r * 0.2, -r * 0.4);
-      // Top right lobe
-      ctx.bezierCurveTo(r * 0.3, -r * 0.45, r * 0.45, -r * 0.65, r * 0.6, -r * 0.8);
-      ctx.bezierCurveTo(r * 0.65, -r * 0.65, r * 0.6, -r * 0.35, r * 0.45, -r * 0.1);
-      // Mid right lobe
-      ctx.bezierCurveTo(r * 0.55, -r * 0.15, r * 0.75, -r * 0.25, r * 0.9, -r * 0.25);
-      ctx.bezierCurveTo(r * 0.85, -r * 0.1, r * 0.65, r * 0.1, r * 0.45, r * 0.2);
-      // Bottom right lobe
-      ctx.bezierCurveTo(r * 0.5, r * 0.25, r * 0.65, r * 0.25, r * 0.75, r * 0.35);
-      ctx.bezierCurveTo(r * 0.55, r * 0.5, r * 0.25, r * 0.6, 0, r * 0.72);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
+  // Draw stem at base: starts at (0, 60), curves gracefully downwards to (-20, 110)
+  ctx.beginPath();
+  ctx.moveTo(0, 60);
+  ctx.quadraticCurveTo(-14, 85, -22, 112);
+  ctx.strokeStyle = "#1c1917"; // Dark charcoal espresso
+  ctx.lineWidth = 4.2;
+  ctx.lineCap = "round";
+  ctx.stroke();
 
-      // Botanical delicate vein network
-      ctx.strokeStyle = isUnderside ? "rgba(254, 240, 138, 0.55)" : "rgba(254, 215, 170, 0.32)";
-      ctx.lineWidth = isUnderside ? 1.4 : 1.0;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.72);
-      ctx.lineTo(0, -r * 0.9);
-      ctx.moveTo(0, r * 0.3);
-      ctx.lineTo(-r * 0.55, -r * 0.7);
-      ctx.moveTo(0, r * 0.3);
-      ctx.lineTo(r * 0.55, -r * 0.7);
-      ctx.moveTo(0, r * 0.4);
-      ctx.lineTo(-r * 0.75, -r * 0.2);
-      ctx.moveTo(0, r * 0.4);
-      ctx.lineTo(r * 0.75, -r * 0.2);
-      ctx.moveTo(0, r * 0.5);
-      ctx.lineTo(-r * 0.6, r * 0.3);
-      ctx.moveTo(0, r * 0.5);
-      ctx.lineTo(r * 0.6, r * 0.3);
-      ctx.stroke();
+  if (style === "maple_folded_3d") {
+    // -------------------------------------------------------------------------
+    // Style: 3D Folded Maple Leaf (Signature IconScout curl)
+    // One half is golden-yellow; the folded curled flap is deep pumpkin orange
+    // -------------------------------------------------------------------------
 
-      // Petiole Stem
-      ctx.strokeStyle = "#5b21b6";
-      ctx.lineWidth = 2.0;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.7);
-      ctx.quadraticCurveTo(-r * 0.05, r * 0.85, -r * 0.08, r * 0.98);
-      ctx.stroke();
-      break;
+    // 1. Right / Center Blade (Luminous Golden Amber)
+    const goldGrad = ctx.createLinearGradient(-30, -70, 70, 60);
+    goldGrad.addColorStop(0, "#fde047"); // Bright yellow highlight
+    goldGrad.addColorStop(0.35, "#f59e0b"); // Warm amber
+    goldGrad.addColorStop(0.85, "#ea580c"); // Autumn orange at base
+    goldGrad.addColorStop(1, "#c2410c");
+
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    // Right basal lobe
+    ctx.bezierCurveTo(24, 55, 48, 50, 60, 40);
+    ctx.lineTo(54, 32);
+    ctx.bezierCurveTo(68, 25, 84, 15, 94, 2); // Right lateral tip
+    ctx.lineTo(82, -8);
+    // Right middle lobe
+    ctx.bezierCurveTo(70, -4, 54, -2, 44, -8);
+    ctx.bezierCurveTo(58, -26, 75, -45, 78, -58);
+    ctx.lineTo(65, -54);
+    ctx.bezierCurveTo(60, -68, 52, -78, 44, -84);
+    ctx.lineTo(38, -70);
+    // Central lobe right half
+    ctx.bezierCurveTo(32, -58, 24, -48, 18, -52);
+    ctx.bezierCurveTo(20, -72, 18, -88, 14, -100);
+    ctx.lineTo(6, -94);
+    ctx.bezierCurveTo(4, -108, 0, -118, 0, -120); // Peak
+    // Midline down
+    ctx.lineTo(0, 60);
+    ctx.closePath();
+    ctx.fillStyle = isUnderside ? "#d97706" : goldGrad;
+    ctx.fill();
+
+    // White delicate veins on the golden side
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    ctx.lineTo(0, -115); // Main midrib
+    ctx.moveTo(0, 45);
+    ctx.lineTo(76, -56); // Mid right
+    ctx.moveTo(0, 52);
+    ctx.lineTo(90, 4); // Basal right
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // Secondary vein twigs
+    ctx.beginPath();
+    ctx.moveTo(35, -5);
+    ctx.lineTo(52, -22);
+    ctx.moveTo(40, -50);
+    ctx.lineTo(44, -82);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 2. Left Curled Overlapping Flap (Deep Rich Pumpkin Orange)
+    const orangeGrad = ctx.createLinearGradient(0, -80, -70, 40);
+    orangeGrad.addColorStop(0, "#ea580c"); // Rich orange
+    orangeGrad.addColorStop(0.5, "#c2410c"); // Deep burnt orange
+    orangeGrad.addColorStop(1, "#9a3412"); // Russet shadow
+
+    // Crease drop shadow under the fold
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    ctx.lineTo(-4, -115);
+    ctx.lineTo(-24, -40);
+    ctx.lineTo(-65, 0);
+    ctx.lineTo(0, 60);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+    ctx.fill();
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    // Curled left flap profile
+    ctx.bezierCurveTo(-18, 55, -42, 45, -56, 32);
+    ctx.lineTo(-48, 24);
+    ctx.bezierCurveTo(-62, 16, -75, 4, -82, -10); // Left tip
+    ctx.lineTo(-70, -18);
+    ctx.bezierCurveTo(-58, -14, -44, -12, -35, -18);
+    ctx.bezierCurveTo(-46, -35, -58, -50, -60, -62);
+    ctx.lineTo(-50, -58);
+    ctx.bezierCurveTo(-45, -70, -38, -78, -32, -84);
+    ctx.lineTo(-26, -72);
+    ctx.bezierCurveTo(-20, -60, -14, -52, -10, -56);
+    ctx.bezierCurveTo(-12, -74, -10, -90, -8, -102);
+    ctx.lineTo(0, -120); // Join apex
+    ctx.closePath();
+    ctx.fillStyle = isUnderside ? goldGrad : orangeGrad;
+    ctx.fill();
+
+    // Delicate highlights on the fold crease
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    ctx.lineTo(0, -120);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  } else if (style === "maple_side_glide") {
+    // -------------------------------------------------------------------------
+    // Style: Side-Angle Drifting Maple Leaf
+    // Dynamic aerodynamic sweep in wind
+    // -------------------------------------------------------------------------
+    const sideGrad = ctx.createLinearGradient(-50, -80, 50, 60);
+    if (isUnderside) {
+      sideGrad.addColorStop(0, "#ea580c");
+      sideGrad.addColorStop(1, "#9a3412");
+    } else {
+      sideGrad.addColorStop(0, "#fde047");
+      sideGrad.addColorStop(0.4, "#f59e0b");
+      sideGrad.addColorStop(0.85, "#ea580c");
+      sideGrad.addColorStop(1, "#c2410c");
     }
 
-    case "oak": {
-      // Golden Scarlet Oak - sinuous lobed undulating margins
-      const grad = ctx.createLinearGradient(0, -r * 0.9, 0, r * 0.9);
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    ctx.bezierCurveTo(20, 48, 42, 38, 54, 25);
+    ctx.lineTo(46, 18);
+    ctx.bezierCurveTo(62, 10, 78, -2, 85, -18);
+    ctx.lineTo(72, -24);
+    ctx.bezierCurveTo(60, -20, 46, -18, 38, -24);
+    ctx.bezierCurveTo(52, -42, 68, -60, 72, -74);
+    ctx.lineTo(58, -68);
+    ctx.bezierCurveTo(52, -80, 42, -90, 32, -96);
+    ctx.lineTo(26, -82);
+    ctx.bezierCurveTo(18, -68, 12, -58, 8, -62);
+    ctx.bezierCurveTo(6, -82, 4, -98, 0, -114);
+    ctx.bezierCurveTo(-14, -85, -28, -60, -36, -35);
+    ctx.bezierCurveTo(-48, -22, -62, -8, -68, 8);
+    ctx.bezierCurveTo(-54, 25, -30, 45, 0, 60);
+    ctx.closePath();
+    ctx.fillStyle = sideGrad;
+    ctx.fill();
+
+    // Curved white vein
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    ctx.quadraticCurveTo(8, -20, 0, -110);
+    ctx.moveTo(4, 20);
+    ctx.lineTo(82, -16);
+    ctx.moveTo(6, -20);
+    ctx.lineTo(70, -72);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+  } else {
+    // -------------------------------------------------------------------------
+    // Style: Full Open Autumn Maple Leaf (Gold or Red-Orange)
+    // Textbook 5-lobed Sugar Maple with sharp serrations and radiant venation
+    // -------------------------------------------------------------------------
+    const isGold = style === "maple_open_gold";
+    const openGrad = ctx.createRadialGradient(0, 20, 10, 0, -20, 130);
+
+    if (isGold) {
       if (isUnderside) {
-        grad.addColorStop(0, "#d97706");
-        grad.addColorStop(0.5, "#b45309");
-        grad.addColorStop(1, "#78350f");
+        openGrad.addColorStop(0, "#fbbf24");
+        openGrad.addColorStop(0.5, "#f59e0b");
+        openGrad.addColorStop(0.9, "#d97706");
+        openGrad.addColorStop(1, "#b45309");
       } else {
-        grad.addColorStop(0, "#f59e0b");
-        grad.addColorStop(0.35, "#d97706");
-        grad.addColorStop(0.75, "#9a3412");
-        grad.addColorStop(1, "#451a03");
+        openGrad.addColorStop(0, "#fef08a"); // Sunny yellow center
+        openGrad.addColorStop(0.25, "#fde047");
+        openGrad.addColorStop(0.65, "#f59e0b"); // Golden amber
+        openGrad.addColorStop(0.9, "#ea580c"); // Autumn orange tips
+        openGrad.addColorStop(1, "#c2410c");
       }
-
-      ctx.beginPath();
-      ctx.moveTo(0, -r * 0.92);
-      ctx.bezierCurveTo(r * 0.25, -r * 0.85, r * 0.45, -r * 0.7, r * 0.35, -r * 0.55);
-      ctx.bezierCurveTo(r * 0.55, -r * 0.5, r * 0.65, -r * 0.25, r * 0.45, -r * 0.15);
-      ctx.bezierCurveTo(r * 0.6, -r * 0.05, r * 0.65, r * 0.2, r * 0.4, r * 0.35);
-      ctx.bezierCurveTo(r * 0.5, r * 0.45, r * 0.35, r * 0.65, 0, r * 0.75);
-      ctx.bezierCurveTo(-r * 0.35, r * 0.65, -r * 0.5, r * 0.45, -r * 0.4, r * 0.35);
-      ctx.bezierCurveTo(-r * 0.65, r * 0.2, -r * 0.6, -r * 0.05, -r * 0.45, -r * 0.15);
-      ctx.bezierCurveTo(-r * 0.65, -r * 0.25, -r * 0.55, -r * 0.5, -r * 0.35, -r * 0.55);
-      ctx.bezierCurveTo(-r * 0.45, -r * 0.7, -r * 0.25, -r * 0.85, 0, -r * 0.92);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // Veins
-      ctx.strokeStyle = isUnderside ? "rgba(254, 240, 138, 0.5)" : "rgba(254, 215, 170, 0.32)";
-      ctx.lineWidth = 1.1;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.75);
-      ctx.lineTo(0, -r * 0.85);
-      [-0.6, -0.35, -0.1, 0.15, 0.4].forEach((pos) => {
-        ctx.moveTo(0, r * pos);
-        ctx.quadraticCurveTo(r * 0.2, r * (pos - 0.1), r * 0.38, r * (pos - 0.15));
-        ctx.moveTo(0, r * pos);
-        ctx.quadraticCurveTo(-r * 0.2, r * (pos - 0.1), -r * 0.38, r * (pos - 0.15));
-      });
-      ctx.stroke();
-
-      // Stem
-      ctx.strokeStyle = "#451a03";
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.75);
-      ctx.lineTo(0, r * 0.95);
-      ctx.stroke();
-      break;
+    } else {
+      // Fiery Orange-Red Maple
+      if (isUnderside) {
+        openGrad.addColorStop(0, "#f97316");
+        openGrad.addColorStop(0.5, "#ea580c");
+        openGrad.addColorStop(0.9, "#c2410c");
+        openGrad.addColorStop(1, "#991b1b");
+      } else {
+        openGrad.addColorStop(0, "#fde047"); // Golden highlight at center
+        openGrad.addColorStop(0.25, "#fb923c"); // Bright orange
+        openGrad.addColorStop(0.6, "#ea580c"); // Rich vermilion
+        openGrad.addColorStop(0.88, "#dc2626"); // Scarlet flame
+        openGrad.addColorStop(1, "#7f1d1d"); // Deep wine border
+      }
     }
 
-    case "ginkgo": {
-      // Ginkgo Biloba - iconic fan with radiating parallel venation
-      const grad = ctx.createRadialGradient(0, r * 0.6, r * 0.1, 0, 0, r * 0.9);
-      if (isUnderside) {
-        grad.addColorStop(0, "#a3e635");
-        grad.addColorStop(0.35, "#eab308");
-        grad.addColorStop(0.8, "#ca8a04");
-        grad.addColorStop(1, "#a16207");
-      } else {
-        grad.addColorStop(0, "#84cc16");
-        grad.addColorStop(0.25, "#facc15");
-        grad.addColorStop(0.7, "#eab308");
-        grad.addColorStop(1, "#ca8a04");
-      }
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
 
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.6);
-      ctx.bezierCurveTo(-r * 0.4, r * 0.45, -r * 0.85, r * 0.1, -r * 0.9, -r * 0.3);
-      ctx.bezierCurveTo(-r * 0.8, -r * 0.65, -r * 0.4, -r * 0.85, -r * 0.08, -r * 0.7);
-      ctx.lineTo(0, -r * 0.5);
-      ctx.lineTo(r * 0.08, -r * 0.7);
-      ctx.bezierCurveTo(r * 0.4, -r * 0.85, r * 0.8, -r * 0.65, r * 0.9, -r * 0.3);
-      ctx.bezierCurveTo(r * 0.85, r * 0.1, r * 0.4, r * 0.45, 0, r * 0.6);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
+    // 1. Lower Left Lobe
+    ctx.bezierCurveTo(-22, 54, -44, 46, -58, 35);
+    ctx.lineTo(-50, 28);
+    ctx.bezierCurveTo(-65, 20, -80, 8, -90, -6); // Left lateral tip
+    ctx.lineTo(-78, -15);
 
-      // Radial striations
-      ctx.strokeStyle = isUnderside ? "rgba(254, 240, 138, 0.6)" : "rgba(234, 179, 8, 0.45)";
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      for (let angle = -65; angle <= 65; angle += 10) {
-        if (Math.abs(angle) < 4) continue;
-        const rad = (angle * Math.PI) / 180;
-        ctx.moveTo(0, r * 0.6);
-        ctx.quadraticCurveTo(
-          Math.sin(rad) * r * 0.5,
-          r * 0.6 - Math.cos(rad) * r * 0.6,
-          Math.sin(rad) * r * 0.88,
-          -Math.cos(rad) * r * 0.7
-        );
-      }
-      ctx.stroke();
+    // 2. Sinus to Mid Left Lobe
+    ctx.bezierCurveTo(-66, -11, -50, -8, -42, -14); // Deep sinus
+    ctx.bezierCurveTo(-56, -32, -72, -50, -78, -64);
+    ctx.lineTo(-65, -60);
+    ctx.bezierCurveTo(-60, -72, -52, -82, -44, -90); // Mid-left tooth
+    ctx.lineTo(-38, -76);
 
-      // Petiole Stem
-      ctx.strokeStyle = "#854d0e";
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.6);
-      ctx.quadraticCurveTo(r * 0.05, r * 0.8, 0, r * 0.98);
-      ctx.stroke();
-      break;
-    }
+    // 3. Sinus to Central Tallest Lobe
+    ctx.bezierCurveTo(-32, -62, -24, -52, -18, -56); // Deep notch
+    ctx.bezierCurveTo(-22, -75, -20, -96, -15, -108); // Center left tooth
+    ctx.lineTo(-6, -102);
+    ctx.bezierCurveTo(-4, -116, 0, -128, 0, -132); // Main Central Peak!
+    ctx.bezierCurveTo(0, -128, 4, -116, 6, -102);
+    ctx.lineTo(15, -108); // Center right tooth
+    ctx.bezierCurveTo(20, -96, 22, -75, 18, -56);
 
-    case "birch": {
-      // Quaking Aspen / Golden Birch - broad ovate heart shape with rapid quaking flutter
-      const grad = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r * 0.85);
-      if (isUnderside) {
-        grad.addColorStop(0, "#fde047");
-        grad.addColorStop(0.5, "#ca8a04");
-        grad.addColorStop(1, "#854d0e");
-      } else {
-        grad.addColorStop(0, "#fef08a");
-        grad.addColorStop(0.3, "#facc15");
-        grad.addColorStop(0.75, "#eab308");
-        grad.addColorStop(1, "#a16207");
-      }
+    // 4. Sinus to Mid Right Lobe
+    ctx.bezierCurveTo(24, -52, 32, -62, 38, -76);
+    ctx.lineTo(44, -90); // Mid-right tooth
+    ctx.bezierCurveTo(52, -82, 60, -72, 65, -60);
+    ctx.lineTo(78, -64);
+    ctx.bezierCurveTo(72, -50, 56, -32, 42, -14); // Deep sinus
 
-      ctx.beginPath();
-      ctx.moveTo(0, -r * 0.88);
-      ctx.bezierCurveTo(r * 0.55, -r * 0.65, r * 0.75, 0, r * 0.45, r * 0.45);
-      ctx.bezierCurveTo(r * 0.3, r * 0.6, r * 0.1, r * 0.68, 0, r * 0.65);
-      ctx.bezierCurveTo(-r * 0.1, r * 0.68, -r * 0.3, r * 0.6, -r * 0.45, r * 0.45);
-      ctx.bezierCurveTo(-r * 0.75, 0, -r * 0.55, -r * 0.65, 0, -r * 0.88);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
+    // 5. Sinus to Lower Right Lobe
+    ctx.bezierCurveTo(50, -8, 66, -11, 78, -15);
+    ctx.lineTo(90, -6); // Right lateral tip
+    ctx.bezierCurveTo(80, 8, 65, 20, 50, 28);
+    ctx.lineTo(58, 35);
+    ctx.bezierCurveTo(44, 46, 22, 54, 0, 60);
 
-      // Veins
-      ctx.strokeStyle = isUnderside ? "rgba(254, 240, 138, 0.6)" : "rgba(253, 224, 71, 0.4)";
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.65);
-      ctx.lineTo(0, -r * 0.82);
-      [-0.4, -0.15, 0.1, 0.35].forEach((pos) => {
-        ctx.moveTo(0, r * pos);
-        ctx.lineTo(r * 0.32, r * (pos - 0.18));
-        ctx.moveTo(0, r * pos);
-        ctx.lineTo(-r * 0.32, r * (pos - 0.18));
-      });
-      ctx.stroke();
+    ctx.closePath();
+    ctx.fillStyle = openGrad;
+    ctx.fill();
 
-      // Long flexible petiole stem
-      ctx.strokeStyle = "#713f12";
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.65);
-      ctx.quadraticCurveTo(-r * 0.08, r * 0.82, -r * 0.05, r * 0.98);
-      ctx.stroke();
-      break;
-    }
+    // Botanical delicate white branching venation
+    ctx.strokeStyle = isUnderside ? "rgba(254, 240, 138, 0.6)" : "rgba(255, 255, 255, 0.82)";
+    ctx.lineWidth = 1.9;
+    ctx.lineCap = "round";
 
-    case "beech":
-    default: {
-      // Crimson Beech / Sweetgum - rich wine/ruby elongated foliage
-      const grad = ctx.createLinearGradient(0, -r * 0.85, 0, r * 0.85);
-      if (isUnderside) {
-        grad.addColorStop(0, "#fb7185");
-        grad.addColorStop(0.4, "#e11d48");
-        grad.addColorStop(0.8, "#9f1239");
-        grad.addColorStop(1, "#4c0519");
-      } else {
-        grad.addColorStop(0, "#f43f5e");
-        grad.addColorStop(0.3, "#be123c");
-        grad.addColorStop(0.7, "#881337");
-        grad.addColorStop(1, "#4c0519");
-      }
+    // Main 5 Primary Veins
+    ctx.beginPath();
+    ctx.moveTo(0, 60);
+    ctx.lineTo(0, -125); // Center peak
+    ctx.moveTo(0, 48);
+    ctx.lineTo(-74, -62); // Mid-left
+    ctx.moveTo(0, 48);
+    ctx.lineTo(74, -62); // Mid-right
+    ctx.moveTo(0, 54);
+    ctx.lineTo(-86, -4); // Lower-left
+    ctx.moveTo(0, 54);
+    ctx.lineTo(86, -4); // Lower-right
+    ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(0, -r * 0.9);
-      ctx.bezierCurveTo(r * 0.5, -r * 0.6, r * 0.65, -r * 0.1, r * 0.5, r * 0.35);
-      ctx.bezierCurveTo(r * 0.4, r * 0.55, r * 0.2, r * 0.68, 0, r * 0.7);
-      ctx.bezierCurveTo(-r * 0.2, r * 0.68, -r * 0.4, r * 0.55, -r * 0.5, r * 0.35);
-      ctx.bezierCurveTo(-r * 0.65, -r * 0.1, -r * 0.5, -r * 0.6, 0, -r * 0.9);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // Veins
-      ctx.strokeStyle = isUnderside ? "rgba(254, 205, 211, 0.6)" : "rgba(254, 205, 211, 0.35)";
-      ctx.lineWidth = 1.1;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.7);
-      ctx.lineTo(0, -r * 0.85);
-      [-0.55, -0.3, -0.05, 0.2, 0.45].forEach((pos) => {
-        ctx.moveTo(0, r * pos);
-        ctx.lineTo(r * 0.35, r * (pos - 0.16));
-        ctx.moveTo(0, r * pos);
-        ctx.lineTo(-r * 0.35, r * (pos - 0.16));
-      });
-      ctx.stroke();
-
-      // Stem
-      ctx.strokeStyle = "#4c0519";
-      ctx.lineWidth = 2.0;
-      ctx.beginPath();
-      ctx.moveTo(0, r * 0.7);
-      ctx.lineTo(0, r * 0.95);
-      ctx.stroke();
-      break;
-    }
+    // Fine secondary branching twigs
+    ctx.strokeStyle = isUnderside ? "rgba(254, 240, 138, 0.4)" : "rgba(255, 255, 255, 0.52)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    // Center branch twigs
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-14, -18);
+    ctx.moveTo(0, -35);
+    ctx.lineTo(14, -54);
+    ctx.moveTo(0, -70);
+    ctx.lineTo(-14, -88);
+    // Left branch twigs
+    ctx.moveTo(-35, -5);
+    ctx.lineTo(-44, -30);
+    ctx.moveTo(-50, -38);
+    ctx.lineTo(-62, -50);
+    // Right branch twigs
+    ctx.moveTo(35, -5);
+    ctx.lineTo(44, -30);
+    ctx.moveTo(50, -38);
+    ctx.lineTo(62, -50);
+    ctx.stroke();
   }
 
   ctx.restore();
@@ -365,96 +382,96 @@ export function FallingLeavesAmbient({ enabled = true }: FallingLeavesAmbientPro
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    // Pre-render botanical sprite bank (both topside and underside)
-    const speciesList: LeafSpecies[] = ["maple", "oak", "ginkgo", "birch", "beech"];
-    const spriteBank: Record<LeafSpecies, LeafSpritePair[]> = {
-      maple: [
-        { topside: createBotanicalSprite("maple", false, 0), underside: createBotanicalSprite("maple", true, 0) },
-        { topside: createBotanicalSprite("maple", false, 1), underside: createBotanicalSprite("maple", true, 1) },
-      ],
-      oak: [
-        { topside: createBotanicalSprite("oak", false, 0), underside: createBotanicalSprite("oak", true, 0) },
-      ],
-      ginkgo: [
-        { topside: createBotanicalSprite("ginkgo", false, 0), underside: createBotanicalSprite("ginkgo", true, 0) },
-      ],
-      birch: [
-        { topside: createBotanicalSprite("birch", false, 0), underside: createBotanicalSprite("birch", true, 0) },
-      ],
-      beech: [
-        { topside: createBotanicalSprite("beech", false, 0), underside: createBotanicalSprite("beech", true, 0) },
-      ],
+    // Pre-render the 4 iconic Maple leaf styles (both topside and underside)
+    const styleList: MapleLeafStyle[] = [
+      "maple_open_gold",
+      "maple_open_orange",
+      "maple_folded_3d",
+      "maple_side_glide",
+    ];
+
+    const spriteBank: Record<MapleLeafStyle, MapleSpritePair> = {
+      maple_open_gold: {
+        topside: createMapleSprite("maple_open_gold", false),
+        underside: createMapleSprite("maple_open_gold", true),
+      },
+      maple_open_orange: {
+        topside: createMapleSprite("maple_open_orange", false),
+        underside: createMapleSprite("maple_open_orange", true),
+      },
+      maple_folded_3d: {
+        topside: createMapleSprite("maple_folded_3d", false),
+        underside: createMapleSprite("maple_folded_3d", true),
+      },
+      maple_side_glide: {
+        topside: createMapleSprite("maple_side_glide", false),
+        underside: createMapleSprite("maple_side_glide", true),
+      },
     };
 
     const isMobile = width < 768;
-    const particleCount = isMobile ? 22 : 36;
-    const particles: LeafParticle[] = [];
+    // Elegant, tranquil count: visible and magnificent, not a storm of tiny flecks
+    const particleCount = isMobile ? 14 : 22;
+    const particles: MapleParticle[] = [];
 
-    const initParticle = (p?: Partial<LeafParticle>, startRandomY: boolean = false): LeafParticle => {
-      const species = speciesList[Math.floor(Math.random() * speciesList.length)];
-      const pairs = spriteBank[species];
-      const spriteIndex = Math.floor(Math.random() * pairs.length);
-      const depth = 0.3 + Math.random() * 0.7; // 0.3 background, 1.0 foreground
+    const initParticle = (p?: Partial<MapleParticle>, startRandomY: boolean = false): MapleParticle => {
+      const style = styleList[Math.floor(Math.random() * styleList.length)];
+      const depth = 0.4 + Math.random() * 0.6; // 0.4 distant, 1.0 foreground
 
-      // Species-specific aerodynamics
-      let swayAmp = 1.2 + Math.random() * 1.6;
-      let pitchSpeed = 0.015 + Math.random() * 0.02;
-      let rollSpeed = 0.018 + Math.random() * 0.025;
-      let baseFallSpeed = 0.9 + Math.random() * 1.3;
+      // Natural aerodynamic parameters
+      let swayAmp = 1.3 + Math.random() * 1.5;
+      let pitchSpeed = 0.012 + Math.random() * 0.018;
+      let rollSpeed = 0.014 + Math.random() * 0.022;
+      let baseFallSpeed = 0.85 + Math.random() * 1.15;
 
-      if (species === "ginkgo" || species === "birch") {
-        // Lighter leaves flutter faster with wider drift
-        swayAmp *= 1.4;
-        pitchSpeed *= 1.3;
-        rollSpeed *= 1.4;
-        baseFallSpeed *= 0.85;
-      } else if (species === "oak") {
-        // Heavy oak leaves have higher inertia and slower tumble
-        swayAmp *= 0.85;
-        pitchSpeed *= 0.7;
-        rollSpeed *= 0.8;
-        baseFallSpeed *= 1.2;
+      if (style === "maple_folded_3d") {
+        // Folded leaves tumble with a slightly more pronounced helical sway
+        swayAmp *= 1.25;
+        pitchSpeed *= 1.15;
       }
+
+      // Base sizes: clearly visible maple leaves with stems and veins
+      // Desktop: 44px to 68px. Mobile: 32px to 48px.
+      const baseSize = isMobile ? 32 + Math.random() * 16 : 46 + Math.random() * 24;
 
       return {
         x: Math.random() * width,
-        y: startRandomY ? Math.random() * height : -60 - Math.random() * 100,
+        y: startRandomY ? Math.random() * height : -80 - Math.random() * 120,
         depth,
-        baseSize: isMobile ? 26 + Math.random() * 16 : 34 + Math.random() * 22,
-        species,
-        spriteIndex,
+        baseSize,
+        style,
         pitch: Math.random() * Math.PI * 2,
         roll: Math.random() * Math.PI * 2,
         yaw: Math.random() * Math.PI * 2,
         tilt: 0,
         pitchSpeed,
         rollSpeed,
-        yawSpeed: (Math.random() - 0.5) * 0.018,
+        yawSpeed: 0.008 + Math.random() * 0.014,
         swayPhase: Math.random() * Math.PI * 2,
-        swaySpeed: 0.015 + Math.random() * 0.02,
+        swaySpeed: 0.02 + Math.random() * 0.025,
         swayAmp,
         baseFallSpeed,
         vx: 0,
         vy: 0,
-        opacity: 0.7 + depth * 0.28,
+        opacity: 0.75 + Math.random() * 0.25,
         ...p,
       };
     };
 
+    // Initialize initial particles distributed across viewport
     for (let i = 0; i < particleCount; i++) {
       particles.push(initParticle({}, true));
     }
 
-    // Pointer wind interaction
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-      let clientX = -999;
-      let clientY = -999;
+      let clientX = 0;
+      let clientY = 0;
       if ("touches" in e && e.touches.length > 0) {
         clientX = e.touches[0].clientX;
         clientY = e.touches[0].clientY;
       } else if ("clientX" in e) {
-        clientX = e.clientX;
-        clientY = e.clientY;
+        clientX = (e as MouseEvent).clientX;
+        clientY = (e as MouseEvent).clientY;
       }
       pointerPosRef.current = { x: clientX, y: clientY, active: true };
     };
@@ -469,77 +486,70 @@ export function FallingLeavesAmbient({ enabled = true }: FallingLeavesAmbientPro
     window.addEventListener("touchend", handlePointerLeave);
 
     let lastTime = performance.now();
-    let globalWindTime = 0;
 
-    const renderLoop = (now: number) => {
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
-      lastTime = now;
-      globalWindTime += dt;
-
-      // Natural gusting wind harmonics (gentle breeze that ebbs and flows)
-      const windGust =
-        0.25 +
-        Math.sin(globalWindTime * 0.35) * 0.45 +
-        Math.cos(globalWindTime * 0.85) * 0.2 +
-        Math.sin(globalWindTime * 1.4) * 0.15;
+    const renderLoop = (time: number) => {
+      const dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
 
       ctx.clearRect(0, 0, width, height);
 
+      // Smooth ambient breeze oscillation
+      const windGust = Math.sin(time * 0.0006) * 0.5 + Math.cos(time * 0.0014) * 0.25;
       const pointer = pointerPosRef.current;
 
-      // Sort particles by depth so foreground leaves render on top of background leaves
-      particles.sort((a, b) => a.depth - b.depth);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
 
-      for (const p of particles) {
-        // Aerodynamic flight angles
+        // 3D Rotational physics
         p.pitch += p.pitchSpeed;
         p.roll += p.rollSpeed;
         p.yaw += p.yawSpeed;
         p.swayPhase += p.swaySpeed;
 
-        // Lift factor: flat leaves encounter air resistance and glide slower; vertical leaves slice down faster
+        // Aerodynamic lift: flat leaves glide slower, vertical leaves cut downward faster
         const liftFactor = 0.55 + 0.45 * Math.abs(Math.sin(p.pitch));
         const gravity = p.baseFallSpeed * (0.6 + 0.5 * p.depth) * liftFactor * 42 * dt;
 
-        // Lateral sway with bank tilt
-        const swayForce = Math.cos(p.swayPhase) * p.swayAmp * 24 * dt;
-        const totalWind = (windGust * 28 + swayForce) * p.depth * dt;
+        // Lateral breeze & sway
+        const swayForce = Math.cos(p.swayPhase) * p.swayAmp * 26 * dt;
+        const totalWind = (windGust * 32 + swayForce) * p.depth * dt;
 
         p.y += gravity + p.vy;
         p.x += totalWind + p.vx;
 
-        // Bank tilt: leaf tilts in the direction of its lateral velocity (like a real glider)
-        p.tilt = (totalWind / (gravity + 0.1)) * 0.4;
+        // Bank tilt: leaf naturally leans into the direction of drift
+        p.tilt = (totalWind / (gravity + 0.1)) * 0.38;
 
-        // Interactive cursor breeze impulse
+        // Interactive air wake when pointer passes near
         if (pointer.active) {
           const dx = p.x - pointer.x;
           const dy = p.y - pointer.y;
           const distSq = dx * dx + dy * dy;
-          const maxDist = 130;
+          const maxDist = 140;
           if (distSq < maxDist * maxDist && distSq > 4) {
             const dist = Math.sqrt(distSq);
-            const force = (1 - dist / maxDist) * 3.5;
+            const force = (1 - dist / maxDist) * 3.8;
             p.vx += (dx / dist) * force;
             p.vy += (dy / dist) * force * 0.5;
             p.rollSpeed += (Math.random() - 0.5) * 0.08;
           }
         }
 
-        // Dampen transient velocities
+        // Dampen transient impulses
         p.vx *= 0.92;
         p.vy *= 0.92;
 
-        // 3D Projection & Aspect Ratio
+        // 3D Perspective Projection
         const scaleX = Math.cos(p.roll);
         const scaleY = Math.cos(p.pitch);
         const isUnderside = scaleX < 0;
 
-        const effectiveScaleX = Math.abs(scaleX);
-        const effectiveScaleY = 0.45 + 0.55 * Math.abs(scaleY);
+        // Keep leaves visible without collapsing to needle-thin lines
+        const effectiveScaleX = 0.35 + 0.65 * Math.abs(scaleX);
+        const effectiveScaleY = 0.5 + 0.5 * Math.abs(scaleY);
 
-        const currentSize = p.baseSize * (0.55 + 0.55 * p.depth);
-        const spritePair = spriteBank[p.species][p.spriteIndex];
+        const currentSize = p.baseSize * (0.65 + 0.45 * p.depth);
+        const spritePair = spriteBank[p.style];
         const activeSprite = isUnderside ? spritePair.underside : spritePair.topside;
 
         ctx.save();
@@ -547,24 +557,24 @@ export function FallingLeavesAmbient({ enabled = true }: FallingLeavesAmbientPro
         ctx.rotate(p.yaw + p.tilt);
         ctx.scale(effectiveScaleX, effectiveScaleY);
 
-        // Soft natural drop shadow for foreground foliage
-        if (p.depth > 0.65) {
-          ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
-          ctx.shadowBlur = 6 * p.depth;
-          ctx.shadowOffsetY = 3 * p.depth;
+        // Soft ambient shadow for foreground foliage
+        if (p.depth > 0.6) {
+          ctx.shadowColor = "rgba(0, 0, 0, 0.38)";
+          ctx.shadowBlur = 8 * p.depth;
+          ctx.shadowOffsetY = 4 * p.depth;
         }
 
-        ctx.globalAlpha = p.opacity * (isUnderside ? 0.92 : 1.0);
+        ctx.globalAlpha = p.opacity * (isUnderside ? 0.94 : 1.0);
         ctx.drawImage(activeSprite, -currentSize / 2, -currentSize / 2, currentSize, currentSize);
         ctx.restore();
 
-        // Screen boundary wrapping
-        if (p.y > height + 60) {
-          Object.assign(p, initParticle({ y: -50, x: Math.random() * width }, false));
-        } else if (p.x < -60) {
-          p.x = width + 50;
-        } else if (p.x > width + 60) {
-          p.x = -50;
+        // Wrap around screen boundaries
+        if (p.y > height + 80) {
+          Object.assign(p, initParticle({ y: -70, x: Math.random() * width }, false));
+        } else if (p.x < -80) {
+          p.x = width + 70;
+        } else if (p.x > width + 80) {
+          p.x = -70;
         }
       }
 
@@ -602,12 +612,13 @@ export function FallingLeavesAmbient({ enabled = true }: FallingLeavesAmbientPro
     };
   }, [enabled]);
 
-  if (!enabled) return null;
-
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-[35] w-full h-full select-none"
+      className={`fixed inset-0 pointer-events-none z-[15] transition-opacity duration-700 ${
+        enabled ? "opacity-100" : "opacity-0"
+      }`}
+      style={{ willChange: "transform" }}
       aria-hidden="true"
     />
   );
