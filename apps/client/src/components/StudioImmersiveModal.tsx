@@ -10,6 +10,7 @@ import {
   Volume2,
   VolumeX,
   Minimize2,
+  Maximize2,
   Radio,
   Music2,
   Disc,
@@ -78,21 +79,42 @@ export function StudioImmersiveModal({
     }
   };
 
+  const handleExitStudio = () => {
+    hapticLight();
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+    onClose();
+  };
+
   const handleModalTouchEnd = () => {
     if (dragY > 85) {
-      hapticLight();
-      onClose();
+      handleExitStudio();
     }
     setDragY(0);
     setIsDragging(false);
     touchStartY.current = null;
   };
 
+  // Lock background window and body scrolling completely while Fullscreen Studio is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+      };
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
       if (e.key === "Escape") {
-        onClose();
+        handleExitStudio();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -163,11 +185,12 @@ export function StudioImmersiveModal({
       onTouchStart={handleModalTouchStart}
       onTouchMove={handleModalTouchMove}
       onTouchEnd={handleModalTouchEnd}
+      onWheel={(e) => e.stopPropagation()}
       style={{
         transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
         transition: isDragging ? "none" : "transform 0.28s cubic-bezier(0.25, 0.9, 0.3, 1)",
       }}
-      className="fixed inset-0 z-50 bg-[#07090e] text-[#f8fafc] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300 overscroll-contain"
+      className="fixed inset-0 z-[200] w-full h-full h-dvh max-h-screen bg-[#07090e] text-[#f8fafc] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300 overscroll-none"
     >
       {/* iOS Modal Pull-Down Grabber Pill */}
       <div className="sm:hidden w-full flex justify-center pt-2 pb-0.5 z-20 cursor-grab active:cursor-grabbing">
@@ -247,29 +270,47 @@ export function StudioImmersiveModal({
           </button>
         </div>
 
-        <button
-          onClick={() => {
-            hapticLight();
-            onClose();
-          }}
-          aria-label="Exit Studio Mode"
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold backdrop-blur-xl transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl min-h-[40px]"
-        >
-          <Minimize2 className="w-4 h-4" />
-          <span className="hidden xs:inline">Exit Studio</span>
-          <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-gray-400">
-            ESC
-          </kbd>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Native Browser Fullscreen Toggle */}
+          <button
+            onClick={() => {
+              hapticLight();
+              if (typeof document !== "undefined") {
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen?.().catch(() => {});
+                } else {
+                  document.exitFullscreen?.().catch(() => {});
+                }
+              }
+            }}
+            aria-label="Toggle Browser Fullscreen"
+            title="Toggle Browser Fullscreen (F11)"
+            className="hidden sm:flex items-center justify-center w-9 h-9 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handleExitStudio}
+            aria-label="Exit Studio Mode"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold backdrop-blur-xl transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl min-h-[40px]"
+          >
+            <Minimize2 className="w-4 h-4" />
+            <span className="hidden xs:inline">Exit Studio</span>
+            <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-gray-400">
+              ESC
+            </kbd>
+          </button>
+        </div>
       </div>
 
       {/* 3. Center Stage: Spinning Vinyl & High-Res Album Cover */}
-      <div className="relative z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 py-2 sm:py-4 flex flex-col items-center justify-center text-center space-y-4 sm:space-y-6 flex-1">
+      <div className="relative z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 py-1 sm:py-3 flex flex-col items-center justify-center text-center space-y-3 sm:space-y-4 flex-1 min-h-0">
         {/* Centerpiece: Audiophile Gatefold Sleeve, Slideout Vinyl Record & Tonearm */}
-        <div className="relative flex items-center justify-center py-2 sm:py-4 overflow-visible">
+        <div className="relative flex items-center justify-center py-1 sm:py-2 overflow-visible">
           <div
-            className={`relative w-48 h-48 xs:w-56 xs:h-56 sm:w-80 sm:h-80 md:w-88 md:h-88 lg:w-96 lg:h-96 flex items-center justify-center transition-transform duration-1000 ease-out ${
-              isPlaying ? "-translate-x-4 sm:-translate-x-12 md:-translate-x-16" : "translate-x-0"
+            className={`relative w-40 h-40 xs:w-48 xs:h-48 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 max-h-[36vh] max-w-[36vh] aspect-square flex items-center justify-center transition-transform duration-1000 ease-out ${
+              isPlaying ? "-translate-x-3 sm:-translate-x-10 md:-translate-x-14" : "translate-x-0"
             }`}
           >
             {/* 1. The Audiophile Vinyl LP Record (emerges from jacket slot on the right) */}
@@ -382,21 +423,21 @@ export function StudioImmersiveModal({
         </div>
 
         {/* Track Title & Artist Metadata with Real Audio Spectrum Visualizer */}
-        <div className="space-y-3 max-w-2xl flex flex-col items-center">
+        <div className="space-y-2 max-w-2xl flex flex-col items-center">
           {/* Responsive Audio Frequency Spectrum Visualizer */}
           <AudioFrequencyVisualizer isPlaying={isPlaying} />
 
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-xl line-clamp-1">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-xl line-clamp-1">
             {currentTrack.title}
           </h1>
-          <p className="text-base sm:text-xl text-gray-300 font-medium drop-shadow-md line-clamp-1">
+          <p className="text-sm sm:text-lg text-gray-300 font-medium drop-shadow-md line-clamp-1">
             {currentTrack.artist}
           </p>
         </div>
       </div>
 
       {/* 4. Bottom Controls & Scrubber */}
-      <div className="relative z-10 max-w-4xl w-full mx-auto px-4 sm:px-8 py-3 sm:py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4 sm:space-y-5">
+      <div className="relative z-10 max-w-4xl w-full mx-auto px-4 sm:px-8 py-2 sm:py-4 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-2.5 sm:space-y-3.5">
         {/* Full-width Timeline Scrubber */}
         <div className="space-y-1.5 sm:space-y-2">
           <div
@@ -451,7 +492,7 @@ export function StudioImmersiveModal({
                 onTogglePlay();
               }}
               aria-label={isPlaying ? "Pause Track" : "Play Track"}
-              className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
             >
               {isPlaying ? (
                 <Pause className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
