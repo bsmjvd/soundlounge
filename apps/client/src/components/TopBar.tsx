@@ -263,10 +263,10 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-[100] w-full bg-transparent px-4 sm:px-8 py-3.5 transition-colors">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left: Mobile Trigger & Top Navigation Tabs: DISCOVER, MY LIBRARY, RADIO */}
-        <div className="flex items-center gap-6">
+    <header className="sticky top-0 z-[100] w-full bg-transparent px-3 sm:px-8 py-2.5 sm:py-3.5 transition-colors">
+      <div className="flex items-center justify-between gap-2 sm:gap-4">
+        {/* Left: Mobile Trigger & Desktop Navigation Tabs */}
+        <div className="flex items-center gap-2 sm:gap-6 flex-shrink-0">
           {onToggleMobileMenu && (
             <button
               onClick={() => {
@@ -280,7 +280,7 @@ export function TopBar({
             </button>
           )}
 
-          <nav className="flex items-center gap-6 sm:gap-8">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
             <button
               onClick={() => {
                 hapticLight();
@@ -327,18 +327,18 @@ export function TopBar({
           <SyncHealthBadge pingMs={pingMs} mode={mode} className="hidden md:inline-flex" />
         </div>
 
-        {/* Center/Right: Pill Search Input + Dropdown */}
-        <div className="flex items-center gap-4 flex-1 justify-end max-w-lg">
-          <div className="relative w-full max-w-xs sm:max-w-sm">
+        {/* Center/Right: Fluid Responsive Pill Search Input + Dropdown */}
+        <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end min-w-0 max-w-full md:max-w-md lg:max-w-lg">
+          <div className="relative w-full min-w-0">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <Search className="w-4 h-4" />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
 
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search artist, albums..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -347,10 +347,10 @@ export function TopBar({
                 onFocus={() => {
                   setIsDropdownOpen(true);
                 }}
-                className="w-full h-9 bg-slate-800/60 hover:bg-slate-800 focus:bg-slate-800/90 border border-slate-700/60 focus:border-[#00e5ff] rounded-full pl-9 pr-16 text-xs text-white placeholder-slate-400 outline-none transition-all shadow-inner"
+                className="w-full h-8.5 sm:h-9 bg-slate-800/60 hover:bg-slate-800 focus:bg-slate-800/90 border border-slate-700/60 focus:border-[#00e5ff] rounded-full pl-8 sm:pl-9 pr-8 sm:pr-14 text-xs text-white placeholder-slate-400 outline-none transition-all shadow-inner"
               />
 
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                 {searchQuery && (
                   <button
                     type="button"
@@ -369,11 +369,11 @@ export function TopBar({
               </div>
             </form>
 
-            {/* Instant Search Results & Recents Dropdown */}
+            {/* Instant Search Results Dropdown - Fixed full-width on mobile, absolute on desktop */}
             {isDropdownOpen && (
               <div
                 ref={dropdownRef}
-                className="absolute left-0 right-0 top-full mt-2 bg-[#0c121e] border border-[#1b273d] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden z-[120] max-h-[70vh] flex flex-col"
+                className="fixed inset-x-3 top-13 md:absolute md:inset-x-0 md:top-full md:mt-2 bg-[#0c121e] border border-[#1b273d] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden z-[120] max-h-[75vh] flex flex-col"
               >
                 {/* 1. Category Filter Segmented Chips (Visible when searching) */}
                 {searchQuery.trim().length > 0 && (
@@ -598,7 +598,7 @@ export function TopBar({
           </div>
 
           {/* User Profile Avatar with subtle cyan halo (matching reference image) */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Seasonal Autumn Leaves Ambient Toggle */}
             {onToggleLeaves && (
               <button
