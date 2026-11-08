@@ -350,7 +350,7 @@ export class SoloPlayer {
 
     if (!playUrl || playUrl.trim() === "" || playUrl === "undefined") {
       if (directVideoId) {
-        playUrl = `/api/stream/youtube?id=${directVideoId}`;
+        playUrl = `/api/stream/youtube?id=${directVideoId}&title=${encodeURIComponent(track.title || "")}&artist=${encodeURIComponent(track.artist || "")}`;
       } else if (track.title) {
         playUrl = `/api/stream/youtube?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist || "")}`;
       }
@@ -404,7 +404,6 @@ export class SoloPlayer {
 
       if (currentSrc !== targetUrl) {
         this.audioElement.src = playUrl;
-        this.audioElement.load();
       }
 
       if (positionMs > 0) {

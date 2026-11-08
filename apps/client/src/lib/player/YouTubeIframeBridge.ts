@@ -180,6 +180,14 @@ export class YouTubeIframeBridge {
         events: {
           onReady: () => {
             this.isReady = true;
+            try {
+              const iframe =
+                document.querySelector("#soundlounge-yt-bridge iframe") ||
+                document.getElementById("soundlounge-yt-bridge");
+              if (iframe && "setAttribute" in iframe) {
+                iframe.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture");
+              }
+            } catch {}
             this.setVolume(this.volume);
             if (this.pendingVideoId) {
               const vid = this.pendingVideoId;
