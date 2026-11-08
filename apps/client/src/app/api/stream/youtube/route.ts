@@ -195,10 +195,11 @@ async function fallbackSaavnMatch(title: string, artist?: string): Promise<Cache
     const songs = data?.songs?.data || [];
     const targetNorm = norm(cleanTitle);
 
-    // Verify title matches to prevent playing unrelated BGM or wrong songs
+    // Strict title match to prevent playing unrelated BGM, rap covers, or wrong songs
     const match = songs.find((s: { title?: string }) => {
-      const sNorm = norm(s.title || "");
-      return sNorm.includes(targetNorm) || targetNorm.includes(sNorm);
+      const rawSTitle = (s.title || "").replace(/&amp;/g, "&").replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "").trim();
+      const sNorm = norm(rawSTitle);
+      return sNorm === targetNorm;
     });
 
     if (!match || !match.id) return null;

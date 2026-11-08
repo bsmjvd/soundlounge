@@ -110,26 +110,81 @@ export class YouTubeIframeBridge {
   }
 
   /**
-   * Loads the YouTube IFrame API script tag once and initializes the hidden container
+   * Loads the YouTube IFrame API script tag once and initializes the player dock
    */
   public initIframeApi(): void {
     if (typeof window === "undefined" || typeof document === "undefined") return;
     if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") return;
 
     // Check if player container already exists
-    let container = document.getElementById("soundlounge-yt-bridge");
+    let container = document.getElementById("soundlounge-yt-dock");
     if (!container) {
       container = document.createElement("div");
-      container.id = "soundlounge-yt-bridge";
-      // 200x200 positioned fixed at bottom with 0.001 opacity - satisfies YouTube embed policy and browser audio subsystems
+      container.id = "soundlounge-yt-dock";
+      const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
       container.style.position = "fixed";
-      container.style.bottom = "0px";
-      container.style.right = "0px";
-      container.style.width = "200px";
-      container.style.height = "200px";
-      container.style.opacity = "0.001";
-      container.style.pointerEvents = "none";
-      container.style.zIndex = "-1";
+      container.style.bottom = isMobile ? "76px" : "88px";
+      container.style.right = isMobile ? "12px" : "24px";
+      container.style.width = isMobile ? "160px" : "260px";
+      container.style.height = isMobile ? "90px" : "146px";
+      container.style.borderRadius = "12px";
+      container.style.overflow = "hidden";
+      container.style.boxShadow = "0 12px 36px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,229,255,0.3)";
+      container.style.zIndex = "45";
+      container.style.backgroundColor = "#090e18";
+      container.style.transition = "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)";
+      container.style.opacity = "1";
+      container.style.pointerEvents = "auto";
+
+      const playerTarget = document.createElement("div");
+      playerTarget.id = "soundlounge-yt-player";
+      playerTarget.style.width = "100%";
+      playerTarget.style.height = "100%";
+      container.appendChild(playerTarget);
+
+      // Mini top bar with status indicator & minimize toggle
+      const header = document.createElement("div");
+      header.id = "soundlounge-yt-dock-header";
+      header.style.position = "absolute";
+      header.style.top = "0px";
+      header.style.left = "0px";
+      header.style.right = "0px";
+      header.style.height = "24px";
+      header.style.backgroundColor = "rgba(9, 14, 24, 0.85)";
+      header.style.backdropFilter = "blur(8px)";
+      header.style.display = "flex";
+      header.style.alignItems = "center";
+      header.style.justifyContent = "space-between";
+      header.style.padding = "0 8px";
+      header.style.zIndex = "10";
+      header.style.fontSize = "11px";
+      header.style.color = "#94a3b8";
+      header.style.pointerEvents = "auto";
+      header.style.userSelect = "none";
+
+      const titleSpan = document.createElement("span");
+      titleSpan.innerHTML =
+        '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#00e5ff;margin-right:6px;box-shadow:0 0 8px #00e5ff;"></span>Live Video';
+      header.appendChild(titleSpan);
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.innerHTML = "−";
+      toggleBtn.title = "Toggle Video Size";
+      toggleBtn.style.background = "transparent";
+      toggleBtn.style.border = "none";
+      toggleBtn.style.color = "#94a3b8";
+      toggleBtn.style.cursor = "pointer";
+      toggleBtn.style.fontSize = "16px";
+      toggleBtn.style.lineHeight = "1";
+      toggleBtn.style.padding = "0 4px";
+      toggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.toggleDockMinimized();
+      };
+      header.appendChild(toggleBtn);
+
+      container.appendChild(header);
+
       try {
         document.body.appendChild(container);
       } catch {}
@@ -158,14 +213,33 @@ export class YouTubeIframeBridge {
     }
   }
 
+  public toggleDockMinimized(): void {
+    if (typeof document === "undefined") return;
+    const container = document.getElementById("soundlounge-yt-dock");
+    if (!container) return;
+    const isMinimized = container.getAttribute("data-minimized") === "true";
+    const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+    if (isMinimized) {
+      container.setAttribute("data-minimized", "false");
+      container.style.width = isMobile ? "160px" : "260px";
+      container.style.height = isMobile ? "90px" : "146px";
+      container.style.opacity = "1";
+    } else {
+      container.setAttribute("data-minimized", "true");
+      container.style.width = isMobile ? "96px" : "120px";
+      container.style.height = "26px";
+      container.style.opacity = "0.95";
+    }
+  }
+
   private createPlayer(): void {
     if (typeof window === "undefined" || !window.YT || !window.YT.Player) return;
     if (this.player) return;
 
     try {
-      this.player = new window.YT.Player("soundlounge-yt-bridge", {
-        width: "200",
-        height: "200",
+      this.player = new window.YT.Player("soundlounge-yt-player", {
+        width: "100%",
+        height: "100%",
         playerVars: {
           autoplay: 1,
           controls: 0,
@@ -182,8 +256,8 @@ export class YouTubeIframeBridge {
             this.isReady = true;
             try {
               const iframe =
-                document.querySelector("#soundlounge-yt-bridge iframe") ||
-                document.getElementById("soundlounge-yt-bridge");
+                document.querySelector("#soundlounge-yt-dock iframe") ||
+                document.getElementById("soundlounge-yt-player");
               if (iframe && "setAttribute" in iframe) {
                 iframe.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture");
               }
@@ -409,6 +483,7 @@ export class YouTubeIframeBridge {
     }
 
     // 4. Query /api/search for exact track
+    if (typeof window === "undefined") return null;
     const query = `${track.title} ${track.artist || ""}`.trim();
     if (!query) return null;
 
@@ -454,8 +529,8 @@ export class YouTubeIframeBridge {
       }
     } catch {}
 
-    // Check direct /stream/youtube/VIDEO_ID or /watch?v=VIDEO_ID or /embed/VIDEO_ID
-    const streamMatch = trackIdOrUrl.match(/(?:\/stream\/youtube\/|v=|\/embed\/)([a-zA-Z0-9_-]{11})/);
+    // Check direct /stream/youtube/VIDEO_ID or /watch?v=VIDEO_ID or /embed/VIDEO_ID or youtu.be/VIDEO_ID
+    const streamMatch = trackIdOrUrl.match(/(?:\/stream\/youtube\/|v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
     if (streamMatch) return streamMatch[1];
 
     // Check clean yt_ prefix
