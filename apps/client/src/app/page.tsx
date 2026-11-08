@@ -527,24 +527,39 @@ export default function SoundloungeApp() {
         <div className="flex-1 min-w-0 flex flex-col justify-between pb-28">
           <div>
             {isDiscoverHome ? (
-              /* SEAMLESS FULL-BLEED DISCOVER STAGE (TopBar + Flume Spotlight Hero) */
-              <div className="relative w-full overflow-hidden min-h-[340px] sm:min-h-[380px] bg-gradient-to-r from-[#175d69] via-[#103a4c] to-[#0c192c]">
-                {/* Ambient glowing atmosphere matching reference design */}
-                <div className="absolute top-0 left-0 w-[640px] h-full bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#187280_40%,transparent_75%)] opacity-35 pointer-events-none z-[1]" />
-                <div className="absolute -top-10 right-0 w-[680px] h-full bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-40 pointer-events-none z-[1]" />
+              /* SEAMLESS FULL-BLEED DISCOVER STAGE (TopBar + Hero + Taste Sections) */
+              <div className="relative w-full overflow-hidden min-h-[340px] sm:min-h-[380px] bg-[#060b13]">
+                {/* 1. Ambient Blurred Full-Bleed Color Wash reflecting the current spotlight artwork */}
+                <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-25">
+                  <img
+                    key={`ambient-${currentSpotlight.id}`}
+                    src={currentSpotlight.heroImageUrl}
+                    alt=""
+                    className="w-full h-full object-cover object-center blur-3xl scale-110 select-none animate-in fade-in duration-1000"
+                  />
+                </div>
 
-                {/* THE HERO ARTWORK / ALBUM COVER FILLED SEAMLESSLY IN THE BACKGROUND */}
-                <div className="absolute top-0 right-0 bottom-0 w-[58%] sm:w-[52%] lg:w-[48%] pointer-events-none z-0 overflow-hidden flex items-start justify-end">
+                {/* 2. Deep luxury gradient backdrop transition */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0e2736]/80 via-[#0a1524]/90 to-[#060b13] pointer-events-none z-[1]" />
+
+                {/* 3. Glowing cyan/teal atmospheric spotlight at top left behind title and controls */}
+                <div className="absolute top-0 left-0 w-[680px] h-[480px] bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#175d69_45%,transparent_75%)] opacity-30 pointer-events-none z-[2]" />
+                <div className="absolute -top-10 right-0 w-[680px] h-[520px] bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-35 pointer-events-none z-[2]" />
+
+                {/* 4. THE HERO ARTWORK / ALBUM COVER NATURALLY STRETCHING DOWN BEHIND JUMP BACK IN & TASTE SECTIONS */}
+                <div className="absolute top-0 right-0 bottom-0 w-[68%] sm:w-[60%] lg:w-[54%] max-w-6xl pointer-events-none z-[3] overflow-hidden flex items-start justify-end">
                   <img
                     key={currentSpotlight.id}
                     src={currentSpotlight.heroImageUrl}
                     alt={currentSpotlight.title}
-                    className="w-full h-full object-cover object-top sm:object-[center_top] select-none animate-in fade-in duration-700 [mask-image:linear-gradient(to_left,black_60%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_60%,transparent_100%)]"
+                    className="w-full h-full object-cover object-top sm:object-[75%_top] select-none animate-in fade-in duration-700 [mask-image:linear-gradient(to_left,black_50%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_50%,transparent_100%)]"
                   />
+                  {/* Subtle vertical vignette overlay ensuring frosted glass cards and typography pop with crystalline contrast */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#060b13]/35 to-[#060b13]/90" />
                 </div>
 
-                {/* Ambient bottom-edge smooth gradient fade into main content */}
-                <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-b from-transparent via-[#0e1422]/60 to-[#0e1422] pointer-events-none z-10" />
+                {/* 5. Ambient bottom-edge smooth gradient fade into main content */}
+                <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-b from-transparent via-[#060b13]/80 to-[#060b13] pointer-events-none z-10" />
 
                 {/* TopBar sitting seamlessly over the hero stage */}
                 <div className="relative z-20">
