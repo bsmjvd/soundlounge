@@ -120,11 +120,16 @@ async function resolveVideoId(
 /**
  * Extracts high-fidelity audio format from YouTube using VisionOS / Tv clients
  */
+let lastExtractionError = "";
+
 async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat | null> {
   try {
     const info = await ytdl.getInfo(videoId);
     const audioFormats = info.formats.filter((f) => f.hasAudio && !f.hasVideo && Boolean(f.url));
-    if (audioFormats.length === 0) return null;
+    if (audioFormats.length === 0) {
+      lastExtractionError = `No audio formats with direct URL found for ${videoId} (total formats: ${info.formats.length})`;
+      return null;
+    }
 
     // Prefer AAC / MP4 (itag 140) for universal cross-platform browser support, fallback to Opus / WebM
     const mp4Formats = audioFormats.filter((f) => f.mimeType && f.mimeType.includes("mp4"));
@@ -133,7 +138,10 @@ async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat 
     );
 
     const chosen = sortedFormats[0];
-    if (!chosen || !chosen.url) return null;
+    if (!chosen || !chosen.url) {
+      lastExtractionError = "Chosen format had no URL";
+      return null;
+    }
 
     let expireMs = NaN;
     try {
@@ -149,8 +157,10 @@ async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat 
       contentLength: chosen.contentLength || undefined,
       expiresAt,
     };
-  } catch (err) {
-    console.warn(`ytdl extraction failed for ${videoId}:`, err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    lastExtractionError = msg;
+    console.warn(`ytdl extraction failed for ${videoId}:`, msg);
     return null;
   }
 }
@@ -275,6 +285,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(
       JSON.stringify({
         error: "Direct audio stream could not be extracted",
+        details: lastExtractionError,
         track: { id: rawVideoId, title, artist, query },
       }),
       {
