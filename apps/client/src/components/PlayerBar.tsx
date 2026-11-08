@@ -19,6 +19,7 @@ import {
 import type { Track } from "@soundlounge/shared";
 import type { PlaybackMode } from "../lib/player";
 import { TrackArtwork } from "./TrackArtwork";
+import { hapticLight, hapticMedium } from "../lib/haptics";
 
 interface PlayerBarProps {
   currentTrack: Track | null;
@@ -67,8 +68,42 @@ export function PlayerBar({
   const [hoverSeekPos, setHoverSeekPos] = useState<number | null>(null);
   const [hoverSeekLeft, setHoverSeekLeft] = useState<number>(0);
   const trackBarRef = React.useRef<HTMLDivElement>(null);
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLElement>) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = touchStartX.current - e.changedTouches[0].clientX;
+    const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+
+    // Horizontal swipe on mini player (Apple Music iOS gesture)
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX > 0) {
+        // Swiped Left -> Skip to Next Track
+        hapticMedium();
+        onNext();
+      } else {
+        // Swiped Right -> Skip to Previous Track
+        hapticMedium();
+        onPrevious();
+      }
+    } else if (deltaY > 40 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      // Swiped Up -> Open Studio Immersion
+      hapticLight();
+      onOpenStudio?.();
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   const toggleMute = () => {
+    hapticLight();
     if (isMuted) {
       setIsMuted(false);
       onVolumeChange(volume || 0.8);
@@ -90,7 +125,11 @@ export function PlayerBar({
   const isPlaying = status === "playing";
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e18]/95 backdrop-blur-md border-t border-[#152033] px-3 sm:px-8 h-18 sm:h-20 pb-[max(0.25rem,env(safe-area-inset-bottom))] flex items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+    <footer
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="fixed bottom-0 left-0 right-0 z-50 bg-[#090e18]/95 backdrop-blur-md border-t border-[#152033] px-3 sm:px-8 h-18 sm:h-20 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)] select-none"
+    >
       {/* Mobile Top Edge Timeline Scrubber (Visible only on <sm screens) */}
       <div
         onClick={(e) => {
@@ -262,7 +301,10 @@ export function PlayerBar({
         <div className="flex sm:hidden items-center gap-1 flex-shrink-0">
           {currentTrack && (
             <button
-              onClick={() => onToggleLike(currentTrack)}
+              onClick={() => {
+                hapticLight();
+                onToggleLike(currentTrack);
+              }}
               aria-label={isLiked ? "Unlike song" : "Like song"}
               className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-400 active:scale-90 transition-all cursor-pointer"
             >
@@ -271,20 +313,22 @@ export function PlayerBar({
           )}
 
           <button
-            onClick={onTogglePlay}
+            onClick={() => {
+              hapticMedium();
+              onTogglePlay();
+            }}
             disabled={!currentTrack}
             aria-label={isPlaying ? "Pause" : "Play"}
             className="w-10 h-10 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_12px_rgba(0,229,255,0.4)] disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
           >
-            {isPlaying ? (
-              <Pause className="w-4 h-4 fill-current" />
-            ) : (
-              <Play className="w-4 h-4 fill-current ml-0.5" />
-            )}
+            {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
           </button>
 
           <button
-            onClick={onNext}
+            onClick={() => {
+              hapticMedium();
+              onNext();
+            }}
             disabled={!currentTrack}
             aria-label="Next song"
             className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
@@ -294,7 +338,10 @@ export function PlayerBar({
 
           {onOpenStudio && (
             <button
-              onClick={onOpenStudio}
+              onClick={() => {
+                hapticLight();
+                onOpenStudio();
+              }}
               aria-label="Open Studio"
               className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-[#00e5ff] active:scale-90 transition-all cursor-pointer"
             >

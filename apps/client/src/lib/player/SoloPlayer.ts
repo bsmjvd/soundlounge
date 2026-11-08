@@ -138,7 +138,10 @@ export class SoloPlayer {
               YouTubeIframeBridge.extractVideoId(currentTrack.url) ||
               YouTubeIframeBridge.extractVideoId(currentTrack.id);
             if (videoId) {
-              console.log("SoloPlayer: Direct audio failed; gracefully activating YouTube IFrame playback for", videoId);
+              console.log(
+                "SoloPlayer: Direct audio failed; gracefully activating YouTube IFrame playback for",
+                videoId
+              );
               this.activeEngine = "iframe";
               this.ytBridge.loadAndPlay(videoId, this.state.positionMs);
               return;
@@ -207,6 +210,17 @@ export class SoloPlayer {
         if (this.onPreviousCallback) {
           navigator.mediaSession.setActionHandler("previoustrack", () => this.onPreviousCallback?.());
         }
+
+        navigator.mediaSession.playbackState = "playing";
+        if (track.durationMs && track.durationMs > 0) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: track.durationMs / 1000,
+              position: Math.max(0, this.state.positionMs / 1000),
+              playbackRate: 1,
+            });
+          } catch {}
+        }
       } catch {}
     }
   }
@@ -221,9 +235,7 @@ export class SoloPlayer {
       typeof window !== "undefined" &&
       (window.location.hostname.includes("vercel.app") || window.location.hostname.includes("soundlounge.vercel.app"));
 
-    const videoId =
-      YouTubeIframeBridge.extractVideoId(track.url) ||
-      YouTubeIframeBridge.extractVideoId(track.id);
+    const videoId = YouTubeIframeBridge.extractVideoId(track.url) || YouTubeIframeBridge.extractVideoId(track.id);
 
     // On Vercel cloud deployments, YouTube datacenter bot blocks prevent serverless streaming.
     // Use YouTube IFrame directly for zero-latency, 100% reliable sound playback!
@@ -320,6 +332,11 @@ export class SoloPlayer {
           await this.audioElement.play();
         } catch {}
       }
+      if (typeof window !== "undefined" && "mediaSession" in navigator) {
+        try {
+          navigator.mediaSession.playbackState = "playing";
+        } catch {}
+      }
       this.emitState();
     }
   }
@@ -332,6 +349,11 @@ export class SoloPlayer {
       this.audioElement.pause();
       this.state.positionMs = Math.floor(this.audioElement.currentTime * 1000);
     }
+    if (typeof window !== "undefined" && "mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.playbackState = "paused";
+      } catch {}
+    }
     this.emitState();
   }
 
@@ -342,6 +364,17 @@ export class SoloPlayer {
       this.ytBridge.seekTo(clampedPos);
     } else if (this.audioElement) {
       this.audioElement.currentTime = clampedPos / 1000;
+    }
+    if (typeof window !== "undefined" && "mediaSession" in navigator) {
+      try {
+        if (this.state.durationMs > 0) {
+          navigator.mediaSession.setPositionState({
+            duration: this.state.durationMs / 1000,
+            position: clampedPos / 1000,
+            playbackRate: this.state.status === "playing" ? 1 : 0,
+          });
+        }
+      } catch {}
     }
     this.emitState();
   }

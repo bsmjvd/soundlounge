@@ -7,6 +7,7 @@ import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import type { Track } from "@soundlounge/shared";
 import { MOCKUP_SIDEBAR_TRACKS } from "../lib/data/mockupData";
 import { TrackArtwork } from "./TrackArtwork";
+import { hapticLight } from "../lib/haptics";
 
 export type NavTab =
   | "home"
@@ -114,7 +115,10 @@ export function NavigationSidebar({
             <h1 className="text-2xl font-bold tracking-tight text-white font-sans">Playlist</h1>
             {isOpenMobile && (
               <button
-                onClick={onCloseMobile}
+                onClick={() => {
+                  hapticLight();
+                  onCloseMobile?.();
+                }}
                 className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 aria-label="Close navigation"
               >
@@ -127,6 +131,7 @@ export function NavigationSidebar({
           <nav className="space-y-1.5 mb-5 pb-3 border-b border-slate-800/80">
             <button
               onClick={() => {
+                hapticLight();
                 setSidebarFilter("my_playlist");
                 onTabChange("home");
               }}
@@ -151,6 +156,7 @@ export function NavigationSidebar({
 
             <button
               onClick={() => {
+                hapticLight();
                 setSidebarFilter("last_listening");
               }}
               className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
@@ -178,6 +184,7 @@ export function NavigationSidebar({
 
             <button
               onClick={() => {
+                hapticLight();
                 setSidebarFilter("recommended");
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${

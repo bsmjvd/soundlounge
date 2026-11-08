@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import { AudioFrequencyVisualizer } from "./studio/AudioFrequencyVisualizer";
+import { hapticLight, hapticMedium } from "../lib/haptics";
 
 interface StudioImmersiveModalProps {
   isOpen: boolean;
@@ -55,6 +56,37 @@ export function StudioImmersiveModal({
   const [isMuted, setIsMuted] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const vinylRef = useRef<HTMLDivElement>(null);
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleModalTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Only engage drag if touching the top region or drag pill
+    if (e.touches[0].clientY < 260) {
+      touchStartY.current = e.touches[0].clientY;
+      setIsDragging(true);
+    }
+  };
+
+  const handleModalTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartY.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - touchStartY.current;
+    if (deltaY > 0) {
+      // Dragging downwards
+      setDragY(deltaY);
+    }
+  };
+
+  const handleModalTouchEnd = () => {
+    if (dragY > 85) {
+      hapticLight();
+      onClose();
+    }
+    setDragY(0);
+    setIsDragging(false);
+    touchStartY.current = null;
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,7 +159,21 @@ export function StudioImmersiveModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#07090e] text-[#f8fafc] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300">
+    <div
+      onTouchStart={handleModalTouchStart}
+      onTouchMove={handleModalTouchMove}
+      onTouchEnd={handleModalTouchEnd}
+      style={{
+        transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+        transition: isDragging ? "none" : "transform 0.28s cubic-bezier(0.25, 0.9, 0.3, 1)",
+      }}
+      className="fixed inset-0 z-50 bg-[#07090e] text-[#f8fafc] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300 overscroll-contain"
+    >
+      {/* iOS Modal Pull-Down Grabber Pill */}
+      <div className="sm:hidden w-full flex justify-center pt-2 pb-0.5 z-20 cursor-grab active:cursor-grabbing">
+        <div className="w-10 h-1 rounded-full bg-white/25 active:bg-white/45 transition-colors" />
+      </div>
+
       {/* 1. Full-Screen Cinematic Backdrop */}
       {bannerUrl && (
         <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
@@ -160,7 +206,9 @@ export function StudioImmersiveModal({
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-[11px] sm:text-xs uppercase tracking-widest font-bold text-sky-400">Studio Immersion</span>
+              <span className="text-[11px] sm:text-xs uppercase tracking-widest font-bold text-sky-400">
+                Studio Immersion
+              </span>
               <span className="text-[9px] sm:text-[10px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded-full text-gray-300 font-mono">
                 Hi-Fi
               </span>
@@ -172,7 +220,10 @@ export function StudioImmersiveModal({
         {/* Center RPM Speed Selector Pill */}
         <div className="hidden sm:flex items-center gap-1 bg-black/40 border border-white/10 rounded-full p-1 backdrop-blur-md shadow-inner">
           <button
-            onClick={() => setRpmSpeed(33)}
+            onClick={() => {
+              hapticLight();
+              setRpmSpeed(33);
+            }}
             className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
               rpmSpeed === 33
                 ? "bg-[#00e5ff] text-[#07090e] shadow-[0_0_12px_rgba(0,229,255,0.6)]"
@@ -182,7 +233,10 @@ export function StudioImmersiveModal({
             33⅓ RPM
           </button>
           <button
-            onClick={() => setRpmSpeed(45)}
+            onClick={() => {
+              hapticLight();
+              setRpmSpeed(45);
+            }}
             className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
               rpmSpeed === 45
                 ? "bg-[#00e5ff] text-[#07090e] shadow-[0_0_12px_rgba(0,229,255,0.6)]"
@@ -194,7 +248,10 @@ export function StudioImmersiveModal({
         </div>
 
         <button
-          onClick={onClose}
+          onClick={() => {
+            hapticLight();
+            onClose();
+          }}
           aria-label="Exit Studio Mode"
           className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold backdrop-blur-xl transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl min-h-[40px]"
         >
@@ -364,7 +421,10 @@ export function StudioImmersiveModal({
         {/* Playback Button Bar */}
         <div className="flex items-center justify-between">
           <button
-            onClick={() => onToggleLike(currentTrack)}
+            onClick={() => {
+              hapticLight();
+              onToggleLike(currentTrack);
+            }}
             aria-label="Toggle Like Track"
             className={`p-2.5 sm:p-3 rounded-full transition-all cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center ${
               isLiked ? "text-rose-500 bg-rose-500/10 scale-110" : "text-gray-400 hover:text-white hover:bg-white/10"
@@ -375,7 +435,10 @@ export function StudioImmersiveModal({
 
           <div className="flex items-center gap-3 sm:gap-6">
             <button
-              onClick={onPrevious}
+              onClick={() => {
+                hapticMedium();
+                onPrevious();
+              }}
               aria-label="Previous Track"
               className="p-2.5 sm:p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
@@ -383,15 +446,25 @@ export function StudioImmersiveModal({
             </button>
 
             <button
-              onClick={onTogglePlay}
+              onClick={() => {
+                hapticMedium();
+                onTogglePlay();
+              }}
               aria-label={isPlaying ? "Pause Track" : "Play Track"}
               className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
             >
-              {isPlaying ? <Pause className="w-6 h-6 sm:w-8 sm:h-8 fill-current" /> : <Play className="w-6 h-6 sm:w-8 sm:h-8 fill-current ml-1" />}
+              {isPlaying ? (
+                <Pause className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
+              ) : (
+                <Play className="w-6 h-6 sm:w-8 sm:h-8 fill-current ml-1" />
+              )}
             </button>
 
             <button
-              onClick={onNext}
+              onClick={() => {
+                hapticMedium();
+                onNext();
+              }}
               aria-label="Next Track"
               className="p-2.5 sm:p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >

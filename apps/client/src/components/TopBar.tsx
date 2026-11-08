@@ -8,6 +8,7 @@ import { ARTISTS_CATALOG, type ArtistProfileData } from "../lib/data/artistsCata
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import { TrackArtwork } from "./TrackArtwork";
 import { SyncHealthBadge } from "./room/SyncHealthBadge";
+import { hapticLight } from "../lib/haptics";
 
 export type TopNavTab = "discover" | "library" | "radio";
 
@@ -268,7 +269,10 @@ export function TopBar({
         <div className="flex items-center gap-6">
           {onToggleMobileMenu && (
             <button
-              onClick={onToggleMobileMenu}
+              onClick={() => {
+                hapticLight();
+                onToggleMobileMenu();
+              }}
               className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
               aria-label="Open playlist menu"
             >
@@ -278,7 +282,10 @@ export function TopBar({
 
           <nav className="flex items-center gap-6 sm:gap-8">
             <button
-              onClick={() => onTopTabChange && onTopTabChange("discover")}
+              onClick={() => {
+                hapticLight();
+                onTopTabChange && onTopTabChange("discover");
+              }}
               className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
                 activeTopTab === "discover"
                   ? "text-[#00e5ff] border-[#00e5ff]"
@@ -289,7 +296,10 @@ export function TopBar({
             </button>
 
             <button
-              onClick={() => onTopTabChange && onTopTabChange("library")}
+              onClick={() => {
+                hapticLight();
+                onTopTabChange && onTopTabChange("library");
+              }}
               className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
                 activeTopTab === "library"
                   ? "text-[#00e5ff] border-[#00e5ff]"
@@ -300,7 +310,10 @@ export function TopBar({
             </button>
 
             <button
-              onClick={() => onTopTabChange && onTopTabChange("radio")}
+              onClick={() => {
+                hapticLight();
+                onTopTabChange && onTopTabChange("radio");
+              }}
               className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
                 activeTopTab === "radio"
                   ? "text-[#00e5ff] border-[#00e5ff]"
@@ -590,7 +603,10 @@ export function TopBar({
             {onToggleLeaves && (
               <button
                 type="button"
-                onClick={onToggleLeaves}
+                onClick={() => {
+                  hapticLight();
+                  onToggleLeaves();
+                }}
                 title={isLeavesEnabled ? "Disable falling autumn leaves" : "Enable falling autumn leaves"}
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all cursor-pointer border ${
                   isLeavesEnabled

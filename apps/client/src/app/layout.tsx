@@ -1,18 +1,37 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const inter = Inter({
-  subsets: ["latin"],
   variable: "--font-inter",
+  subsets: ["latin"],
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#0e1422",
+};
+
 export const metadata: Metadata = {
-  title: "Soundlounge — Ultra-Precision Synchronized & Solo Music Streaming",
+  title: "Soundlounge | Audiophile Music Experience",
   description:
-    "Listen together in sub-30ms millisecond sync or stream solo instantly. Zero-account playlists, collaborative queues, and multi-source playback for YouTube, SoundCloud, and local uploads.",
+    "Next-generation audiophile music player and collaborative listening lounge. Real-time sub-millisecond sync, high-fidelity audio, and cinematic studio immersion.",
+  keywords: ["music", "sync", "audio", "collaboration", "real-time", "soundlounge", "audiophile"],
+  authors: [{ name: "Soundlounge Team" }],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Soundlounge",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({
@@ -22,7 +41,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
-      <body className="min-h-screen bg-[#07090e] text-[#f3f4f6] font-sans antialiased selection:bg-indigo-500/30 selection:text-white">
+      <body className="min-h-screen bg-[#07090e] text-[#f3f4f6] font-sans antialiased selection:bg-[#00e5ff]/30 selection:text-white">
         {children}
         <SpeedInsights />
       </body>

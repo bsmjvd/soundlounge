@@ -601,7 +601,7 @@ export default function SoundloungeApp() {
             )}
 
             {/* Stage Canvas */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
+            <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-32 sm:pb-24">
               {/* Detailed Artist Profile & Discography View */}
               {selectedArtist ? (
                 <ArtistDetailView
