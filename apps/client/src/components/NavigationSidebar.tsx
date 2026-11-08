@@ -17,11 +17,12 @@ import {
   Disc3,
 } from "lucide-react";
 import type { PlaybackMode } from "../lib/player";
-import type { LastSessionSnapshot } from "../lib/store/useLibraryStore";
+import { type LastSessionSnapshot, useLibraryStore } from "../lib/store/useLibraryStore";
 import type { Track } from "@soundlounge/shared";
 import { MOCKUP_SIDEBAR_TRACKS } from "../lib/data/mockupData";
 import { TrackArtwork } from "./TrackArtwork";
 import { hapticLight } from "../lib/haptics";
+import { useTasteProfile } from "../lib/recommendation/useTasteProfile";
 
 export type NavTab =
   | "home"
@@ -110,20 +111,26 @@ export function NavigationSidebar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpenMobile, onCloseMobile]);
 
+  const { getSidebarRecommendedTracks } = useTasteProfile();
+  const likedTracks = useLibraryStore((s) => s.likedTracks);
+
   // Determine which track list to render in the sidebar based on active filter
   const displayedTracks: Track[] = React.useMemo(() => {
     if (sidebarFilter === "last_listening") {
       if (historyTracks && historyTracks.length > 0) {
         return historyTracks.slice(0, 15);
       }
-      return MOCKUP_SIDEBAR_TRACKS.slice().reverse();
+      return getSidebarRecommendedTracks().slice().reverse();
     }
     if (sidebarFilter === "recommended") {
-      return MOCKUP_SIDEBAR_TRACKS.slice(2).concat(MOCKUP_SIDEBAR_TRACKS.slice(0, 2));
+      return getSidebarRecommendedTracks();
     }
-    // "my_playlist": show curated mockup playlist tracks matching reference UI
-    return MOCKUP_SIDEBAR_TRACKS;
-  }, [sidebarFilter, historyTracks]);
+    // "my_playlist": show user's liked tracks or personalized recommendations
+    if (likedTracks && likedTracks.length > 0) {
+      return likedTracks.slice(0, 15);
+    }
+    return getSidebarRecommendedTracks();
+  }, [sidebarFilter, historyTracks, likedTracks, getSidebarRecommendedTracks]);
 
   const handleTrackClick = (track: Track) => {
     hapticLight();

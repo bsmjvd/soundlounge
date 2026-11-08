@@ -440,8 +440,66 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
   }
 
   // --------------------------------------------------------------------------
-  // Tier 6: Final safety fallback to any unplayed catalog track
+  // Tier 6: Taste-Informed & Genre-Consistent Safety Fallback
+  // (Prevents unrelated genres from appearing when current artist tracks are exhausted)
   // --------------------------------------------------------------------------
+  try {
+    const { TasteProfileEngine } = await import("./TasteProfileEngine");
+    const taste = TasteProfileEngine.getInstance();
+    const userTopGenres = taste.getTopGenres(3).map((g) => g.genre);
+    const userTopArtists = taste.getTopArtists(5).map((a) => a.artistName.toLowerCase());
+
+    // 6a. Try catalog artists matching the user's known top genres
+    for (const g of userTopGenres) {
+      const gArtists = ARTISTS_CATALOG.filter(
+        (a) => a.region === g || a.genre.toLowerCase().includes(g)
+      );
+      for (const artist of gArtists) {
+        const candidate = artist.topTracks.find((t) => !isDuplicateCandidate(t));
+        if (candidate) {
+          return {
+            track: candidate,
+            matchType: "genre_match",
+            reason: `From Your Taste in ${g.toUpperCase()}: ${candidate.artist}`,
+          };
+        }
+      }
+    }
+
+    // 6b. Try catalog artists matching user's top artist affinities
+    for (const artistName of userTopArtists) {
+      const match = ARTISTS_CATALOG.find((a) => a.name.toLowerCase().includes(artistName));
+      if (match) {
+        const candidate = match.topTracks.find((t) => !isDuplicateCandidate(t));
+        if (candidate) {
+          return {
+            track: candidate,
+            matchType: "same_artist",
+            reason: `Based on your favorite artist: ${candidate.artist}`,
+          };
+        }
+      }
+    }
+  } catch {
+    // TasteProfileEngine optional during isolated tests
+  }
+
+  // 6c. As a final fallback, choose from catalog artists that match detectedGenre
+  const sameGenreCatalog = ARTISTS_CATALOG.filter(
+    (a) => a.region === detectedGenre || a.genre.toLowerCase().includes(detectedGenre)
+  );
+  for (const artist of sameGenreCatalog) {
+    const candidate = artist.topTracks.find((t) => !isDuplicateCandidate(t));
+    if (candidate) {
+      return {
+        track: candidate,
+        matchType: "genre_match",
+        reason: `Suggested ${detectedGenre.toUpperCase()}: ${candidate.artist}`,
+      };
+    }
+  }
+
+  // 6d. Absolute fallback if no genre match exists: pick from catalog
   for (const artist of ARTISTS_CATALOG) {
     const candidate = artist.topTracks.find((t) => !isDuplicateCandidate(t));
     if (candidate) {

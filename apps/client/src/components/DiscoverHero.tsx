@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
-import { FEATURED_SPOTLIGHTS } from "../lib/data/mockupData";
+import { FEATURED_SPOTLIGHTS, type FeaturedSpotlight } from "../lib/data/mockupData";
 import { HeroCarouselIndicators } from "./ui/HeroCarouselIndicators";
 
 interface DiscoverHeroProps {
@@ -12,6 +12,7 @@ interface DiscoverHeroProps {
   isPlaying: boolean;
   activeIndex?: number;
   onActiveIndexChange?: (index: number) => void;
+  spotlights?: FeaturedSpotlight[];
 }
 
 export function DiscoverHero({
@@ -20,7 +21,9 @@ export function DiscoverHero({
   isPlaying,
   activeIndex: externalIndex,
   onActiveIndexChange,
+  spotlights,
 }: DiscoverHeroProps) {
+  const activeSpotlights = spotlights && spotlights.length > 0 ? spotlights : FEATURED_SPOTLIGHTS;
   const [internalIndex, setInternalIndex] = useState(0);
   const activeIndex = externalIndex !== undefined ? externalIndex : internalIndex;
 
@@ -42,26 +45,27 @@ export function DiscoverHero({
   const [isHovered, setIsHovered] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
-  const spotlight = FEATURED_SPOTLIGHTS[activeIndex] || FEATURED_SPOTLIGHTS[0];
+  const safeIndex = activeIndex >= 0 && activeIndex < activeSpotlights.length ? activeIndex : 0;
+  const spotlight = activeSpotlights[safeIndex] || activeSpotlights[0];
   const isCurrentSpotlightTrack = currentTrack?.id === spotlight.mainTrack.id;
   const isTrackPlaying = isCurrentSpotlightTrack && isPlaying;
 
   const handleNextSpotlight = useCallback(() => {
-    setActiveIndex((prev) => (prev + 1) % FEATURED_SPOTLIGHTS.length);
-  }, [setActiveIndex]);
+    setActiveIndex((prev) => (prev + 1) % activeSpotlights.length);
+  }, [setActiveIndex, activeSpotlights.length]);
 
   const handlePrevSpotlight = useCallback(() => {
-    setActiveIndex((prev) => (prev - 1 + FEATURED_SPOTLIGHTS.length) % FEATURED_SPOTLIGHTS.length);
-  }, [setActiveIndex]);
+    setActiveIndex((prev) => (prev - 1 + activeSpotlights.length) % activeSpotlights.length);
+  }, [setActiveIndex, activeSpotlights.length]);
 
   // Ambient Auto-Rotation (8 seconds, paused on hover)
   useEffect(() => {
-    if (isHovered || FEATURED_SPOTLIGHTS.length <= 1) return;
+    if (isHovered || activeSpotlights.length <= 1) return;
     const timer = setInterval(() => {
       handleNextSpotlight();
     }, 8000);
     return () => clearInterval(timer);
-  }, [isHovered, handleNextSpotlight]);
+  }, [isHovered, handleNextSpotlight, activeSpotlights.length]);
 
   // Keyboard navigation when user is on the hero
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -166,11 +170,11 @@ export function DiscoverHero({
       </div>
 
       {/* Spotlights Carousel Controls & Slide Indicator Pills */}
-      {FEATURED_SPOTLIGHTS.length > 1 && (
+      {activeSpotlights.length > 1 && (
         <div className="absolute bottom-2 right-4 sm:right-6 z-20 flex items-center gap-3">
           <HeroCarouselIndicators
-            total={FEATURED_SPOTLIGHTS.length}
-            activeIndex={activeIndex}
+            total={activeSpotlights.length}
+            activeIndex={safeIndex}
             onChange={(idx) => setActiveIndex(idx)}
           />
 

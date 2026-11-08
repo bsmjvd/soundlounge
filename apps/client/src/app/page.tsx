@@ -21,6 +21,8 @@ import { GenreDirectoryView } from "../components/GenreDirectoryView";
 import { type ArtistProfileData, ARTISTS_CATALOG } from "../lib/data/artistsCatalog";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import type { MusicGenre } from "../lib/recommendation/genreTaxonomy";
+import { useTasteProfile } from "../lib/recommendation/useTasteProfile";
+import { DynamicTasteHomeSections } from "../components/DynamicTasteHomeSections";
 
 import { AudioEngineCoordinator, type CoordinatorPlayerState, type PlaybackMode } from "../lib/player";
 import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibraryStore";
@@ -76,8 +78,24 @@ export default function SoundloungeApp() {
   });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
+
+  // Dynamic Taste Profile Engine
+  const {
+    recordPlay,
+    recordLike,
+    recordSearch,
+    recordArtistView,
+    getPersonalizedSpotlights,
+    hasTaste,
+    dominantGenre,
+    dominantArtist,
+  } = useTasteProfile();
+
+  const dynamicSpotlights = getPersonalizedSpotlights();
   const [heroSpotlightIndex, setHeroSpotlightIndex] = useState(0);
-  const currentSpotlight = FEATURED_SPOTLIGHTS[heroSpotlightIndex] || FEATURED_SPOTLIGHTS[0];
+  const safeSpotlightIndex =
+    heroSpotlightIndex >= 0 && heroSpotlightIndex < dynamicSpotlights.length ? heroSpotlightIndex : 0;
+  const currentSpotlight = dynamicSpotlights[safeSpotlightIndex] || dynamicSpotlights[0];
 
   const handleTabChange = (tab: NavTab) => {
     setSelectedArtist(null);
@@ -135,12 +153,13 @@ export default function SoundloungeApp() {
   useEffect(() => {
     return coordinator.onStateChange((state) => {
       setPlayerState(state);
-      // Automatically snapshot session for Continue Listening
+      // Automatically snapshot session for Continue Listening and record taste
       if (state.currentTrack && state.status === "playing") {
         useLibraryStore.getState().saveLastSession(state.currentTrack, state.positionMs);
+        recordPlay(state.currentTrack);
       }
     });
-  }, [coordinator]);
+  }, [coordinator, recordPlay]);
 
   // Stores
   const { queue, currentIndex, isAutoplayEnabled, toggleAutoplay, autoQueueReasons, ensureSimilarQueued } =
@@ -165,6 +184,12 @@ export default function SoundloungeApp() {
     inviteToken,
     coordinator,
   });
+
+  const handleToggleLike = (track: Track) => {
+    const isCurrentlyLiked = isLiked(track.id);
+    toggleLike(track);
+    recordLike(track, !isCurrentlyLiked);
+  };
 
   const handleModeChange = (newMode: PlaybackMode) => {
     coordinator.setMode(newMode);
@@ -227,6 +252,7 @@ export default function SoundloungeApp() {
 
   const handlePlaySingleTrack = (track: Track) => {
     addToHistory(track);
+    recordPlay(track);
     if (playerState.mode === "synced") {
       sync.sendClearQueue();
       sync.sendAddTrack(track, false);
@@ -238,6 +264,20 @@ export default function SoundloungeApp() {
       if (isAutoplayEnabled) {
         state.seedSimilarQueue(track, history);
       }
+    }
+  };
+
+  const handlePlayMix = (tracks: Track[]) => {
+    if (tracks.length === 0) return;
+    useQueueStore.getState().setQueue(tracks, 0);
+    addToHistory(tracks[0]);
+    recordPlay(tracks[0]);
+    if (playerState.mode === "synced") {
+      sync.sendClearQueue();
+      tracks.forEach((t) => sync.sendAddTrack(t));
+      sync.sendPlay(tracks[0].id, 0);
+    } else {
+      coordinator.play(tracks[0], 0);
     }
   };
 
@@ -523,6 +563,7 @@ export default function SoundloungeApp() {
                     onSearch={(q) => {
                       if (q.trim()) {
                         setSearchQuery(q.trim());
+                        recordSearch(q.trim());
                         setSelectedArtist(null);
                         setSelectedAlbum(null);
                         setActiveTab("search");
@@ -533,7 +574,10 @@ export default function SoundloungeApp() {
                     onOpenUpload={() => setActiveTab("search")}
                     onPlayTrack={handlePlaySingleTrack}
                     onAddTrack={handleAddTrack}
-                    onSelectArtist={(artist) => setSelectedArtist(artist)}
+                    onSelectArtist={(artist) => {
+                      recordArtistView(artist.name);
+                      setSelectedArtist(artist);
+                    }}
                     onSelectAlbum={(album) => setSelectedAlbum(album)}
                     activeTopTab={topNavTab}
                     onTopTabChange={(tab) => {
@@ -557,8 +601,9 @@ export default function SoundloungeApp() {
                     onPlayTrack={handlePlaySingleTrack}
                     currentTrack={activeTrack}
                     isPlaying={playerState.status === "playing"}
-                    activeIndex={heroSpotlightIndex}
+                    activeIndex={safeSpotlightIndex}
                     onActiveIndexChange={setHeroSpotlightIndex}
+                    spotlights={dynamicSpotlights}
                   />
                 </div>
               </div>
@@ -578,6 +623,7 @@ export default function SoundloungeApp() {
                 onSearch={(q) => {
                   if (q.trim()) {
                     setSearchQuery(q.trim());
+                    recordSearch(q.trim());
                     setSelectedArtist(null);
                     setSelectedAlbum(null);
                     setActiveTab("search");
@@ -588,7 +634,10 @@ export default function SoundloungeApp() {
                 onOpenUpload={() => setActiveTab("search")}
                 onPlayTrack={handlePlaySingleTrack}
                 onAddTrack={handleAddTrack}
-                onSelectArtist={(artist) => setSelectedArtist(artist)}
+                onSelectArtist={(artist) => {
+                  recordArtistView(artist.name);
+                  setSelectedArtist(artist);
+                }}
                 onSelectAlbum={(album) => setSelectedAlbum(album)}
                 activeTopTab={topNavTab}
                 onTopTabChange={(tab) => {
@@ -722,17 +771,41 @@ export default function SoundloungeApp() {
                   />
                 </div>
               ) : (
-                /* EXACT REFERENCE UI VIEW: Popular Albums + Popular Artists */
+                /* DYNAMIC PERSONALIZED DISCOVERY VIEW: Jump Back In + Because You Listened + Popular Albums + Popular Artists */
                 <div className="space-y-10 pt-2">
-                  {/* Popular Albums Section */}
+                  {/* Dynamic Taste Sections: Jump Back In & Because You Listened */}
+                  <DynamicTasteHomeSections
+                    onPlayTrack={handlePlaySingleTrack}
+                    onPlayMix={handlePlayMix}
+                    onSelectArtist={(artistName) => {
+                      const match = ARTISTS_CATALOG.find(
+                        (a) => a.name.toLowerCase() === artistName.toLowerCase()
+                      );
+                      if (match) {
+                        recordArtistView(match.name);
+                        setSelectedArtist(match);
+                      }
+                    }}
+                    onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
+                    currentTrack={activeTrack}
+                    isPlaying={playerState.status === "playing"}
+                    historyTracks={history}
+                  />
+
+                  {/* Popular Albums Section (Dynamically re-ranked by taste) */}
                   <PopularAlbumsRow
                     onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
                     onPlayAlbum={handlePlayAlbum}
                     onPlayTrack={handlePlaySingleTrack}
                   />
 
-                  {/* Popular Artists Section */}
-                  <PopularArtistsRow onSelectArtist={(artist) => setSelectedArtist(artist)} />
+                  {/* Popular Artists Section (Dynamically re-ranked by taste) */}
+                  <PopularArtistsRow
+                    onSelectArtist={(artist) => {
+                      recordArtistView(artist.name);
+                      setSelectedArtist(artist);
+                    }}
+                  />
                 </div>
               )}
             </main>
@@ -751,7 +824,7 @@ export default function SoundloungeApp() {
         pingMs={sync.pingMs}
         queueCount={queue.length}
         isLiked={activeTrack ? isLiked(activeTrack.id) : false}
-        onToggleLike={(t) => toggleLike(t)}
+        onToggleLike={(t) => handleToggleLike(t)}
         onTogglePlay={handleTogglePlay}
         onSeek={handleSeek}
         onNext={handleNext}
@@ -779,7 +852,7 @@ export default function SoundloungeApp() {
         durationMs={playerState.durationMs}
         volume={playerState.volume}
         isLiked={activeTrack ? isLiked(activeTrack.id) : false}
-        onToggleLike={(t) => toggleLike(t)}
+        onToggleLike={(t) => handleToggleLike(t)}
         onTogglePlay={handleTogglePlay}
         onSeek={handleSeek}
         onNext={handleNext}

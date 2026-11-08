@@ -6,6 +6,7 @@ import type { Album, Track } from "@soundlounge/shared";
 import { POPULAR_ALBUMS_MOCKUP, type DisplayAlbum } from "../lib/data/mockupData";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import { ImageWithFallback } from "./ui/ImageWithFallback";
+import { useTasteProfile } from "../lib/recommendation/useTasteProfile";
 
 interface PopularAlbumsRowProps {
   onSelectAlbum?: (album: Album | DisplayAlbum) => void;
@@ -16,8 +17,9 @@ interface PopularAlbumsRowProps {
 export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: PopularAlbumsRowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const { rankAlbums, dominantGenre, hasTaste } = useTasteProfile();
 
-  // Combine catalog albums (with authentic artwork and 2026 hits) with popular releases
+  // Combine catalog albums with popular releases and dynamically rank by taste
   const combinedAlbums = React.useMemo(() => {
     const seen = new Set<string>();
     const list: DisplayAlbum[] = [];
@@ -83,8 +85,8 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       }
     }
 
-    return list;
-  }, []);
+    return rankAlbums(list);
+  }, [rankAlbums]);
 
   const handleScroll = () => {
     const el = scrollContainerRef.current;
@@ -171,7 +173,16 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
     <section className="w-full">
       {/* Header with Title and Minimalist Pagination Arrows matching mockup */}
       <div className="flex items-center justify-between mb-3.5">
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">Popular Albums</h2>
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">
+            {hasTaste ? "Albums Tailored To Your Vibe" : "Popular Albums"}
+          </h2>
+          {hasTaste && dominantGenre && (
+            <p className="text-xs text-slate-400 mt-0.5">
+              Highlighting releases in {dominantGenre.toUpperCase()} & related artists
+            </p>
+          )}
+        </div>
 
         <div className="flex items-center gap-2.5">
           <button

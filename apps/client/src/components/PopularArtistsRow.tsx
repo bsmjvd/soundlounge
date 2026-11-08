@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { POPULAR_ARTISTS_MOCKUP, type DisplayArtist } from "../lib/data/mockupData";
 import { ARTISTS_CATALOG, type ArtistProfileData } from "../lib/data/artistsCatalog";
 import { ImageWithFallback } from "./ui/ImageWithFallback";
+import { useTasteProfile } from "../lib/recommendation/useTasteProfile";
 
 interface PopularArtistsRowProps {
   onSelectArtist: (artist: ArtistProfileData) => void;
@@ -12,10 +13,11 @@ interface PopularArtistsRowProps {
 
 export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { rankDisplayArtists, dominantArtist, dominantGenre, hasTaste } = useTasteProfile();
 
-  // Combine mockup artists with top catalog artists
+  // Combine mockup artists with top catalog artists and dynamically rank by taste
   const combinedArtists = React.useMemo(() => {
-    return [
+    const rawList: DisplayArtist[] = [
       ...POPULAR_ARTISTS_MOCKUP,
       ...ARTISTS_CATALOG.filter(
         (a) => !POPULAR_ARTISTS_MOCKUP.some((m) => m.name.toLowerCase() === a.name.toLowerCase())
@@ -27,7 +29,8 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
         listeners: a.monthlyListeners,
       })),
     ];
-  }, []);
+    return rankDisplayArtists(rawList);
+  }, [rankDisplayArtists]);
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -81,7 +84,16 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
     <section className="w-full">
       {/* Header with Title and Minimalist Pagination Arrows matching mockup */}
       <div className="flex items-center justify-between mb-3.5">
-        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">Popular Artists</h2>
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">
+            {hasTaste ? "Artists You Love & Similar" : "Popular Artists"}
+          </h2>
+          {hasTaste && dominantGenre && (
+            <p className="text-xs text-slate-400 mt-0.5">
+              Ranked dynamically by your listening in {dominantGenre.toUpperCase()}
+            </p>
+          )}
+        </div>
 
         <div className="flex items-center gap-2.5">
           <button
