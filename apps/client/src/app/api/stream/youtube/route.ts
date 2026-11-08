@@ -61,7 +61,7 @@ async function searchCandidateYouTubeSongs(title: string, artist?: string): Prom
 
     const ids = (validSongVideos.length > 0 ? validSongVideos : videos)
       .map((v) => (v.id ? String(v.id) : null))
-      .filter((id): id is string => Boolean(id) && /^[a-zA-Z0-9_-]{11}$/.test(id));
+      .filter((id): id is string => typeof id === "string" && /^[a-zA-Z0-9_-]{11}$/.test(id));
 
     return Array.from(new Set(ids)).slice(0, 4);
   } catch (err) {
