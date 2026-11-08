@@ -24,6 +24,16 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
     const seen = new Set<string>();
     const list: DisplayAlbum[] = [];
 
+    // 1. If user has no personalized taste profile yet, present the authentic reference mockup albums first!
+    if (!hasTaste) {
+      for (const alb of POPULAR_ALBUMS_MOCKUP) {
+        const titleKey = alb.title.toLowerCase().trim();
+        seen.add(alb.id);
+        seen.add(titleKey);
+        list.push(alb);
+      }
+    }
+
     // Prioritized 2026 & iconic catalog albums for the top carousel
     const priorityIds = [
       "short_n_sweet_sabrina_carpenter",
@@ -38,26 +48,28 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       "discovery_2001_daft_punk",
     ];
 
-    // 1. Add prioritized albums first
+    // 2. Add prioritized albums
     for (const id of priorityIds) {
       const match = ALBUMS_CATALOG.find((a) => a.id === id);
       if (match) {
         const titleKey = match.title.toLowerCase().trim();
-        seen.add(match.id);
-        seen.add(titleKey);
-        list.push({
-          id: match.id,
-          title: match.title,
-          artist: match.primaryArtist,
-          subtitle: match.primaryArtist,
-          coverUrl: match.coverUrl || "/albums/rockstar.webp",
-          tracksCount: match.tracks.length,
-          tracks: match.tracks,
-        });
+        if (!seen.has(match.id) && !seen.has(titleKey)) {
+          seen.add(match.id);
+          seen.add(titleKey);
+          list.push({
+            id: match.id,
+            title: match.title,
+            artist: match.primaryArtist,
+            subtitle: match.primaryArtist,
+            coverUrl: match.coverUrl || "/albums/rockstar.webp",
+            tracksCount: match.tracks.length,
+            tracks: match.tracks,
+          });
+        }
       }
     }
 
-    // 2. Add remaining authentic catalog albums
+    // 3. Add remaining authentic catalog albums
     for (const a of ALBUMS_CATALOG) {
       const titleKey = a.title.toLowerCase().trim();
       if (!seen.has(a.id) && !seen.has(titleKey)) {
@@ -75,7 +87,7 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       }
     }
 
-    // 3. Add additional mockup releases if not already present
+    // 4. Add additional mockup releases if not already present
     for (const alb of POPULAR_ALBUMS_MOCKUP) {
       const titleKey = alb.title.toLowerCase().trim();
       if (!seen.has(alb.id) && !seen.has(titleKey)) {
@@ -86,7 +98,7 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
     }
 
     return rankAlbums(list);
-  }, [rankAlbums]);
+  }, [hasTaste, rankAlbums]);
 
   const handleScroll = () => {
     const el = scrollContainerRef.current;

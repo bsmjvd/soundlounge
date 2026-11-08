@@ -103,6 +103,26 @@ export interface FeaturedSpotlight {
 
 export const FEATURED_SPOTLIGHTS: FeaturedSpotlight[] = [
   {
+    id: "flume_skin",
+    tagline: "Featured Album",
+    title: "Flume: Skin",
+    subtitle: "Future Bass & Electronic",
+    description: `Flume walks us through his 'weird' new album, 'Skin'. He has one goal: "I wanna make weird stuff."`,
+    artistName: "Flume",
+    heroImageUrl: "/heroes/hero-flume-skin.webp",
+    accentColor: "#00e5ff",
+    mainTrack: {
+      id: "yt_flume_never_be_like_you",
+      title: "Never Be Like You (feat. Kai)",
+      artist: "Flume",
+      durationMs: 234000,
+      coverUrl: "/albums/discovery-daft-punk.webp",
+      url: "/api/stream/youtube?title=Never%20Be%20Like%20You&artist=Flume",
+      source: "youtube",
+      createdAt: 0,
+    },
+  },
+  {
     id: "gaga_bruno_die_with_a_smile",
     tagline: "Billboard #1 Global Smash • 2026",
     title: "Die With a Smile",
