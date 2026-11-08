@@ -527,9 +527,9 @@ export default function SoundloungeApp() {
         <div className="flex-1 min-w-0 flex flex-col justify-between pb-28">
           <div>
             {isDiscoverHome ? (
-              /* SEAMLESS FULL-BLEED DISCOVER STAGE (TopBar + Hero + Taste Sections) */
-              <div className="relative w-full overflow-hidden min-h-[340px] sm:min-h-[380px] bg-[#060b13]">
-                {/* 1. Ambient Blurred Full-Bleed Color Wash reflecting the current spotlight artwork */}
+              /* SEAMLESS FULL-BLEED DISCOVER STAGE (TopBar + Hero + Taste + Albums + Artists) */
+              <div className="relative w-full overflow-hidden min-h-[340px] sm:min-h-[380px] bg-[#060b13] pb-32 sm:pb-24">
+                {/* 1. Ambient Blurred Full-Bleed Color Wash reflecting the current spotlight artwork across the ENTIRE page */}
                 <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-25">
                   <img
                     key={`ambient-${currentSpotlight.id}`}
@@ -539,27 +539,24 @@ export default function SoundloungeApp() {
                   />
                 </div>
 
-                {/* 2. Deep luxury gradient backdrop transition */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0e2736]/80 via-[#0a1524]/90 to-[#060b13] pointer-events-none z-[1]" />
+                {/* 2. Deep luxury gradient backdrop transition spanning seamlessly down */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0e2736]/75 via-[#0a1524]/85 via-[#080e18]/95 to-[#060b13] pointer-events-none z-[1]" />
 
                 {/* 3. Glowing cyan/teal atmospheric spotlight at top left behind title and controls */}
-                <div className="absolute top-0 left-0 w-[680px] h-[480px] bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#175d69_45%,transparent_75%)] opacity-30 pointer-events-none z-[2]" />
-                <div className="absolute -top-10 right-0 w-[680px] h-[520px] bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-35 pointer-events-none z-[2]" />
+                <div className="absolute top-0 left-0 w-[680px] h-[520px] bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#175d69_45%,transparent_75%)] opacity-30 pointer-events-none z-[2]" />
+                <div className="absolute -top-10 right-0 w-[680px] h-[560px] bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-35 pointer-events-none z-[2]" />
 
-                {/* 4. THE HERO ARTWORK / ALBUM COVER NATURALLY STRETCHING DOWN BEHIND JUMP BACK IN & TASTE SECTIONS */}
-                <div className="absolute top-0 right-0 bottom-0 w-[68%] sm:w-[60%] lg:w-[54%] max-w-6xl pointer-events-none z-[3] overflow-hidden flex items-start justify-end">
+                {/* 4. THE HERO ARTWORK / ALBUM COVER NATURALLY FLOWING AND DISSOLVING SEAMLESSLY DOWN THE STAGE */}
+                <div className="absolute top-0 right-0 w-[68%] sm:w-[60%] lg:w-[54%] max-w-6xl pointer-events-none z-[3] overflow-hidden flex items-start justify-end h-[1050px] sm:h-[1200px]">
                   <img
                     key={currentSpotlight.id}
                     src={currentSpotlight.heroImageUrl}
                     alt={currentSpotlight.title}
-                    className="w-full h-full object-cover object-top sm:object-[75%_top] select-none animate-in fade-in duration-700 [mask-image:linear-gradient(to_left,black_50%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_50%,transparent_100%)]"
+                    className="w-full h-full object-cover object-top sm:object-[75%_top] select-none animate-in fade-in duration-700 [mask-image:linear-gradient(to_left,black_45%,transparent_100%),linear-gradient(to_bottom,black_40%,transparent_100%)] [webkit-mask-image:linear-gradient(to_left,black_45%,transparent_100%),linear-gradient(to_bottom,black_40%,transparent_100%)]"
                   />
                   {/* Subtle vertical vignette overlay ensuring frosted glass cards and typography pop with crystalline contrast */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#060b13]/35 to-[#060b13]/90" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#060b13]/40 via-[#060b13]/80 to-[#060b13]" />
                 </div>
-
-                {/* 5. Ambient bottom-edge smooth gradient fade into main content */}
-                <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-b from-transparent via-[#060b13]/80 to-[#060b13] pointer-events-none z-10" />
 
                 {/* TopBar sitting seamlessly over the hero stage */}
                 <div className="relative z-20">
@@ -622,8 +619,8 @@ export default function SoundloungeApp() {
                   />
                 </div>
 
-                {/* DYNAMIC TASTE SECTIONS EXTENDED SEAMLESSLY OVER HERO BACKDROP */}
-                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pb-12 pt-2">
+                {/* UNIFIED DISCOVER CONTENT: Taste Profile -> Tailored Albums -> Popular Artists */}
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 space-y-12 pt-2">
                   <DynamicTasteHomeSections
                     onPlayTrack={handlePlaySingleTrack}
                     onPlayMix={handlePlayMix}
@@ -642,182 +639,15 @@ export default function SoundloungeApp() {
                     historyTracks={history}
                     isOverHero={true}
                   />
-                </div>
-              </div>
-            ) : (
-              <TopBar
-                mode={playerState.mode}
-                onModeChange={handleModeChange}
-                roomId={roomId}
-                participantsCount={sync.participantsCount}
-                pingMs={sync.pingMs}
-                onOpenInvite={() => setIsInviteOpen(true)}
-                onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
-                isLeavesEnabled={isLeavesEnabled}
-                onToggleLeaves={handleToggleLeaves}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onSearch={(q) => {
-                  if (q.trim()) {
-                    setSearchQuery(q.trim());
-                    recordSearch(q.trim());
-                    setSelectedArtist(null);
-                    setSelectedAlbum(null);
-                    setActiveTab("search");
-                  }
-                }}
-                onNavBack={handleNavBack}
-                onNavForward={handleNavForward}
-                onOpenUpload={() => setActiveTab("search")}
-                onPlayTrack={handlePlaySingleTrack}
-                onAddTrack={handleAddTrack}
-                onSelectArtist={(artist) => {
-                  recordArtistView(artist.name);
-                  setSelectedArtist(artist);
-                }}
-                onSelectAlbum={(album) => setSelectedAlbum(album)}
-                activeTopTab={topNavTab}
-                onTopTabChange={(tab) => {
-                  setSelectedArtist(null);
-                  setSelectedAlbum(null);
-                  setTopNavTab(tab);
-                  if (tab === "discover") {
-                    setActiveTab("home");
-                  } else if (tab === "library") {
-                    setActiveTab("liked");
-                  } else if (tab === "radio") {
-                    setActiveTab("genres");
-                  }
-                }}
-              />
-            )}
 
-            {/* Stage Canvas */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-32 sm:pb-24">
-              {/* Detailed Artist Profile & Discography View */}
-              {selectedArtist ? (
-                <ArtistDetailView
-                  artist={selectedArtist}
-                  onBack={() => setSelectedArtist(null)}
-                  onPlayTrack={handlePlaySingleTrack}
-                  onAddTrack={handleAddTrack}
-                  onPlayAll={handlePlayArtistAll}
-                  onSelectAlbum={(album) => {
-                    setSelectedArtist(null);
-                    setSelectedAlbum(album);
-                  }}
-                  currentTrack={activeTrack}
-                  isPlaying={playerState.status === "playing"}
-                />
-              ) : selectedAlbum ? (
-                <AlbumDetailView
-                  album={selectedAlbum}
-                  onBack={() => setSelectedAlbum(null)}
-                  onPlayTrack={handlePlaySingleTrack}
-                  onAddTrack={handleAddTrack}
-                  onPlayAlbum={handlePlayAlbum}
-                  onAddAlbumToQueue={handleAddAlbumToQueue}
-                  currentTrack={activeTrack}
-                  isPlaying={playerState.status === "playing"}
-                  onSelectAlbum={(alb) => setSelectedAlbum(alb)}
-                />
-              ) : activeTab === "queue" ? (
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold text-white tracking-tight">Playing Queue</h2>
-                      <p className="text-xs text-slate-400">
-                        {queue.length} track{queue.length === 1 ? "" : "s"} scheduled • Autoplay similar soundscapes
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setActiveTab("home");
-                        setTopNavTab("discover");
-                      }}
-                      className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
-                    >
-                      Back to Discover
-                    </button>
-                  </div>
-
-                  <QueueView
-                    queue={queue}
-                    currentIndex={currentIndex}
-                    isAutoplayEnabled={isAutoplayEnabled}
-                    onToggleAutoplay={toggleAutoplay}
-                    autoQueueReasons={autoQueueReasons}
-                    onPlayTrack={handlePlayQueueTrack}
-                    onRemoveTrack={handleRemoveTrack}
-                    onPlayNext={handlePlayNext}
-                    onClearQueue={handleClearQueue}
-                    onSavePlaylist={handleSaveQueueAsPlaylist}
-                  />
-                </div>
-              ) : activeTab === "search" ? (
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg font-bold text-white tracking-tight">Music Search & Ingestion</h2>
-                      <p className="text-xs text-slate-400">
-                        Direct search powered by YouTube & low-latency edge audio streaming
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setActiveTab("home");
-                        setTopNavTab("discover");
-                      }}
-                      className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
-                    >
-                      Back to Discover
-                    </button>
-                  </div>
-
-                  <MusicIngestion
-                    onAddTrack={handleAddTrack}
-                    onPlayDirect={handlePlaySingleTrack}
-                    roomId={roomId}
-                    initialQuery={searchQuery}
-                    onQueryChange={setSearchQuery}
-                    onSelectAlbum={(album) => setSelectedAlbum(album)}
-                  />
-                </div>
-              ) : topNavTab === "library" || activeTab === "liked" || activeTab === "history" ? (
-                <div className="max-w-5xl mx-auto">
-                  <LibraryView
-                    likedTracks={likedTracks}
-                    playlists={playlists}
-                    history={history}
-                    lastSession={lastSession}
-                    onPlayTrack={handlePlaySingleTrack}
-                    onPlayPlaylist={handlePlayPlaylist}
-                    onCreatePlaylist={createPlaylist}
-                    onDeletePlaylist={deletePlaylist}
-                    onResumeSession={handleResumeSession}
-                    activeSection={activeTab === "history" ? "history" : "liked"}
-                  />
-                </div>
-              ) : topNavTab === "radio" || activeTab === "genres" ? (
-                <div className="max-w-6xl mx-auto">
-                  <GenreDirectoryView
-                    onPlayGenreRadio={handlePlayGenreRadio}
-                    onSelectArtist={(artist) => setSelectedArtist(artist)}
-                    onSelectAlbum={(album) => setSelectedAlbum(album)}
-                  />
-                </div>
-              ) : (
-                /* Main Discovery Stage: Popular Albums + Popular Artists */
-                <div className="space-y-10 pt-4">
-                  {/* Popular Albums Section (Dynamically re-ranked by taste) */}
+                  {/* Albums Tailored To Your Vibe / Popular Albums Row */}
                   <PopularAlbumsRow
                     onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
                     onPlayAlbum={handlePlayAlbum}
                     onPlayTrack={handlePlaySingleTrack}
                   />
 
-                  {/* Popular Artists Section (Dynamically re-ranked by taste) */}
+                  {/* Artists You Love & Similar / Popular Artists Row */}
                   <PopularArtistsRow
                     onSelectArtist={(artist) => {
                       recordArtistView(artist.name);
@@ -825,8 +655,174 @@ export default function SoundloungeApp() {
                     }}
                   />
                 </div>
-              )}
-            </main>
+              </div>
+            ) : (
+              <div>
+                <TopBar
+                  mode={playerState.mode}
+                  onModeChange={handleModeChange}
+                  roomId={roomId}
+                  participantsCount={sync.participantsCount}
+                  pingMs={sync.pingMs}
+                  onOpenInvite={() => setIsInviteOpen(true)}
+                  onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+                  isLeavesEnabled={isLeavesEnabled}
+                  onToggleLeaves={handleToggleLeaves}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  onSearch={(q) => {
+                    if (q.trim()) {
+                      setSearchQuery(q.trim());
+                      recordSearch(q.trim());
+                      setSelectedArtist(null);
+                      setSelectedAlbum(null);
+                      setActiveTab("search");
+                    }
+                  }}
+                  onNavBack={handleNavBack}
+                  onNavForward={handleNavForward}
+                  onOpenUpload={() => setActiveTab("search")}
+                  onPlayTrack={handlePlaySingleTrack}
+                  onAddTrack={handleAddTrack}
+                  onSelectArtist={(artist) => {
+                    recordArtistView(artist.name);
+                    setSelectedArtist(artist);
+                  }}
+                  onSelectAlbum={(album) => setSelectedAlbum(album)}
+                  activeTopTab={topNavTab}
+                  onTopTabChange={(tab) => {
+                    setSelectedArtist(null);
+                    setSelectedAlbum(null);
+                    setTopNavTab(tab);
+                    if (tab === "discover") {
+                      setActiveTab("home");
+                    } else if (tab === "library") {
+                      setActiveTab("liked");
+                    } else if (tab === "radio") {
+                      setActiveTab("genres");
+                    }
+                  }}
+                />
+
+                {/* Stage Canvas for non-discover views */}
+                <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-32 sm:pb-24">
+                  {/* Detailed Artist Profile & Discography View */}
+                  {selectedArtist ? (
+                    <ArtistDetailView
+                      artist={selectedArtist}
+                      onBack={() => setSelectedArtist(null)}
+                      onPlayTrack={handlePlaySingleTrack}
+                      onAddTrack={handleAddTrack}
+                      onPlayAll={handlePlayArtistAll}
+                      onSelectAlbum={(album) => {
+                        setSelectedArtist(null);
+                        setSelectedAlbum(album);
+                      }}
+                      currentTrack={activeTrack}
+                      isPlaying={playerState.status === "playing"}
+                    />
+                  ) : selectedAlbum ? (
+                    <AlbumDetailView
+                      album={selectedAlbum}
+                      onBack={() => setSelectedAlbum(null)}
+                      onPlayTrack={handlePlaySingleTrack}
+                      onAddTrack={handleAddTrack}
+                      onPlayAlbum={handlePlayAlbum}
+                      onAddAlbumToQueue={handleAddAlbumToQueue}
+                      currentTrack={activeTrack}
+                      isPlaying={playerState.status === "playing"}
+                      onSelectAlbum={(alb) => setSelectedAlbum(alb)}
+                    />
+                  ) : activeTab === "queue" ? (
+                    <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-xl font-bold text-white tracking-tight">Playing Queue</h2>
+                          <p className="text-xs text-slate-400">
+                            {queue.length} track{queue.length === 1 ? "" : "s"} scheduled • Autoplay similar soundscapes
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setActiveTab("home");
+                            setTopNavTab("discover");
+                          }}
+                          className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
+                        >
+                          Back to Discover
+                        </button>
+                      </div>
+
+                      <QueueView
+                        queue={queue}
+                        currentIndex={currentIndex}
+                        isAutoplayEnabled={isAutoplayEnabled}
+                        onToggleAutoplay={toggleAutoplay}
+                        autoQueueReasons={autoQueueReasons}
+                        onPlayTrack={handlePlayQueueTrack}
+                        onRemoveTrack={handleRemoveTrack}
+                        onPlayNext={handlePlayNext}
+                        onClearQueue={handleClearQueue}
+                        onSavePlaylist={handleSaveQueueAsPlaylist}
+                      />
+                    </div>
+                  ) : activeTab === "search" ? (
+                    <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-lg font-bold text-white tracking-tight">Music Search & Ingestion</h2>
+                          <p className="text-xs text-slate-400">
+                            Direct search powered by YouTube & low-latency edge audio streaming
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSearchQuery("");
+                            setActiveTab("home");
+                            setTopNavTab("discover");
+                          }}
+                          className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
+                        >
+                          Back to Discover
+                        </button>
+                      </div>
+
+                      <MusicIngestion
+                        onAddTrack={handleAddTrack}
+                        onPlayDirect={handlePlaySingleTrack}
+                        roomId={roomId}
+                        initialQuery={searchQuery}
+                        onQueryChange={setSearchQuery}
+                        onSelectAlbum={(album) => setSelectedAlbum(album)}
+                      />
+                    </div>
+                  ) : topNavTab === "library" || activeTab === "liked" || activeTab === "history" ? (
+                    <div className="max-w-5xl mx-auto">
+                      <LibraryView
+                        likedTracks={likedTracks}
+                        playlists={playlists}
+                        history={history}
+                        lastSession={lastSession}
+                        onPlayTrack={handlePlaySingleTrack}
+                        onPlayPlaylist={handlePlayPlaylist}
+                        onCreatePlaylist={createPlaylist}
+                        onDeletePlaylist={deletePlaylist}
+                        onResumeSession={handleResumeSession}
+                        activeSection={activeTab === "history" ? "history" : "liked"}
+                      />
+                    </div>
+                  ) : topNavTab === "radio" || activeTab === "genres" ? (
+                    <div className="max-w-6xl mx-auto">
+                      <GenreDirectoryView
+                        onPlayGenreRadio={handlePlayGenreRadio}
+                        onSelectArtist={(artist) => setSelectedArtist(artist)}
+                        onSelectAlbum={(album) => setSelectedAlbum(album)}
+                      />
+                    </div>
+                  ) : null}
+                </main>
+              </div>
+            )}
           </div>
         </div>
       </div>

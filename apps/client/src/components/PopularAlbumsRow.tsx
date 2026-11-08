@@ -221,8 +221,8 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
               }
             }}
           >
-            {/* Album Cover Card: 1:1 Square with image filling card completely and smooth rounded corners matching mockup */}
-            <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-slate-900 shadow-md shadow-black/50 ring-1 ring-white/10 group-hover:ring-[#00e5ff]/50 transition-all duration-300">
+            {/* Album Cover Card: 1:1 Square with high-res image and frosted glassmorphic depth */}
+            <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#0c1424]/70 backdrop-blur-md shadow-lg shadow-black/50 ring-1 ring-white/15 group-hover:ring-[#00e5ff]/60 transition-all duration-300">
               <ImageWithFallback
                 src={album.coverUrl}
                 alt={album.title}

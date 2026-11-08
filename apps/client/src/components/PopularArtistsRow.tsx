@@ -133,7 +133,7 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
             }}
           >
             {/* Circular Avatar with Glowing Ambient Halo on Hover */}
-            <div className="relative w-[76px] h-[76px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-slate-800 ring-2 ring-slate-800/60 group-hover:ring-[#00e5ff] shadow-lg shadow-black/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.35)]">
+            <div className="relative w-[76px] h-[76px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-[#0c1424]/70 backdrop-blur-md ring-2 ring-white/15 group-hover:ring-[#00e5ff] shadow-xl shadow-black/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.4)]">
               <ImageWithFallback
                 src={artist.avatarUrl}
                 alt={artist.name}
