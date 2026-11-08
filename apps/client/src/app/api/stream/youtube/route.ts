@@ -13,10 +13,15 @@ interface CachedFormat {
 const formatCache = new Map<string, CachedFormat>();
 const searchToVideoIdCache = new Map<string, string>();
 
-// VisionOS and Tv clients bypass all YouTube bot checks without PO tokens or cookies
-const ytdl = new Ytdl({
-  clients: [Client.VisionOS, Client.Tv],
-});
+// VisionOS, Tv, and WebEmbedded clients bypass bot checks without PO tokens or cookies
+const DEFAULT_CLIENT_SETS: Client[][] = [
+  [Client.Tv, Client.WebEmbedded],
+  [Client.WebEmbedded],
+  [Client.Tv],
+  [Client.Mweb],
+  [Client.WebMusic],
+  [Client.VisionOS],
+];
 
 let innertubePromise: Promise<Innertube> | null = null;
 async function getInnertube(): Promise<Innertube> {
@@ -33,17 +38,13 @@ async function getInnertube(): Promise<Innertube> {
 }
 
 /**
- * Searches YouTube for an exact song when no videoId is provided or if initial video is unavailable
+ * Searches YouTube for candidate songs matching title and artist
  */
-async function searchExactYouTubeSong(title: string, artist?: string): Promise<string | null> {
-  const cacheKey = `${title.toLowerCase().trim()}::${(artist || "").toLowerCase().trim()}`;
-  if (searchToVideoIdCache.has(cacheKey)) {
-    return searchToVideoIdCache.get(cacheKey)!;
-  }
-
+async function searchCandidateYouTubeSongs(title: string, artist?: string): Promise<string[]> {
   try {
     const yt = await getInnertube();
     const cleanTitle = title
+      .replace(/&amp;/g, "&")
       .replace(/\(.*?\)/g, "")
       .replace(/\[.*?\]/g, "")
       .trim();
@@ -58,14 +59,30 @@ async function searchExactYouTubeSong(title: string, artist?: string): Promise<s
       return durSec >= 45 && durSec <= 720;
     });
 
-    const chosen = validSongVideos[0] || videos[0];
-    if (chosen && chosen.id) {
-      const vid = String(chosen.id);
-      searchToVideoIdCache.set(cacheKey, vid);
-      return vid;
-    }
+    const ids = (validSongVideos.length > 0 ? validSongVideos : videos)
+      .map((v) => (v.id ? String(v.id) : null))
+      .filter((id): id is string => Boolean(id) && /^[a-zA-Z0-9_-]{11}$/.test(id));
+
+    return Array.from(new Set(ids)).slice(0, 4);
   } catch (err) {
-    console.warn("searchExactYouTubeSong failed:", title, artist, err);
+    console.warn("searchCandidateYouTubeSongs failed:", title, artist, err);
+    return [];
+  }
+}
+
+/**
+ * Searches YouTube for an exact song when no videoId is provided or if initial video is unavailable
+ */
+async function searchExactYouTubeSong(title: string, artist?: string): Promise<string | null> {
+  const cacheKey = `${title.toLowerCase().trim()}::${(artist || "").toLowerCase().trim()}`;
+  if (searchToVideoIdCache.has(cacheKey)) {
+    return searchToVideoIdCache.get(cacheKey)!;
+  }
+
+  const candidates = await searchCandidateYouTubeSongs(title, artist);
+  if (candidates.length > 0) {
+    searchToVideoIdCache.set(cacheKey, candidates[0]);
+    return candidates[0];
   }
 
   return null;
@@ -123,46 +140,42 @@ async function resolveVideoId(
 let lastExtractionError = "";
 
 async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat | null> {
-  try {
-    const info = await ytdl.getInfo(videoId);
-    const audioFormats = info.formats.filter((f) => f.hasAudio && !f.hasVideo && Boolean(f.url));
-    if (audioFormats.length === 0) {
-      lastExtractionError = `No audio formats with direct URL found for ${videoId} (total formats: ${info.formats.length})`;
-      return null;
-    }
-
-    // Prefer AAC / MP4 (itag 140) for universal cross-platform browser support, fallback to Opus / WebM
-    const mp4Formats = audioFormats.filter((f) => f.mimeType && f.mimeType.includes("mp4"));
-    const sortedFormats = (mp4Formats.length > 0 ? mp4Formats : audioFormats).sort(
-      (a, b) => (b.bitrate || 0) - (a.bitrate || 0)
-    );
-
-    const chosen = sortedFormats[0];
-    if (!chosen || !chosen.url) {
-      lastExtractionError = "Chosen format had no URL";
-      return null;
-    }
-
-    let expireMs = NaN;
+  for (const clients of DEFAULT_CLIENT_SETS) {
     try {
-      expireMs = Number(new URL(chosen.url).searchParams.get("expire")) * 1000;
-    } catch {}
+      const yt = new Ytdl({ clients });
+      const info = await yt.getInfo(videoId);
+      const audioFormats = info.formats.filter((f) => f.hasAudio && !f.hasVideo && Boolean(f.url));
+      if (audioFormats.length === 0) continue;
 
-    const expiresAt =
-      Number.isFinite(expireMs) && expireMs > 0 ? Math.min(expireMs - 60000, Date.now() + 3600000) : Date.now() + 3600000;
+      // Prefer AAC / MP4 (itag 140) for universal cross-platform browser support, fallback to Opus / WebM
+      const mp4Formats = audioFormats.filter((f) => f.mimeType && f.mimeType.includes("mp4"));
+      const sortedFormats = (mp4Formats.length > 0 ? mp4Formats : audioFormats).sort(
+        (a, b) => (b.bitrate || 0) - (a.bitrate || 0)
+      );
 
-    return {
-      url: chosen.url,
-      mimeType: chosen.mimeType?.split(";")[0] || "audio/mp4",
-      contentLength: chosen.contentLength || undefined,
-      expiresAt,
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    lastExtractionError = msg;
-    console.warn(`ytdl extraction failed for ${videoId}:`, msg);
-    return null;
+      const chosen = sortedFormats[0];
+      if (!chosen || !chosen.url) continue;
+
+      let expireMs = NaN;
+      try {
+        expireMs = Number(new URL(chosen.url).searchParams.get("expire")) * 1000;
+      } catch {}
+
+      const expiresAt =
+        Number.isFinite(expireMs) && expireMs > 0 ? Math.min(expireMs - 60000, Date.now() + 3600000) : Date.now() + 3600000;
+
+      return {
+        url: chosen.url,
+        mimeType: chosen.mimeType?.split(";")[0] || "audio/mp4",
+        contentLength: chosen.contentLength || undefined,
+        expiresAt,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      lastExtractionError = msg;
+    }
   }
+  return null;
 }
 
 /**
@@ -321,43 +334,50 @@ export async function GET(req: NextRequest) {
   let streamInfo: CachedFormat | null | undefined = formatCache.get(cacheKey);
 
   if (!streamInfo || streamInfo.expiresAt <= Date.now()) {
-    // 1. Resolve authentic YouTube video ID
-    let targetVid = await resolveVideoId(rawVideoId, title, artist, query);
+    // 1. Collect candidate video IDs in priority order
+    const candidateIds: string[] = [];
+    const initialVid = await resolveVideoId(rawVideoId, title, artist, query);
+    if (initialVid) candidateIds.push(initialVid);
 
-    // 2. Primary Engine: Direct YouTube Audio Extraction (VisionOS/Tv zero-bot-check)
-    if (targetVid) {
-      streamInfo = await extractYouTubeAudioFormat(targetVid);
+    if (title || query) {
+      const searchCandidates = await searchCandidateYouTubeSongs(title || query || "", artist);
+      for (const id of searchCandidates) {
+        if (!candidateIds.includes(id)) {
+          candidateIds.push(id);
+        }
+      }
     }
 
-    // 3. If primary video failed, try searching for exact alternate YouTube upload
-    if (!streamInfo && (title || query)) {
-      const altVid = await searchExactYouTubeSong(title || query || "", artist);
-      if (altVid && altVid !== targetVid) {
-        targetVid = altVid;
-        streamInfo = await extractYouTubeAudioFormat(altVid);
+    // 2. Primary Engine: Direct YouTube Audio Extraction across candidates
+    let successfulVid: string | null = null;
+    for (const vid of candidateIds) {
+      streamInfo = await extractYouTubeAudioFormat(vid);
+      if (streamInfo) {
+        successfulVid = vid;
+        break;
       }
     }
 
     // Resolve title and artist if not explicitly passed
     let queryTitle: string | null | undefined = title;
     let queryArtist: string | null | undefined = artist;
-    if (!queryTitle && targetVid) {
+    if (!queryTitle && successfulVid) {
       try {
         const yt = await getInnertube();
-        const basic = await yt.getBasicInfo(targetVid);
+        const basic = await yt.getBasicInfo(successfulVid);
         queryTitle = basic.basic_info.title;
         queryArtist = queryArtist || basic.basic_info.author;
       } catch {}
     }
 
-    // 4. Secondary fallback: High-fidelity direct 320kbps MP4 audio with byte ranges (zero bot block)
+    // 3. Secondary fallback: High-fidelity direct 320kbps MP4 audio with byte ranges (zero bot block)
     if (!streamInfo && (queryTitle || title)) {
       streamInfo = await fallbackSaavnMatch((queryTitle || title)!, queryArtist || undefined);
     }
 
     if (streamInfo) {
       formatCache.set(cacheKey, streamInfo);
-      if (targetVid) formatCache.set(targetVid, streamInfo);
+      if (successfulVid) formatCache.set(successfulVid, streamInfo);
     }
   }
 
