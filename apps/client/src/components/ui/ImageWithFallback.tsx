@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { Disc3, Music } from "lucide-react";
 
-interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface ImageWithFallbackProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src"> {
+  src?: string | null;
   fallbackTitle?: string;
   fallbackType?: "album" | "artist" | "track";
   containerClassName?: string;
@@ -18,11 +19,29 @@ export function ImageWithFallback({
   fallbackType = "album",
   ...props
 }: ImageWithFallbackProps) {
+  const [currentSrc, setCurrentSrc] = useState<string | undefined>(typeof src === "string" ? src : undefined);
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Synchronize currentSrc when incoming src prop changes
+  React.useEffect(() => {
+    setCurrentSrc(typeof src === "string" ? src : undefined);
+    setHasError(false);
+    setIsLoaded(false);
+  }, [src]);
+
+  const handleImageError = () => {
+    if (currentSrc && currentSrc.includes("maxresdefault.jpg")) {
+      setCurrentSrc(currentSrc.replace("maxresdefault.jpg", "hqdefault.jpg"));
+    } else if (currentSrc && currentSrc.includes("hqdefault.jpg")) {
+      setCurrentSrc(currentSrc.replace("hqdefault.jpg", "mqdefault.jpg"));
+    } else {
+      setHasError(true);
+    }
+  };
+
   // If src is empty or errored, render the stylized audiophile fallback
-  if (!src || hasError) {
+  if (!currentSrc || hasError) {
     return (
       <div
         className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#101827] to-[#0c1f28] text-slate-400 p-2 select-none relative overflow-hidden ${
@@ -71,10 +90,10 @@ export function ImageWithFallback({
       )}
 
       <img
-        src={src}
+        src={currentSrc}
         alt={alt || fallbackTitle || "Image"}
         onLoad={() => setIsLoaded(true)}
-        onError={() => setHasError(true)}
+        onError={handleImageError}
         className={`${className} transition-opacity duration-300 ${isLoaded ? "opacity-100" : "opacity-0"}`}
         {...props}
       />

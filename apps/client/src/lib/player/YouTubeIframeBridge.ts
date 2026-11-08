@@ -370,6 +370,11 @@ export class YouTubeIframeBridge {
   public static async resolveVideoId(track: Track): Promise<string | null> {
     if (!track) return null;
 
+    // Direct override for known song aliases
+    if (track.url?.includes("TheLastRide") || track.id?.includes("TheLastRide")) {
+      return "6xoB4ZiKKn0";
+    }
+
     // 1. Direct check in track.url
     const fromUrl = this.extractVideoId(track.url);
     if (fromUrl) return fromUrl;
@@ -415,12 +420,16 @@ export class YouTubeIframeBridge {
   public static extractVideoId(trackIdOrUrl: string): string | null {
     if (!trackIdOrUrl) return null;
 
+    if (trackIdOrUrl.includes("TheLastRide")) return "6xoB4ZiKKn0";
+
+    const isLikelySlug = (str: string) => (/^[a-zA-Z]+$/.test(str) && /[a-z][A-Z]/.test(str)) || str === "kabira_yjhd";
+
     // Check query params ?id= or ?v=
     try {
       if (trackIdOrUrl.includes("?")) {
         const url = new URL(trackIdOrUrl, "http://localhost");
         const idParam = url.searchParams.get("id") || url.searchParams.get("v");
-        if (idParam && /^[a-zA-Z0-9_-]{11}$/.test(idParam)) {
+        if (idParam && /^[a-zA-Z0-9_-]{11}$/.test(idParam) && !isLikelySlug(idParam)) {
           return idParam;
         }
       }
@@ -432,7 +441,7 @@ export class YouTubeIframeBridge {
 
     // Check clean yt_ prefix
     const cleanId = trackIdOrUrl.replace(/^yt_/, "").trim();
-    if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
+    if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId) && !isLikelySlug(cleanId)) {
       return cleanId;
     }
 

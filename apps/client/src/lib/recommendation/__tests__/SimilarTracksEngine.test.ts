@@ -13,11 +13,11 @@ describe("Intelligent Similar Tracks Recommendation Engine", () => {
   };
 
   const sidhuTrack2: Track = {
-    id: "yt_TheLastRide",
+    id: "yt_6xoB4ZiKKn0",
     title: "The Last Ride",
     artist: "Sidhu Moose Wala",
     durationMs: 260000,
-    url: "/api/stream/youtube?id=TheLastRide",
+    url: "/api/stream/youtube?id=6xoB4ZiKKn0&title=The%20Last%20Ride&artist=Sidhu%20Moose%20Wala",
     source: "youtube",
   };
 

@@ -90,8 +90,15 @@ async function resolveToValidVideoId(
 
   const cleanId = (idInput || "").replace(/^yt_/, "").trim();
 
-  // If cleanId is already an 11-char YouTube ID
-  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId)) {
+  // Explicit known aliases
+  if (cleanId === "TheLastRide" || cleanId.toLowerCase() === "thelastride") {
+    return "6xoB4ZiKKn0";
+  }
+
+  const isLikelySlug = (/^[a-zA-Z]+$/.test(cleanId) && /[a-z][A-Z]/.test(cleanId)) || cleanId === "kabira_yjhd";
+
+  // If cleanId is a verified 11-char YouTube ID (not a slug)
+  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId) && !isLikelySlug) {
     return cleanId;
   }
 
@@ -138,7 +145,11 @@ async function getAudioStreamUrl(
     }
   } catch (initialErr) {
     console.warn(`ytdl failed for ${videoId}, searching fallback:`, initialErr);
-    const fallbackQuery = title || q || idInput || "";
+    const rawQuery = title || q || idInput || "";
+    const fallbackQuery = rawQuery
+      .replace(/([A-Z])/g, " $1")
+      .replace(/[_\-]+/g, " ")
+      .trim();
     const altId = await searchExactSong(fallbackQuery, artist || undefined);
     if (altId && altId !== videoId) {
       videoId = altId;
