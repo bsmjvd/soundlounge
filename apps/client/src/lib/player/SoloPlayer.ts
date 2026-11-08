@@ -90,22 +90,21 @@ export class SoloPlayer {
 
   /**
    * Synchronously primes and unlocks the HTMLAudioElement within a user gesture.
-   * Required for iOS Safari to avoid NotAllowedError on delayed/async playback calls.
+   * Required for iOS Safari to avoid NotAllowedError on initial unconfigured state.
    */
   public primeAudioSession(track?: Track): void {
-    if (typeof window === "undefined") return;
-    if (this.audioElement) {
-      try {
-        if (this.audioElement.paused) {
-          if (!this.audioElement.src || this.audioElement.src === "" || this.audioElement.src.endsWith("/")) {
-            this.audioElement.src = "/audio/silence.mp3";
-            this.audioElement.loop = true;
-            this.audioElement.volume = 0.001;
-          }
-          this.audioElement.play().catch(() => {});
-        }
-      } catch {}
-    }
+    if (typeof window === "undefined" || !this.audioElement) return;
+    try {
+      if (
+        this.state.status === "idle" &&
+        this.audioElement.paused &&
+        (!this.audioElement.src || this.audioElement.src === "" || this.audioElement.src.endsWith("/"))
+      ) {
+        this.audioElement.src = "/audio/silence.mp3";
+        this.audioElement.volume = 0.001;
+        this.audioElement.play().catch(() => {});
+      }
+    } catch {}
     if (track) {
       this.updateMediaSession(track);
     }
@@ -183,6 +182,11 @@ export class SoloPlayer {
         this.audioElement.addEventListener("playing", () => {
           if (this.activeEngine === "audio") {
             this.state.status = "playing";
+            if (typeof window !== "undefined" && "mediaSession" in navigator) {
+              try {
+                navigator.mediaSession.playbackState = "playing";
+              } catch {}
+            }
             this.emitState();
           }
         });
@@ -190,6 +194,11 @@ export class SoloPlayer {
         this.audioElement.addEventListener("pause", () => {
           if (this.activeEngine === "audio" && this.state.status !== "idle") {
             this.state.status = "paused";
+            if (typeof window !== "undefined" && "mediaSession" in navigator) {
+              try {
+                navigator.mediaSession.playbackState = "paused";
+              } catch {}
+            }
             this.emitState();
           }
         });
@@ -197,6 +206,15 @@ export class SoloPlayer {
         this.audioElement.addEventListener("timeupdate", () => {
           if (this.activeEngine === "audio" && this.audioElement) {
             this.state.positionMs = Math.floor(this.audioElement.currentTime * 1000);
+            if (typeof window !== "undefined" && "mediaSession" in navigator && this.audioElement.duration > 0) {
+              try {
+                navigator.mediaSession.setPositionState({
+                  duration: this.audioElement.duration,
+                  position: Math.max(0, this.audioElement.currentTime),
+                  playbackRate: 1,
+                });
+              } catch {}
+            }
             this.emitState();
           }
         });
@@ -318,47 +336,49 @@ export class SoloPlayer {
   }
 
   async play(track: Track, positionMs: number = 0): Promise<void> {
-    // 0. Synchronously prime audio element and media session within the immediate user gesture
-    this.primeAudioSession(track);
-
     this.state.currentTrack = track;
     this.state.durationMs = track.durationMs || 0;
     this.state.positionMs = positionMs;
     this.state.status = "playing";
     this.emitState();
 
-    // 1. Check if direct videoId can be extracted synchronously (zero user gesture expiration)
+    // 1. Resolve direct streamable URL
+    let playUrl = track.url || "";
     const directVideoId =
       YouTubeIframeBridge.extractVideoId(track.url) ||
       YouTubeIframeBridge.extractVideoId(track.id);
 
-    if (directVideoId) {
-      this.activeEngine = "iframe";
-      this.startSilentAudioAnchor();
-      this.ytBridge.loadAndPlay(directVideoId, positionMs);
-      this.updateMediaSession(track);
-      return;
+    if (!playUrl || playUrl.trim() === "" || playUrl === "undefined") {
+      if (directVideoId) {
+        playUrl = `/api/stream/youtube?id=${directVideoId}`;
+      } else if (track.title) {
+        playUrl = `/api/stream/youtube?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist || "")}`;
+      }
+    } else if (playUrl.startsWith("/api/stream/youtube")) {
+      try {
+        const dummyBase = "http://localhost";
+        const parsed = new URL(playUrl, dummyBase);
+        if (!parsed.searchParams.has("title") && track.title) {
+          parsed.searchParams.set("title", track.title);
+        }
+        if (!parsed.searchParams.has("artist") && track.artist) {
+          parsed.searchParams.set("artist", track.artist);
+        }
+        playUrl = `${parsed.pathname}${parsed.search}`;
+      } catch {}
     }
 
-    // 2. Resolve videoId if track needs dynamic search resolution
-    let videoId: string | null = null;
-    if (track.source === "youtube" || track.url.includes("youtube") || track.id.startsWith("yt_")) {
-      videoId = await YouTubeIframeBridge.resolveVideoId(track);
-    }
-
-    // 3. Play via YouTube IFrame Audio Bridge for YouTube tracks (100% reliable, zero bot block)
-    if (videoId) {
-      this.activeEngine = "iframe";
-      this.startSilentAudioAnchor();
-      this.ytBridge.loadAndPlay(videoId, positionMs);
-      this.updateMediaSession(track);
-      return;
-    }
-
-    // 3. Fallback to HTMLAudioElement for local audio, uploaded audio, or direct CDN streams
-    this.activeEngine = "audio";
+    // 2. PRIMARY AUDIO ENGINE: Native HTMLAudioElement
+    // Direct audio streaming from /api/stream/youtube gives 100% reliable sound on laptop and mobile,
+    // background audio playback on lockscreen, lockscreen scrubber controls, and eliminates YouTube Error 150 blocks.
     if (this.audioElement) {
+      this.activeEngine = "audio";
       this.audioElement.loop = false;
+      this.stopSilentAudioAnchor();
+
+      // Pause any iframe player
+      this.ytBridge.pause();
+
       if (typeof window !== "undefined") {
         const win = window as unknown as WindowWithAudio;
         win.__soundlounge_active_audio__ = this.audioElement;
@@ -372,21 +392,6 @@ export class SoloPlayer {
             } catch {}
           }
         });
-      }
-
-      let playUrl = track.url;
-      if (playUrl.startsWith("/api/stream/youtube")) {
-        try {
-          const dummyBase = "http://localhost";
-          const parsed = new URL(playUrl, dummyBase);
-          if (!parsed.searchParams.has("title") && track.title) {
-            parsed.searchParams.set("title", track.title);
-          }
-          if (!parsed.searchParams.has("artist") && track.artist) {
-            parsed.searchParams.set("artist", track.artist);
-          }
-          playUrl = `${parsed.pathname}${parsed.search}`;
-        } catch {}
       }
 
       const currentSrc = this.audioElement.src;
@@ -411,14 +416,20 @@ export class SoloPlayer {
         await this.audioElement.play();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        console.warn("SoloPlayer: play() rejected or interrupted:", message);
-        const fallbackVid = await YouTubeIframeBridge.resolveVideoId(track);
-        if (fallbackVid) {
-          console.log("SoloPlayer: Switching to YouTube IFrame fallback after play() rejection");
+        console.warn("SoloPlayer: audioElement.play() failed, attempting fallback:", message);
+
+        // Fallback to YouTube IFrame if direct audio stream fails
+        if (directVideoId) {
+          console.log("SoloPlayer: Activating YouTube IFrame fallback for", directVideoId);
           this.activeEngine = "iframe";
-          this.ytBridge.loadAndPlay(fallbackVid, positionMs);
+          this.startSilentAudioAnchor();
+          this.ytBridge.loadAndPlay(directVideoId, positionMs);
         }
       }
+    } else if (directVideoId) {
+      // In headless environments where HTMLAudioElement is not available
+      this.activeEngine = "iframe";
+      this.ytBridge.loadAndPlay(directVideoId, positionMs);
     }
 
     this.updateMediaSession(track);

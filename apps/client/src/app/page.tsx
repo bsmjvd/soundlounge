@@ -266,7 +266,6 @@ export default function SoundloungeApp() {
   }, [coordinator]);
 
   const handlePlaySingleTrack = (track: Track) => {
-    coordinator.primeAudioSession(track);
     addToHistory(track);
     recordPlay(track);
     if (playerState.mode === "synced") {
