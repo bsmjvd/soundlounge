@@ -1,7 +1,17 @@
 import { describe, it, expect } from "bun:test";
-import { parseYouTubeDuration, extractYouTubeVideoId, isLikelySong } from "../youtubeUtils";
+import { parseYouTubeDuration, extractYouTubeVideoId, isLikelySong, isYouTubeVideoId } from "../youtubeUtils";
 
 describe("YouTube Search & Utility Functions", () => {
+  it("accepts every well-formed 11-char video ID, including ones with underscores or mixed case", () => {
+    expect(isYouTubeVideoId("n_FCrCQ6-b4")).toBe(true);
+    expect(isYouTubeVideoId("a18py61_F_w")).toBe(true);
+    expect(isYouTubeVideoId("kVpv8-5XWOI")).toBe(true);
+    expect(isYouTubeVideoId("tcYodQoapMg")).toBe(true);
+    expect(isYouTubeVideoId("295")).toBe(false);
+    expect(isYouTubeVideoId("Levels_Sidhu")).toBe(false);
+    expect(isYouTubeVideoId("")).toBe(false);
+  });
+
   it("extracts YouTube video ID from various URL formats", () => {
     expect(extractYouTubeVideoId("https://www.youtube.com/watch?v=5NV6Rdv1a3I")).toBe("5NV6Rdv1a3I");
     expect(extractYouTubeVideoId("https://youtu.be/5NV6Rdv1a3I")).toBe("5NV6Rdv1a3I");

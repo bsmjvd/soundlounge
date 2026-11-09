@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Ytdl, Client, chooseFormat } from "@distube/ytdl-core";
+import { Ytdl, Client } from "@distube/ytdl-core";
 import { Innertube } from "youtubei.js";
 import CryptoJS from "crypto-js";
+import { isYouTubeVideoId } from "@/lib/youtubeUtils";
 
 interface CachedFormat {
   url: string;
@@ -114,16 +115,6 @@ const CANONICAL_TRACK_IDS: Record<string, string> = {
   "tajdareharam": "a18py61_F_w",
 };
 
-const MISMATCHED_ID_CORRECTIONS: Record<string, { targetId: string; notArtistKeywords: string[] }> = {
-  // Train IDs mistakenly used in Indian tracks
-  TaG9SDxwPBg: { targetId: "cWMxCE2HTag", notArtistKeywords: ["train"] },
-  ghZt2cILcCU: { targetId: "0DS5jYQeiw0", notArtistKeywords: ["train"] },
-  "7Xf-Lesrkuc": { targetId: "kOrRYDJ4AuY", notArtistKeywords: ["train"] },
-  oxqnFJ3lp5k: { targetId: "Nl9-rpuwp3E", notArtistKeywords: ["train"] },
-  "kVpv8-5XWOI": { targetId: "2R3XstG35sE", notArtistKeywords: ["train"] },
-  cl0a3i2wFcc: { targetId: "3K66ntQkJko", notArtistKeywords: ["sidhu", "moose"] },
-};
-
 /**
  * Resolves input into a verified 11-char YouTube video ID
  */
@@ -135,38 +126,23 @@ async function resolveVideoId(
 ): Promise<string | null> {
   const cleanId = (idInput || "").replace(/^yt_/, "").trim();
   const lowerTitle = (title || "").toLowerCase().trim();
-  const lowerArtist = (artist || "").toLowerCase().trim();
 
-  // 1. Direct canonical track resolution by title
+  // 1. Known catalog alias
+  if (cleanId.toLowerCase() === "thelastride") {
+    return "6xoB4ZiKKn0";
+  }
+
+  // 2. A well-formed YouTube ID passed by the caller is played as-is
+  if (isYouTubeVideoId(cleanId)) {
+    return cleanId;
+  }
+
+  // 3. Missing or slug ID: canonical track resolution by title
   if (lowerTitle && CANONICAL_TRACK_IDS[lowerTitle]) {
     return CANONICAL_TRACK_IDS[lowerTitle];
   }
 
-  // 2. Intercept known legacy copy-paste mismatched IDs
-  if (cleanId && MISMATCHED_ID_CORRECTIONS[cleanId]) {
-    const correction = MISMATCHED_ID_CORRECTIONS[cleanId];
-    const isExcluded = lowerArtist && correction.notArtistKeywords.some((k) => lowerArtist.includes(k));
-    if (!isExcluded) {
-      return correction.targetId;
-    }
-  }
-
-  // 3. Known catalog aliases and slugs
-  if (cleanId === "TheLastRide" || cleanId.toLowerCase() === "thelastride") {
-    return "6xoB4ZiKKn0";
-  }
-
-  const isLikelySlug =
-    (/^[a-zA-Z0-9_-]+$/.test(cleanId) && (cleanId.includes("_") || cleanId.length > 11)) ||
-    (/^[a-zA-Z]+$/.test(cleanId) && /[a-z][A-Z]/.test(cleanId)) ||
-    cleanId === "kabira_yjhd";
-
-  // 4. If cleanId is an authentic 11-char YouTube ID (not a slug or corrupt ID)
-  if (/^[a-zA-Z0-9_-]{11}$/.test(cleanId) && !isLikelySlug) {
-    return cleanId;
-  }
-
-  // 5. If title or query is provided, search YouTube for the exact song
+  // 4. If title or query is provided, search YouTube for the exact song
   if (title && title.trim()) {
     const found = await searchExactYouTubeSong(title.trim(), artist || undefined);
     if (found) return found;
@@ -361,7 +337,7 @@ async function fallbackSaavnMatch(title: string, artist?: string): Promise<Cache
     const match = songs.find((s: { title?: string; singers?: string }) => {
       const rawSTitle = (s.title || "").replace(/&amp;/g, "&").replace(/\(.*?\)/g, "").replace(/\[.*?\]/g, "").trim();
       const sNorm = norm(rawSTitle);
-      return sNorm === targetNorm || sNorm.startsWith(targetNorm) || targetNorm.startsWith(sNorm);
+      return targetNorm !== "" && sNorm === targetNorm;
     });
 
     if (!match || !match.id) return null;

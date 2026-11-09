@@ -3,6 +3,10 @@ const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const NON_MUSIC_TITLE_PATTERN =
   /\b(full movie|complete movie|official movie|official trailer|teaser trailer|trailer|movie clip|full film|full episode|behind the scenes|gameplay|walkthrough|documentary)\b/i;
 
+export function isYouTubeVideoId(id: string): boolean {
+  return VIDEO_ID_PATTERN.test(id);
+}
+
 export function extractYouTubeVideoId(input: string): string | null {
   const trimmed = input.trim();
   if (VIDEO_ID_PATTERN.test(trimmed)) {
