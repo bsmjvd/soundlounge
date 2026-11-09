@@ -22,6 +22,11 @@ export interface UseRoomSyncOptions {
   serverWsUrl?: string;
 }
 
+export function indexOfTrackOrZero(queue: Track[], trackId: string | null | undefined): number {
+  const index = trackId ? queue.findIndex((t) => t.id === trackId) : -1;
+  return index === -1 ? 0 : index;
+}
+
 export function useRoomSync({
   roomId,
   inviteToken,
@@ -98,7 +103,9 @@ export function useRoomSync({
           case "ROOM_STATE": {
             setParticipantsCount(action.participantsCount);
             if (coordinator.getMode() === "synced") {
-              useQueueStore.getState().setQueue(action.queue);
+              useQueueStore
+                .getState()
+                .setQueue(action.queue, indexOfTrackOrZero(action.queue, action.state.currentTrackId));
 
               const syncedPlayer = coordinator.getSyncedPlayer();
               if (action.state.status === "playing" && action.state.currentTrackId) {
@@ -115,16 +122,19 @@ export function useRoomSync({
 
           case "QUEUE_UPDATED":
             if (coordinator.getMode() === "synced") {
-              useQueueStore.getState().setQueue(action.queue);
+              const store = useQueueStore.getState();
+              store.setQueue(action.queue, indexOfTrackOrZero(action.queue, store.getCurrentTrack()?.id));
             }
             break;
 
           case "SCHEDULED_PLAY": {
             if (coordinator.getMode() !== "synced") break;
-            const queue = useQueueStore.getState().queue;
-            const track = queue.find((t) => t.id === action.trackId);
-            if (track) {
-              coordinator.getSyncedPlayer().schedulePlay(track, action.serverTimeToExecute, action.positionMs);
+            const store = useQueueStore.getState();
+            const index = store.queue.findIndex((t) => t.id === action.trackId);
+            if (index !== -1) {
+              // Keep next/prev in step on clients that didn't initiate the play
+              store.setCurrentIndex(index);
+              coordinator.getSyncedPlayer().schedulePlay(store.queue[index], action.serverTimeToExecute, action.positionMs);
             }
             break;
           }

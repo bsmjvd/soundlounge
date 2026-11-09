@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TasteProfileEngine, type StoredTasteProfile } from "./TasteProfileEngine";
 import type { Track, Album } from "@soundlounge/shared";
 import type { ArtistProfileData } from "../data/artistsCatalog";
@@ -16,6 +16,9 @@ export function useTasteProfile() {
     });
   }, [engine]);
 
+  // Stable identity so consumers can list it in effect deps without resubscribing every render
+  const recordPlay = useCallback((track: Track) => engine.recordPlay(track), [engine]);
+
   return {
     profile,
     hasTaste: engine.hasTasteProfile(),
@@ -23,7 +26,7 @@ export function useTasteProfile() {
     dominantArtist: engine.getDominantArtist(),
     topArtists: engine.getTopArtists(10),
     topGenres: engine.getTopGenres(5),
-    recordPlay: (track: Track) => engine.recordPlay(track),
+    recordPlay,
     recordLike: (track: Track, isLiked: boolean) => engine.recordLike(track, isLiked),
     recordSearch: (query: string) => engine.recordSearch(query),
     recordArtistView: (artistName: string) => engine.recordArtistView(artistName),

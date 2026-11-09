@@ -1,5 +1,29 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { computeBestNtpOffset, type NtpProbeSample } from "../ntpClient";
+import { indexOfTrackOrZero } from "../useRoomSync";
+import type { Track } from "@soundlounge/shared";
+
+describe("indexOfTrackOrZero", () => {
+  const track = (id: string): Track => ({
+    id,
+    title: id,
+    artist: "Artist",
+    durationMs: 1000,
+    url: `https://r2.soundlounge.app/${id}.mp3`,
+    source: "upload",
+  });
+  const queue = [track("a"), track("b"), track("c")];
+
+  it("keeps the current track's position when the queue is replaced", () => {
+    expect(indexOfTrackOrZero(queue, "c")).toBe(2);
+  });
+
+  it("falls back to 0 when the track is missing or unset", () => {
+    expect(indexOfTrackOrZero(queue, "zzz")).toBe(0);
+    expect(indexOfTrackOrZero(queue, null)).toBe(0);
+    expect(indexOfTrackOrZero(queue, undefined)).toBe(0);
+  });
+});
 
 describe("NTP Client Probe Pair Math", () => {
   it("calculates accurate clock offset and minimum RTT filtering jitter", () => {
