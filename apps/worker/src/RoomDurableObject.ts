@@ -81,34 +81,65 @@ export class RoomDurableObject {
     }));
   }
 
+  // positionMs is the anchor at serverEpochStartTime; clients add the elapsed time themselves
   private getPlaybackState(): RoomPlaybackState {
     const status = (this.getMeta("status", "idle") as "idle" | "playing" | "paused") || "idle";
-    const currentTrackId = this.getMeta("currentTrackId", "") || null;
-    const positionMs = Number(this.getMeta("positionMs", "0"));
-    const serverEpochStartTime = Number(this.getMeta("serverEpochStartTime", "0"));
-    const updatedAt = Number(this.getMeta("updatedAt", String(Date.now())));
-
-    // If currently playing, compute real-time elapsed position
-    let computedPos = positionMs;
-    if (status === "playing" && serverEpochStartTime > 0) {
-      const queue = this.getQueue();
-      const currentTrack = queue.find((t) => t.id === currentTrackId);
-      const durationMs = currentTrack ? currentTrack.durationMs : 3600000;
-      computedPos = calculateLateJoinerPosition(
-        serverEpochStartTime,
-        positionMs,
-        Date.now(),
-        durationMs
-      );
-    }
-
     return {
       status,
-      currentTrackId,
-      positionMs: computedPos,
-      serverEpochStartTime,
-      updatedAt,
+      currentTrackId: this.getMeta("currentTrackId", "") || null,
+      positionMs: Number(this.getMeta("positionMs", "0")),
+      serverEpochStartTime: Number(this.getMeta("serverEpochStartTime", "0")),
+      updatedAt: Number(this.getMeta("updatedAt", String(Date.now()))),
     };
+  }
+
+  private getCurrentPositionMs(): number {
+    const state = this.getPlaybackState();
+    if (state.status !== "playing" || state.serverEpochStartTime <= 0) return state.positionMs;
+    const currentTrack = this.getQueue().find((t) => t.id === state.currentTrackId);
+    return calculateLateJoinerPosition(
+      state.serverEpochStartTime,
+      state.positionMs,
+      Date.now(),
+      currentTrack ? currentTrack.durationMs : 3600000
+    );
+  }
+
+  private startPlayback(trackId: string, positionMs: number) {
+    const serverTimeToExecute = calculateBarrierExecutionTime(Date.now(), Array.from(this.clientRtts.values()));
+
+    this.setMeta("status", "playing");
+    this.setMeta("currentTrackId", trackId);
+    this.setMeta("positionMs", String(positionMs));
+    this.setMeta("serverEpochStartTime", String(serverTimeToExecute));
+    this.setMeta("updatedAt", String(Date.now()));
+    this.scheduleTrackEnd(trackId, serverTimeToExecute, positionMs);
+
+    this.broadcast({ type: "SCHEDULED_PLAY", trackId, serverTimeToExecute, positionMs });
+  }
+
+  private scheduleTrackEnd(trackId: string, serverEpochStartTime: number, positionMs: number) {
+    const track = this.getQueue().find((t) => t.id === trackId);
+    if (!track || track.durationMs <= 0) {
+      this.ctx.storage.deleteAlarm();
+      return;
+    }
+    this.ctx.storage.setAlarm(serverEpochStartTime + Math.max(0, track.durationMs - positionMs));
+  }
+
+  // Track finished: advance the whole room to the next queued track
+  async alarm() {
+    if (this.getMeta("status") !== "playing") return;
+    const queue = this.getQueue();
+    const next = queue[queue.findIndex((t) => t.id === this.getMeta("currentTrackId")) + 1];
+    if (next) {
+      this.startPlayback(next.id, 0);
+    } else {
+      this.setMeta("status", "idle");
+      this.setMeta("positionMs", "0");
+      this.setMeta("serverEpochStartTime", "0");
+      this.setMeta("updatedAt", String(Date.now()));
+    }
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -154,6 +185,7 @@ export class RoomDurableObject {
           participantsCount: this.getConnectedSockets().length,
         };
         server.send(JSON.stringify(stateMessage));
+        this.broadcastParticipantCount();
 
         return new Response(null, { status: 101, webSocket: client } as any);
       }
@@ -226,28 +258,12 @@ export class RoomDurableObject {
         const trackId = action.trackId || this.getMeta("currentTrackId") || (queue[0] ? queue[0].id : "");
         if (!trackId) return;
 
-        const positionMs = action.positionMs ?? Number(this.getMeta("positionMs", "0"));
-        const clientRttList = Array.from(this.clientRtts.values());
-        const serverTimeToExecute = calculateBarrierExecutionTime(Date.now(), clientRttList);
-
-        this.setMeta("status", "playing");
-        this.setMeta("currentTrackId", trackId);
-        this.setMeta("positionMs", String(positionMs));
-        this.setMeta("serverEpochStartTime", String(serverTimeToExecute));
-        this.setMeta("updatedAt", String(Date.now()));
-
-        const broadcastMsg: ServerAction = {
-          type: "SCHEDULED_PLAY",
-          trackId,
-          serverTimeToExecute,
-          positionMs,
-        };
-        this.broadcast(broadcastMsg);
+        this.startPlayback(trackId, action.positionMs ?? Number(this.getMeta("positionMs", "0")));
         break;
       }
 
       case "PAUSE": {
-        const currentPos = action.positionMs ?? this.getPlaybackState().positionMs;
+        const currentPos = action.positionMs ?? this.getCurrentPositionMs();
         const clientRttList = Array.from(this.clientRtts.values());
         const serverTimeToExecute = calculateBarrierExecutionTime(Date.now(), clientRttList);
 
@@ -255,6 +271,7 @@ export class RoomDurableObject {
         this.setMeta("positionMs", String(currentPos));
         this.setMeta("serverEpochStartTime", "0");
         this.setMeta("updatedAt", String(Date.now()));
+        this.ctx.storage.deleteAlarm();
 
         const broadcastMsg: ServerAction = {
           type: "SCHEDULED_PAUSE",
@@ -272,6 +289,7 @@ export class RoomDurableObject {
         this.setMeta("positionMs", String(action.positionMs));
         if (this.getMeta("status") === "playing") {
           this.setMeta("serverEpochStartTime", String(serverTimeToExecute));
+          this.scheduleTrackEnd(this.getMeta("currentTrackId"), serverTimeToExecute, action.positionMs);
         }
         this.setMeta("updatedAt", String(Date.now()));
 
@@ -388,14 +406,8 @@ export class RoomDurableObject {
     }
   }
 
+  // Count only: a full ROOM_STATE here would make every client re-schedule (restart) playback
   private broadcastParticipantCount() {
-    const count = this.getConnectedSockets().length;
-    const stateMsg: ServerAction = {
-      type: "ROOM_STATE",
-      state: this.getPlaybackState(),
-      queue: this.getQueue(),
-      participantsCount: count,
-    };
-    this.broadcast(stateMsg);
+    this.broadcast({ type: "PARTICIPANTS_UPDATED", participantsCount: this.getConnectedSockets().length });
   }
 }

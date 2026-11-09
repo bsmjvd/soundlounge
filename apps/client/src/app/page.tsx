@@ -188,7 +188,8 @@ export default function SoundloungeApp() {
 
   // Synchronized WebSocket engine
   const sync = useRoomSync({
-    roomId,
+    // Only join the room while in synced mode; solo listeners must not affect the shared room
+    roomId: playerState.mode === "synced" ? roomId : "",
     inviteToken,
     coordinator,
   });
@@ -418,6 +419,7 @@ export default function SoundloungeApp() {
       if (cur) {
         const autoNext = await ensureSimilarQueued(cur, history);
         if (autoNext) {
+          if (coordinator.getMode() === "synced") sync.sendAddTrack(autoNext);
           next = useQueueStore.getState().nextTrack();
         }
       }
@@ -425,7 +427,7 @@ export default function SoundloungeApp() {
 
     if (next) {
       addToHistory(next);
-      if (playerState.mode === "synced") {
+      if (coordinator.getMode() === "synced") {
         sync.sendPlay(next.id, 0);
       } else {
         coordinator.play(next, 0);
@@ -439,7 +441,10 @@ export default function SoundloungeApp() {
     const tracksAhead = queue.length - 1 - currentIndex;
     const cur = playerState.currentTrack || queue[currentIndex];
     if (cur && playerState.status === "playing" && isAutoplayEnabled && tracksAhead <= 0) {
-      ensureSimilarQueued(cur, history);
+      ensureSimilarQueued(cur, history).then((track) => {
+        // shortcut: every listener may queue its own pick; dedupe server-side if rooms get busy
+        if (track && coordinator.getMode() === "synced") sync.sendAddTrack(track);
+      });
     }
   }, [playerState.currentTrack?.id, playerState.status, queue.length, currentIndex, isAutoplayEnabled]);
 
@@ -447,7 +452,7 @@ export default function SoundloungeApp() {
     const prev = useQueueStore.getState().previousTrack();
     if (prev) {
       addToHistory(prev);
-      if (playerState.mode === "synced") {
+      if (coordinator.getMode() === "synced") {
         sync.sendPlay(prev.id, 0);
       } else {
         coordinator.play(prev, 0);
@@ -455,14 +460,17 @@ export default function SoundloungeApp() {
     }
   };
 
-  // Wire transport handlers for lock screen and auto-next on track completion
+  // Wire transport handlers for lock screen and auto-next on track completion.
+  // Registered once through a ref so they always see the latest mode/queue/history.
+  const transportRef = useRef({ handleNext, handlePrevious });
+  transportRef.current = { handleNext, handlePrevious };
   useEffect(() => {
     coordinator.setTransportHandlers({
-      onNext: handleNext,
-      onPrevious: handlePrevious,
-      onEnded: handleNext,
+      onNext: () => transportRef.current.handleNext(),
+      onPrevious: () => transportRef.current.handlePrevious(),
+      onEnded: () => transportRef.current.handleNext(),
     });
-  }, [queue, currentIndex]);
+  }, [coordinator]);
 
   // Global desktop studio keyboard shortcuts (Space, M, Arrow keys, S/F for Studio Mode)
   useGlobalAudioHotkeys({

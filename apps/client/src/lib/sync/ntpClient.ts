@@ -45,6 +45,8 @@ export class NtpSyncEngine {
   private samples: NtpProbeSample[] = [];
   private groupId: number = 0;
   private pendingT0Map: Map<string, number> = new Map();
+  // Reported to the server so its play barrier leaves room for the slowest client
+  private lastRTT?: number;
 
   constructor(
     private sendSocketMessage: (action: ClientAction) => void,
@@ -67,6 +69,7 @@ export class NtpSyncEngine {
           t0,
           probeGroupId: this.groupId,
           probeGroupIndex: i,
+          clientRTT: this.lastRTT,
         };
         this.sendSocketMessage(action);
       }, i * PROBE_GAP_MS);
@@ -95,6 +98,7 @@ export class NtpSyncEngine {
 
     if (this.samples.length >= 3) {
       const result = computeBestNtpOffset(this.samples);
+      this.lastRTT = result.bestRTT;
       this.onSyncCalculated(result);
     }
   }

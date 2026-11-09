@@ -103,6 +103,11 @@ export const QueueUpdatedBroadcastSchema = z.object({
   queue: z.array(TrackSchema),
 });
 
+export const ParticipantsUpdatedSchema = z.object({
+  type: z.literal("PARTICIPANTS_UPDATED"),
+  participantsCount: z.number(),
+});
+
 export const RoomInviteBroadcastSchema = z.object({
   type: z.literal("ROOM_INVITE"),
   roomId: z.string(),
@@ -122,6 +127,7 @@ export const ServerActionSchema = z.discriminatedUnion("type", [
   ScheduledSeekSchema,
   RoomStateBroadcastSchema,
   QueueUpdatedBroadcastSchema,
+  ParticipantsUpdatedSchema,
   RoomInviteBroadcastSchema,
   ErrorBroadcastSchema,
 ]);
