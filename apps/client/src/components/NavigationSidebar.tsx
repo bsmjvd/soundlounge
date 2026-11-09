@@ -19,7 +19,6 @@ import {
 import type { PlaybackMode } from "../lib/player";
 import { type LastSessionSnapshot, useLibraryStore } from "../lib/store/useLibraryStore";
 import type { Track } from "@soundlounge/shared";
-import { MOCKUP_SIDEBAR_TRACKS } from "../lib/data/mockupData";
 import { TrackArtwork } from "./TrackArtwork";
 import { hapticLight } from "../lib/haptics";
 import { useTasteProfile } from "../lib/recommendation/useTasteProfile";

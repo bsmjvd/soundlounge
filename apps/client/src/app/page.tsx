@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TopBar, type TopNavTab } from "../components/TopBar";
 import { DiscoverHero } from "../components/DiscoverHero";
-import { FEATURED_SPOTLIGHTS } from "../lib/data/mockupData";
 import { PopularAlbumsRow } from "../components/PopularAlbumsRow";
 import { PopularArtistsRow } from "../components/PopularArtistsRow";
 import { AmbientBackground } from "../components/AmbientBackground";
@@ -85,9 +84,6 @@ export default function SoundloungeApp() {
     recordSearch,
     recordArtistView,
     getPersonalizedSpotlights,
-    hasTaste,
-    dominantGenre,
-    dominantArtist,
   } = useTasteProfile();
 
   const dynamicSpotlights = getPersonalizedSpotlights();
@@ -145,13 +141,30 @@ export default function SoundloungeApp() {
   // Player state subscription
   const [playerState, setPlayerState] = useState<CoordinatorPlayerState>(() => coordinator.getState());
 
+  const lastRecordedTrackIdRef = useRef<string | null>(null);
+  const lastSessionSavedAtRef = useRef(0);
+
   useEffect(() => {
     return coordinator.onStateChange((state) => {
       setPlayerState(state);
-      // Automatically snapshot session for Continue Listening and record taste
-      if (state.currentTrack && state.status === "playing") {
-        useLibraryStore.getState().saveLastSession(state.currentTrack, state.positionMs);
+      // Track ended/stopped: a later replay of the same track counts as a new play
+      if (state.status === "idle") lastRecordedTrackIdRef.current = null;
+      if (!state.currentTrack) return;
+
+      // State emits on every timeupdate, so record taste once per track and throttle session snapshots
+      const isNewPlay = state.status === "playing" && state.currentTrack.id !== lastRecordedTrackIdRef.current;
+      if (isNewPlay) {
+        lastRecordedTrackIdRef.current = state.currentTrack.id;
         recordPlay(state.currentTrack);
+      }
+      const now = Date.now();
+      if (
+        isNewPlay ||
+        state.status === "paused" ||
+        (state.status === "playing" && now - lastSessionSavedAtRef.current >= 5000)
+      ) {
+        lastSessionSavedAtRef.current = now;
+        useLibraryStore.getState().saveLastSession(state.currentTrack, state.positionMs);
       }
     });
   }, [coordinator, recordPlay]);
@@ -262,7 +275,6 @@ export default function SoundloungeApp() {
 
   const handlePlaySingleTrack = (track: Track) => {
     addToHistory(track);
-    recordPlay(track);
     if (playerState.mode === "synced") {
       sync.sendClearQueue();
       sync.sendAddTrack(track, false);
@@ -281,7 +293,6 @@ export default function SoundloungeApp() {
     if (tracks.length === 0) return;
     useQueueStore.getState().setQueue(tracks, 0);
     addToHistory(tracks[0]);
-    recordPlay(tracks[0]);
     if (playerState.mode === "synced") {
       sync.sendClearQueue();
       tracks.forEach((t) => sync.sendAddTrack(t));
