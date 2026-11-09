@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Ytdl, Client } from "@distube/ytdl-core";
 import { Innertube } from "youtubei.js";
 import CryptoJS from "crypto-js";
 import { isYouTubeVideoId } from "@/lib/youtubeUtils";
-import { INVIDIOUS_INSTANCES, WORKER_HTTP_URL, isAllowedStreamUrl } from "@/lib/streamHosts";
+import { INVIDIOUS_INSTANCES, isAllowedStreamUrl } from "@/lib/streamHosts";
 import { getBounded, setBounded } from "@/lib/boundedCache";
 import { isRateLimited } from "@/lib/rateLimit";
 
@@ -17,11 +16,6 @@ interface CachedFormat {
 const formatCache = new Map<string, CachedFormat>();
 const searchToVideoIdCache = new Map<string, string>();
 const CACHE_MAX_ENTRIES = 500;
-
-// VisionOS and Tv clients bypass all YouTube bot checks without PO tokens or cookies
-const ytdl = new Ytdl({
-  clients: [Client.Tv, Client.WebEmbedded],
-});
 
 let innertubePromise: Promise<Innertube> | null = null;
 async function getInnertube(): Promise<Innertube> {
@@ -170,14 +164,12 @@ async function resolveVideoId(
   return cleanId || null;
 }
 
-/**
- * Extracts high-fidelity audio format from YouTube using VisionOS / Tv clients
- */
 let lastExtractionError = "";
 
 /**
- * Extracts direct GoogleVideo audio format via verified Invidious instances,
- * cleanly bypassing datacenter IP bot challenges.
+ * Extracts audio via Invidious, which proxies the bytes itself. googlevideo URLs are locked to the
+ * resolving IP, so anything resolved on Vercel or Cloudflare can't be handed to the browser (and
+ * both are bot-walled anyway).
  */
 async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null> {
   for (const inst of INVIDIOUS_INSTANCES) {
@@ -190,7 +182,10 @@ async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null
         signal: AbortSignal.timeout(6000),
       });
 
-      if (!res.ok) continue;
+      if (!res.ok) {
+        lastExtractionError = `Invidious ${res.status} for ${videoId}`;
+        continue;
+      }
 
       const data: any = await res.json();
       const adaptive = data?.adaptiveFormats || [];
@@ -227,6 +222,7 @@ async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      lastExtractionError = msg;
       console.warn(`Invidious extraction failed for ${videoId} on ${inst}:`, msg);
     }
   }
@@ -234,80 +230,6 @@ async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null
   return null;
 }
 
-/**
- * Our Cloudflare Worker resolves and streams the audio itself (googlevideo URLs are IP-locked),
- * so probe one byte and hand the browser the worker URL.
- */
-async function fetchWorkerAudio(videoId: string): Promise<CachedFormat | null> {
-  if (!WORKER_HTTP_URL) return null;
-  const url = `${WORKER_HTTP_URL}/api/yt/${videoId}`;
-  try {
-    const res = await fetch(url, { headers: { Range: "bytes=0-0" }, signal: AbortSignal.timeout(8000) });
-    await res.body?.cancel();
-    if (res.status !== 206 && res.status !== 200) {
-      lastExtractionError = `worker ${res.status}`;
-      return null;
-    }
-    return { url, mimeType: res.headers.get("content-type") || "audio/mp4", expiresAt: Date.now() + 3600000 };
-  } catch (err: unknown) {
-    lastExtractionError = err instanceof Error ? err.message : String(err);
-    return null;
-  }
-}
-
-async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat | null> {
-  // 1. Our own worker proxy
-  const worker = await fetchWorkerAudio(videoId);
-  if (worker) return worker;
-
-  // 2. Then Invidious
-  const inv = await fetchInvidiousAudio(videoId);
-  if (inv) return inv;
-
-  // 2. Fallback to ytdl
-  try {
-    const info = await ytdl.getInfo(videoId);
-    const audioFormats = info.formats.filter((f) => f.hasAudio && !f.hasVideo && Boolean(f.url));
-    if (audioFormats.length === 0) {
-      lastExtractionError = `No audio formats with direct URL found for ${videoId} (total formats: ${info.formats.length})`;
-      return null;
-    }
-
-    // Prefer AAC / MP4 (itag 140) for universal cross-platform browser support, fallback to Opus / WebM
-    const mp4Formats = audioFormats.filter((f) => f.mimeType && f.mimeType.includes("mp4"));
-    const sortedFormats = (mp4Formats.length > 0 ? mp4Formats : audioFormats).sort(
-      (a, b) => (b.bitrate || 0) - (a.bitrate || 0)
-    );
-
-    const chosen = sortedFormats[0];
-    if (!chosen || !chosen.url) {
-      lastExtractionError = "Chosen format had no URL";
-      return null;
-    }
-
-    let expireMs = NaN;
-    try {
-      expireMs = Number(new URL(chosen.url).searchParams.get("expire")) * 1000;
-    } catch {}
-
-    const expiresAt =
-      Number.isFinite(expireMs) && expireMs > 0 ? Math.min(expireMs - 60000, Date.now() + 3600000) : Date.now() + 3600000;
-
-    return {
-      url: chosen.url,
-      mimeType: chosen.mimeType?.split(";")[0] || "audio/mp4",
-      contentLength: chosen.contentLength || undefined,
-      expiresAt,
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    lastExtractionError = msg;
-    console.warn(`ytdl extraction failed for ${videoId}, falling back to Invidious:`, msg);
-    const inv = await fetchInvidiousAudio(videoId);
-    if (inv) return inv;
-    return null;
-  }
-}
 
 /**
  * Decrypts JioSaavn URL with DES-ECB
@@ -473,9 +395,9 @@ export async function GET(req: NextRequest) {
     // 1. Resolve authentic YouTube video ID
     let targetVid = await resolveVideoId(rawVideoId, title, artist, query);
 
-    // 2. Primary Engine: Direct YouTube Audio Extraction (VisionOS/Tv zero-bot-check)
+    // 2. Primary engine: Invidious-proxied audio
     if (targetVid) {
-      streamInfo = await extractYouTubeAudioFormat(targetVid);
+      streamInfo = await fetchInvidiousAudio(targetVid);
     }
 
     // 3. If primary video failed, try searching for exact alternate YouTube upload
@@ -483,7 +405,7 @@ export async function GET(req: NextRequest) {
       const altVid = await searchExactYouTubeSong(title || query || "", artist);
       if (altVid && altVid !== targetVid) {
         targetVid = altVid;
-        streamInfo = await extractYouTubeAudioFormat(altVid);
+        streamInfo = await fetchInvidiousAudio(altVid);
       }
     }
 
@@ -499,11 +421,6 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
-        // 3.5 Fallback to Invidious if streamInfo is missing
-    if (!streamInfo && targetVid) {
-      streamInfo = await fetchInvidiousAudio(targetVid);
-    }
-
     // 4. Secondary fallback: High-fidelity direct 320kbps MP4 audio with byte ranges (zero bot block)
     if (!streamInfo && (queryTitle || title)) {
       streamInfo = await fallbackSaavnMatch((queryTitle || title)!, queryArtist || undefined);
@@ -516,7 +433,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // The URL comes from upstream data (Invidious issuer, ytdl, JioSaavn), so never redirect off the allow-list
+  // The URL comes from upstream data (Invidious issuer, JioSaavn), so never redirect off the allow-list
   const untrusted = !!streamInfo?.url && !isAllowedStreamUrl(streamInfo.url);
   if (!streamInfo || !streamInfo.url || untrusted) {
     return new NextResponse(
