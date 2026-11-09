@@ -12,12 +12,6 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["RoomDurableObject"]
 
-# Per-IP limit for /api/yt (each track = a few Range requests; seeks add more)
-[[ratelimits]]
-name = "YT_LIMITER"
-namespace_id = "1001"
-simple = { limit = 120, period = 60 }
-
 [vars]
 R2_PUBLIC_URL_PREFIX = "https://r2.soundlounge.app"
 

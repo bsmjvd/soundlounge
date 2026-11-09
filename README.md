@@ -11,7 +11,7 @@ Soundlounge is a modern, edge-native web application that lets friends listen to
 - **⚡ Instant Solo Streaming:** Solo sessions begin playing in under 2 seconds using streaming HTML5 audio without waiting for heavy file downloads or in-memory PCM decoding.
 - **⏱️ Sub-30ms Multi-Device Sync:** Multi-listener rooms use a Huygens NTP probe-pair synchronization protocol with scheduled server epoch execution.
 - **🎵 Multi-Source Music Ingestion:**
-  - **YouTube & YouTube Music:** Instant playback, suggested auto-queue, and playlist import. Audio is proxied by the Worker (`/api/yt/:id`) because googlevideo URLs are locked to the IP that resolved them; Invidious, ytdl and JioSaavn remain fallbacks. Set `NEXT_PUBLIC_WORKER_HTTP_URL` on the client to enable it.
+  - **YouTube & YouTube Music:** Instant playback, suggested auto-queue, and playlist import. googlevideo URLs are locked to the IP that resolved them and Vercel/Cloudflare IPs are bot-walled, so audio is served through an Invidious proxy, with JioSaavn as an exact-title fallback. Check playback with `bun scripts/yt-smoke.ts <base-url>`.
   - **SoundCloud:** Stream resolution and playlist queueing.
   - **Local Audio Uploads:** Direct-to-R2 upload via presigned URLs with zero server egress costs.
 - **💾 Accountless On-Device Library:**
