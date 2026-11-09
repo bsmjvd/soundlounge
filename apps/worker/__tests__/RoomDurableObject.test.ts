@@ -84,8 +84,15 @@ class MockSqlStorage {
 }
 
 class MockDurableObjectContext {
+  alarmAt: number | null = null;
   storage = {
     sql: new MockSqlStorage(),
+    setAlarm: (at: number) => {
+      this.alarmAt = at;
+    },
+    deleteAlarm: () => {
+      this.alarmAt = null;
+    },
   };
   sockets: MockWebSocket[] = [];
 
@@ -196,5 +203,48 @@ describe("RoomDurableObject", () => {
       expect(broadcast.queue.length).toBe(1);
       expect(broadcast.queue[0].id).toBe("yt_test");
     }
+  });
+
+  const addTrack = (ws: MockWebSocket, id: string) =>
+    room.handleSocketMessage(
+      ws as any,
+      JSON.stringify({
+        type: "ADD_TRACK",
+        track: { id, title: id, artist: "A", durationMs: 200000, url: `https://r2.soundlounge.app/${id}.mp3`, source: "upload" },
+      })
+    );
+
+  it("schedules the track end and advances the room to the next track on alarm", async () => {
+    const ws = new MockWebSocket();
+    ctx.acceptWebSocket(ws);
+    await addTrack(ws, "a");
+    await addTrack(ws, "b");
+
+    await room.handleSocketMessage(ws as any, JSON.stringify({ type: "PLAY", trackId: "a", positionMs: 50000 }));
+    const play = JSON.parse(ws.sentMessages.at(-1)!);
+    expect(ctx.alarmAt).toBe(play.serverTimeToExecute + 150000);
+
+    await room.alarm();
+    const advanced = JSON.parse(ws.sentMessages.at(-1)!);
+    expect(advanced.type).toBe("SCHEDULED_PLAY");
+    expect(advanced.trackId).toBe("b");
+    expect(advanced.positionMs).toBe(0);
+
+    await room.handleSocketMessage(ws as any, JSON.stringify({ type: "PAUSE", positionMs: 1000 }));
+    expect(ctx.alarmAt).toBeNull();
+  });
+
+  it("sends the anchor position with the start time so clients do not double-count elapsed time", async () => {
+    const ws = new MockWebSocket();
+    ctx.acceptWebSocket(ws);
+    await addTrack(ws, "a");
+    await room.handleSocketMessage(ws as any, JSON.stringify({ type: "PLAY", trackId: "a", positionMs: 1000 }));
+    // Pretend the barrier passed a minute ago
+    ctx.storage.sql.exec("INSERT OR REPLACE INTO room_meta (key, value) VALUES (?, ?)", "serverEpochStartTime", String(Date.now() - 60000));
+
+    await room.handleSocketMessage(ws as any, JSON.stringify({ type: "REQUEST_SYNC" }));
+    const state = JSON.parse(ws.sentMessages.at(-1)!);
+    expect(state.type).toBe("ROOM_STATE");
+    expect(state.state.positionMs).toBe(1000);
   });
 });
