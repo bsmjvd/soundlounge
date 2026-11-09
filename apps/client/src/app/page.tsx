@@ -819,6 +819,7 @@ export default function SoundloungeApp() {
                         onAddTrack={handleAddTrack}
                         onPlayDirect={handlePlaySingleTrack}
                         roomId={roomId}
+                        inviteToken={inviteToken}
                         initialQuery={searchQuery}
                         onQueryChange={setSearchQuery}
                         onSelectAlbum={(album) => setSelectedAlbum(album)}

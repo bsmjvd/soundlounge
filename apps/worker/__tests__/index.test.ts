@@ -49,6 +49,7 @@ describe("Worker Entrypoint & Routing", () => {
       body: JSON.stringify({
         fileName: "beat.mp3",
         contentType: "audio/mpeg",
+        size: 1024,
       }),
     });
 
@@ -57,5 +58,51 @@ describe("Worker Entrypoint & Routing", () => {
     const body = (await res.json()) as any;
     expect(body.publicUrl).toContain("https://r2.soundlounge.app/rooms/my-room/beat___");
     expect(body.key).toContain("rooms/my-room/beat___");
+  });
+
+  const upload = (body: object, roomEnv = env, roomId = "my-room") =>
+    worker.fetch(
+      new Request(`https://soundlounge.app/api/rooms/${roomId}/upload-url`, { method: "POST", body: JSON.stringify(body) }),
+      roomEnv,
+      {} as any
+    );
+
+  it("rejects non-audio, missing or oversized uploads and bad room ids", async () => {
+    expect((await upload({ fileName: "x.exe", contentType: "application/octet-stream", size: 10 })).status).toBe(400);
+    expect((await upload({ fileName: "a.mp3", contentType: "audio/mpeg" })).status).toBe(400);
+    expect((await upload({ fileName: "a.mp3", contentType: "audio/mpeg", size: 51 * 1024 * 1024 })).status).toBe(400);
+    expect((await upload({ fileName: "a.mp3", contentType: "audio/mpeg", size: 10 }, env, "a.b")).status).toBe(400);
+  });
+
+  it("refuses uploads to a private room without its invite token", async () => {
+    const privateEnv: any = {
+      ...env,
+      ROOM_DO: { ...env.ROOM_DO, get: () => ({ fetch: async () => new Response(null, { status: 403 }) }) },
+    };
+    expect((await upload({ fileName: "a.mp3", contentType: "audio/mpeg", size: 10 }, privateEnv)).status).toBe(403);
+  });
+
+  it("creates a private room with a random id and invite token", async () => {
+    let initBody: any;
+    let initPath = "";
+    const createEnv: any = {
+      ...env,
+      ROOM_DO: {
+        ...env.ROOM_DO,
+        get: () => ({
+          fetch: async (req: Request) => {
+            initPath = new URL(req.url).pathname;
+            initBody = await req.json();
+            return new Response(null, { status: 204 });
+          },
+        }),
+      },
+    };
+    const res = await worker.fetch(new Request("https://soundlounge.app/api/rooms", { method: "POST" }), createEnv, {} as any);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.roomId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(body.inviteToken).toBe(initBody.inviteToken);
+    expect(initPath).toBe("/init-private");
   });
 });
