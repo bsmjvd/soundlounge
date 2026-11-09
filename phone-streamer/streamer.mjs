@@ -62,6 +62,8 @@ function download(id) {
         "-f", "bestaudio[ext=m4a]/bestaudio",
         "-o", path.join(CACHE_DIR, "%(id)s.%(ext)s"),
         "--no-playlist", "--no-warnings", "--no-progress", "--no-part",
+        // YouTube's JS challenge needs a runtime; Deno has no Android build, Node does (Termux)
+        "--no-js-runtimes", "--js-runtimes", "node",
         `https://www.youtube.com/watch?v=${id}`,
       ],
       { timeout: 120_000 },
