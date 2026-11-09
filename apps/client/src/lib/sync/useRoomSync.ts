@@ -216,6 +216,8 @@ export function useRoomSync({
 
   const sendAddTrack = useCallback(
     (track: Track, playNext?: boolean) => {
+      // Object URLs only resolve in this tab; the track stays in the local queue only
+      if (track.url.startsWith("blob:")) return;
       sendAction({ type: "ADD_TRACK", track, playNext });
     },
     [sendAction],

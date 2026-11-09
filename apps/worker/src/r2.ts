@@ -29,6 +29,7 @@ export interface PresignedUrlParams {
   bucketName: string;
   key: string;
   contentType: string;
+  contentLength: number;
   expiresInSeconds?: number;
 }
 
@@ -46,9 +47,12 @@ export async function createPresignedR2PutUrl(params: PresignedUrlParams): Promi
     Bucket: params.bucketName,
     Key: params.key,
     ContentType: params.contentType,
+    ContentLength: params.contentLength,
   });
 
   return getSignedUrl(s3, command, {
     expiresIn: params.expiresInSeconds ?? 900, // 15 min expiry
+    // Signed so the PUT must match the size and type the worker validated
+    signableHeaders: new Set(["content-type", "content-length"]),
   });
 }

@@ -3,6 +3,9 @@ import { Ytdl, Client } from "@distube/ytdl-core";
 import { Innertube } from "youtubei.js";
 import CryptoJS from "crypto-js";
 import { isYouTubeVideoId } from "@/lib/youtubeUtils";
+import { INVIDIOUS_INSTANCES, isAllowedStreamUrl } from "@/lib/streamHosts";
+import { getBounded, setBounded } from "@/lib/boundedCache";
+import { isRateLimited } from "@/lib/rateLimit";
 
 interface CachedFormat {
   url: string;
@@ -13,6 +16,7 @@ interface CachedFormat {
 
 const formatCache = new Map<string, CachedFormat>();
 const searchToVideoIdCache = new Map<string, string>();
+const CACHE_MAX_ENTRIES = 500;
 
 // VisionOS and Tv clients bypass all YouTube bot checks without PO tokens or cookies
 const ytdl = new Ytdl({
@@ -38,8 +42,9 @@ async function getInnertube(): Promise<Innertube> {
  */
 async function searchExactYouTubeSong(title: string, artist?: string): Promise<string | null> {
   const cacheKey = `${title.toLowerCase().trim()}::${(artist || "").toLowerCase().trim()}`;
-  if (searchToVideoIdCache.has(cacheKey)) {
-    return searchToVideoIdCache.get(cacheKey)!;
+  const cachedVid = getBounded(searchToVideoIdCache, cacheKey);
+  if (cachedVid) {
+    return cachedVid;
   }
 
   try {
@@ -62,7 +67,7 @@ async function searchExactYouTubeSong(title: string, artist?: string): Promise<s
     const chosen = validSongVideos[0] || videos[0];
     if (chosen && chosen.id) {
       const vid = String(chosen.id);
-      searchToVideoIdCache.set(cacheKey, vid);
+      setBounded(searchToVideoIdCache, cacheKey, vid, CACHE_MAX_ENTRIES);
       return vid;
     }
   } catch (err) {
@@ -175,9 +180,7 @@ let lastExtractionError = "";
  * cleanly bypassing datacenter IP bot challenges.
  */
 async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null> {
-  const instances = ["https://yt.chocolatemoo53.com"];
-
-  for (const inst of instances) {
+  for (const inst of INVIDIOUS_INSTANCES) {
     try {
       const res = await fetch(`${inst}/api/v1/videos/${encodeURIComponent(videoId)}`, {
         headers: {
@@ -357,7 +360,8 @@ async function fallbackSaavnMatch(title: string, artist?: string): Promise<Cache
     if (!dec) return null;
 
     return {
-      url: dec.replace("_96.mp4", "_320.mp4"),
+      // Saavn sometimes hands out http:// URLs; the redirect allow-list (and mixed content) needs https
+      url: dec.replace("_96.mp4", "_320.mp4").replace(/^http:/, "https:"),
       mimeType: "audio/mp4",
       expiresAt: Date.now() + 86400000,
     };
@@ -367,6 +371,10 @@ async function fallbackSaavnMatch(title: string, artist?: string): Promise<Cache
 }
 
 export async function GET(req: NextRequest) {
+  if (await isRateLimited(req, "stream", 60)) {
+    return new NextResponse("Too many requests", { status: 429, headers: { "Retry-After": "60" } });
+  }
+
   const { searchParams } = new URL(req.url);
   const rawVideoId = searchParams.get("id");
   const query = searchParams.get("q");
@@ -434,7 +442,7 @@ export async function GET(req: NextRequest) {
   }
 
   const cacheKey = `${rawVideoId || ""}::${title || ""}::${artist || ""}::${query || ""}`;
-  let streamInfo: CachedFormat | null | undefined = formatCache.get(cacheKey);
+  let streamInfo: CachedFormat | null | undefined = getBounded(formatCache, cacheKey);
 
   if (!streamInfo || streamInfo.expiresAt <= Date.now()) {
     // 1. Resolve authentic YouTube video ID
@@ -476,17 +484,20 @@ export async function GET(req: NextRequest) {
       streamInfo = await fallbackSaavnMatch((queryTitle || title)!, queryArtist || undefined);
     }
 
-    if (streamInfo) {
-      formatCache.set(cacheKey, streamInfo);
-      if (targetVid) formatCache.set(targetVid, streamInfo);
+    // Untrusted hosts are never cached, so the 404 below isn't served from cache either
+    if (streamInfo && isAllowedStreamUrl(streamInfo.url)) {
+      setBounded(formatCache, cacheKey, streamInfo, CACHE_MAX_ENTRIES);
+      if (targetVid) setBounded(formatCache, targetVid, streamInfo, CACHE_MAX_ENTRIES);
     }
   }
 
-  if (!streamInfo || !streamInfo.url) {
+  // The URL comes from upstream data (Invidious issuer, ytdl, JioSaavn), so never redirect off the allow-list
+  const untrusted = !!streamInfo?.url && !isAllowedStreamUrl(streamInfo.url);
+  if (!streamInfo || !streamInfo.url || untrusted) {
     return new NextResponse(
       JSON.stringify({
         error: "Direct audio stream could not be extracted",
-        details: lastExtractionError,
+        details: untrusted ? "untrusted stream host" : lastExtractionError,
         track: { id: rawVideoId, title, artist, query },
       }),
       {

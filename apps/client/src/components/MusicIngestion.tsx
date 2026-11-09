@@ -30,6 +30,7 @@ interface MusicIngestionProps {
   onAddTrack: (track: Track, playNext?: boolean) => void;
   onPlayDirect?: (track: Track) => void;
   roomId: string;
+  inviteToken?: string;
   workerHttpUrl?: string;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
   initialQuery?: string;
@@ -54,6 +55,7 @@ export function MusicIngestion({
   onAddTrack,
   onPlayDirect,
   roomId,
+  inviteToken,
   workerHttpUrl = process.env.NEXT_PUBLIC_WORKER_HTTP_URL || "http://localhost:8787",
   searchInputRef: externalSearchRef,
   initialQuery = "",
@@ -217,12 +219,14 @@ export function MusicIngestion({
     setIsUploading(true);
 
     try {
-      const presignRes = await fetch(`${workerHttpUrl}/api/rooms/${roomId}/upload-url`, {
+      const tokenParam = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "";
+      const presignRes = await fetch(`${workerHttpUrl}/api/rooms/${roomId}/upload-url${tokenParam}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fileName: file.name,
           contentType: file.type || "audio/mpeg",
+          size: file.size,
         }),
       });
 
@@ -233,12 +237,13 @@ export function MusicIngestion({
         const data = await presignRes.json();
         key = data.key;
         if (data.uploadUrl && data.uploadUrl !== data.publicUrl) {
-          await fetch(data.uploadUrl, {
+          const putRes = await fetch(data.uploadUrl, {
             method: "PUT",
             headers: { "Content-Type": file.type || "audio/mpeg" },
             body: file,
           });
-          publicUrl = data.publicUrl;
+          // On failure keep the local object URL: it still plays here, and rooms refuse blob: tracks
+          if (putRes.ok) publicUrl = data.publicUrl;
         }
       }
 

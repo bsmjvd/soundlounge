@@ -145,6 +145,15 @@ export class RoomDurableObject {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    // Internal path: the worker only forwards /api/rooms/* here, so clients can't reach it
+    if (url.pathname === "/init-private" && request.method === "POST") {
+      if (this.getMeta("inviteToken")) return new Response("Room already initialized", { status: 409 });
+      const { inviteToken } = (await request.json()) as { inviteToken: string };
+      this.setMeta("isPrivate", "true");
+      this.setMeta("inviteToken", inviteToken);
+      return new Response(null, { status: 204 });
+    }
+
     // Invite token validation for private sessions
     const isPrivate = this.getMeta("isPrivate", "false") === "true";
     const expectedToken = this.getMeta("inviteToken", "");
@@ -152,6 +161,13 @@ export class RoomDurableObject {
     if (isPrivate && expectedToken) {
       const providedToken = url.searchParams.get("invite");
       if (providedToken !== expectedToken) {
+        // Browsers can't read a failed handshake's status, so accept and close with the private-room code
+        if (request.headers.get("Upgrade")?.toLowerCase() === "websocket" && typeof (globalThis as any).WebSocketPair === "function") {
+          const pair = new (globalThis as any).WebSocketPair();
+          pair[1].accept();
+          pair[1].close(PRIVATE_ROOM_CLOSE_CODE, "Private room: valid invite token required");
+          return new Response(null, { status: 101, webSocket: pair[0] } as any);
+        }
         return new Response(
           JSON.stringify({
             error: "Private room: valid invite token required",
@@ -303,7 +319,14 @@ export class RoomDurableObject {
       }
 
       case "ADD_TRACK": {
+        // Object URLs only resolve in the uploader's own tab
+        if (action.track.url.startsWith("blob:")) {
+          ws.send(JSON.stringify({ type: "ERROR", code: "INVALID_TRACK", message: "Local file URLs can't be shared" }));
+          return;
+        }
         const queue = this.getQueue();
+        // Every listener auto-queues the same similar pick; keep one copy (playNext still moves it)
+        if (!action.playNext && queue.some((t) => t.id === action.track.id)) return;
         let nextPos = queue.length;
         if (action.playNext && queue.length > 0) {
           const currentId = this.getMeta("currentTrackId");

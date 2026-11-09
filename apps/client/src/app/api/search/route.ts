@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Innertube } from "youtubei.js";
 import { extractYouTubeVideoId, parseYouTubeDuration } from "@/lib/youtubeUtils";
+import { isRateLimited } from "@/lib/rateLimit";
 import type { Track } from "@soundlounge/shared";
 
 // Innertube singleton for search
@@ -207,6 +208,10 @@ function extractCleanTrackInfo(
 }
 
 export async function GET(req: NextRequest) {
+  if (await isRateLimited(req, "search", 30)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": "60" } });
+  }
+
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q")?.trim();
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));

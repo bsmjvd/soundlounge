@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Copy, Check, ShieldCheck, Link2, QrCode } from "lucide-react";
+import { X, Copy, Check, ShieldCheck, Link2 } from "lucide-react";
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -12,15 +12,30 @@ interface InviteModalProps {
 
 export function InviteModal({ isOpen, onClose, roomId, inviteToken }: InviteModalProps) {
   const [copied, setCopied] = useState(false);
-  const [showQr, setShowQr] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   if (!isOpen) return null;
+
+  const handleCreatePrivate = async () => {
+    setIsCreating(true);
+    setCreateError("");
+    try {
+      const workerHttpUrl = process.env.NEXT_PUBLIC_WORKER_HTTP_URL || "http://localhost:8787";
+      const res = await fetch(`${workerHttpUrl}/api/rooms`, { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { roomId: newRoomId, inviteToken: newToken } = await res.json();
+      window.location.assign(`/?room=${encodeURIComponent(newRoomId)}&invite=${encodeURIComponent(newToken)}`);
+    } catch {
+      setCreateError("Couldn't create a private room. Try again.");
+      setIsCreating(false);
+    }
+  };
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://soundlounge.vercel.app";
   const inviteUrl = `${origin}/?room=${encodeURIComponent(roomId)}${
     inviteToken ? `&invite=${encodeURIComponent(inviteToken)}` : ""
   }`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(inviteUrl)}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(inviteUrl);
@@ -56,16 +71,7 @@ export function InviteModal({ isOpen, onClose, roomId, inviteToken }: InviteModa
         </p>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Shareable Invite URL</label>
-            <button
-              onClick={() => setShowQr((prev) => !prev)}
-              className="text-[11px] text-[#00e5ff] hover:underline flex items-center gap-1 cursor-pointer font-medium"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>{showQr ? "Hide QR" : "Show QR Code"}</span>
-            </button>
-          </div>
+          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Shareable Invite URL</label>
 
           <div className="flex items-center gap-2 bg-black/60 border border-white/10 rounded-2xl p-2 shadow-inner">
             <input
@@ -82,24 +88,28 @@ export function InviteModal({ isOpen, onClose, roomId, inviteToken }: InviteModa
               {copied ? "Copied!" : "Copy"}
             </button>
           </div>
-
-          {/* Real-time Mobile QR Code Display */}
-          {showQr && (
-            <div className="flex flex-col items-center justify-center p-4 bg-white/5 border border-white/10 rounded-2xl animate-in fade-in duration-200 mt-2">
-              <div className="p-2 bg-white rounded-xl shadow-lg">
-                <img src={qrCodeUrl} alt="Room Invite QR Code" className="w-36 h-36" />
-              </div>
-              <p className="text-[10px] text-slate-400 mt-2 font-mono text-center">
-                Scan with any smartphone camera to join room on mobile
-              </p>
-            </div>
-          )}
         </div>
 
-        {inviteToken && (
+        {inviteToken ? (
           <div className="flex items-center gap-2.5 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl p-3 text-xs text-emerald-300">
             <ShieldCheck className="w-4 h-4 flex-shrink-0 text-emerald-400" />
             <span>Private room access key is securely embedded in the link.</span>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <button
+              onClick={handleCreatePrivate}
+              disabled={isCreating}
+              className="w-full flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-2xl p-3 text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              {isCreating ? "Creating private room…" : "Create a private room instead"}
+            </button>
+            {createError && (
+              <p role="alert" className="text-[11px] text-rose-400 text-center">
+                {createError}
+              </p>
+            )}
           </div>
         )}
       </div>

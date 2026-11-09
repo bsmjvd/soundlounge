@@ -129,6 +129,16 @@ describe("RoomDurableObject", () => {
     expect(body.code).toBe(PRIVATE_ROOM_CLOSE_CODE);
   });
 
+  it("initializes a private room once, then requires its token", async () => {
+    const init = () =>
+      room.fetch(new Request("https://room/init-private", { method: "POST", body: JSON.stringify({ inviteToken: "tok" }) }));
+    expect((await init()).status).toBe(204);
+    expect((await init()).status).toBe(409);
+
+    expect((await room.fetch(new Request("https://soundlounge.app/api/rooms/r/state"))).status).toBe(403);
+    expect((await room.fetch(new Request("https://soundlounge.app/api/rooms/r/state?invite=tok"))).status).toBe(200);
+  });
+
   it("handles NTP probe pairs and responds immediately with t1 and t2", async () => {
     const ws = new MockWebSocket();
     ctx.acceptWebSocket(ws);
@@ -213,6 +223,27 @@ describe("RoomDurableObject", () => {
         track: { id, title: id, artist: "A", durationMs: 200000, url: `https://r2.soundlounge.app/${id}.mp3`, source: "upload" },
       })
     );
+
+  it("keeps one copy when several listeners add the same track", async () => {
+    const ws = new MockWebSocket();
+    ctx.acceptWebSocket(ws);
+    await addTrack(ws, "a");
+    await addTrack(ws, "a");
+    expect(ws.sentMessages.length).toBe(1);
+  });
+
+  it("refuses blob: tracks, which only play in the uploader's tab", async () => {
+    const ws = new MockWebSocket();
+    ctx.acceptWebSocket(ws);
+    await room.handleSocketMessage(
+      ws as any,
+      JSON.stringify({
+        type: "ADD_TRACK",
+        track: { id: "u", title: "u", artist: "A", durationMs: 1000, url: "blob:https://x/1", source: "upload" },
+      })
+    );
+    expect(JSON.parse(ws.sentMessages[0]).type).toBe("ERROR");
+  });
 
   it("schedules the track end and advances the room to the next track on alarm", async () => {
     const ws = new MockWebSocket();

@@ -16,6 +16,15 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+const ROOM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+  });
+
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: any): Promise<Response> {
     if (request.method === "OPTIONS") {
@@ -45,14 +54,40 @@ export default {
       );
     }
 
+    // Private room creation: random id + token, so an existing room can't be taken over
+    if (path === "/api/rooms" && request.method === "POST") {
+      const roomId = crypto.randomUUID();
+      const inviteToken = crypto.randomUUID();
+      const stub = env.ROOM_DO.get(env.ROOM_DO.idFromName(roomId));
+      const init = await stub.fetch(
+        new Request("https://room/init-private", { method: "POST", body: JSON.stringify({ inviteToken }) })
+      );
+      if (!init.ok) return json({ error: "Failed to create room" }, 500);
+      return json({ roomId, inviteToken });
+    }
+
     // Direct audio upload presigning
     const uploadMatch = path.match(/^\/api\/rooms\/([^/]+)\/upload-url$/);
     if (uploadMatch && request.method === "POST") {
       const roomId = uploadMatch[1];
+      if (!ROOM_ID_RE.test(roomId)) return json({ error: "Invalid room id" }, 400);
+
+      // Same invite check the room applies to joiners
+      const stub = env.ROOM_DO.get(env.ROOM_DO.idFromName(roomId));
+      const access = await stub.fetch(
+        new Request(`https://room/api/rooms/${roomId}/state${url.search}`)
+      );
+      if (access.status === 403) return json({ error: "Private room: valid invite token required" }, 403);
+
       try {
-        const body = (await request.json()) as { fileName?: string; contentType?: string };
+        const body = (await request.json()) as { fileName?: string; contentType?: string; size?: number };
         const rawFileName = body.fileName || "audio.mp3";
         const contentType = body.contentType || "audio/mpeg";
+        const size = body.size;
+        if (!contentType.startsWith("audio/")) return json({ error: "Only audio files can be uploaded" }, 400);
+        if (typeof size !== "number" || !(size > 0) || size > MAX_UPLOAD_BYTES) {
+          return json({ error: `File must be under ${MAX_UPLOAD_BYTES / 1024 / 1024} MB` }, 400);
+        }
         const timestamp = Date.now();
         const key = sanitizeR2Key(roomId, rawFileName, timestamp);
         const cdnBase = env.R2_PUBLIC_URL_PREFIX || "https://r2.soundlounge.app";
@@ -72,6 +107,7 @@ export default {
             bucketName: env.R2_BUCKET_NAME,
             key,
             contentType,
+            contentLength: size,
           });
         }
 
