@@ -3,7 +3,7 @@ import { Ytdl, Client } from "@distube/ytdl-core";
 import { Innertube } from "youtubei.js";
 import CryptoJS from "crypto-js";
 import { isYouTubeVideoId } from "@/lib/youtubeUtils";
-import { INVIDIOUS_INSTANCES, isAllowedStreamUrl } from "@/lib/streamHosts";
+import { INVIDIOUS_INSTANCES, WORKER_HTTP_URL, isAllowedStreamUrl } from "@/lib/streamHosts";
 import { getBounded, setBounded } from "@/lib/boundedCache";
 import { isRateLimited } from "@/lib/rateLimit";
 
@@ -234,8 +234,33 @@ async function fetchInvidiousAudio(videoId: string): Promise<CachedFormat | null
   return null;
 }
 
+/**
+ * Our Cloudflare Worker resolves and streams the audio itself (googlevideo URLs are IP-locked),
+ * so probe one byte and hand the browser the worker URL.
+ */
+async function fetchWorkerAudio(videoId: string): Promise<CachedFormat | null> {
+  if (!WORKER_HTTP_URL) return null;
+  const url = `${WORKER_HTTP_URL}/api/yt/${videoId}`;
+  try {
+    const res = await fetch(url, { headers: { Range: "bytes=0-0" }, signal: AbortSignal.timeout(8000) });
+    await res.body?.cancel();
+    if (res.status !== 206 && res.status !== 200) {
+      lastExtractionError = `worker ${res.status}`;
+      return null;
+    }
+    return { url, mimeType: res.headers.get("content-type") || "audio/mp4", expiresAt: Date.now() + 3600000 };
+  } catch (err: unknown) {
+    lastExtractionError = err instanceof Error ? err.message : String(err);
+    return null;
+  }
+}
+
 async function extractYouTubeAudioFormat(videoId: string): Promise<CachedFormat | null> {
-  // 1. Try Invidious zero-bot-challenge engine first
+  // 1. Our own worker proxy
+  const worker = await fetchWorkerAudio(videoId);
+  if (worker) return worker;
+
+  // 2. Then Invidious
   const inv = await fetchInvidiousAudio(videoId);
   if (inv) return inv;
 
