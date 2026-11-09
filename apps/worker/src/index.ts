@@ -1,5 +1,6 @@
 import { RoomDurableObject, type Env } from "./RoomDurableObject";
 import { sanitizeR2Key, formatAudioPublicUrl, createPresignedR2PutUrl } from "./r2";
+import { YT_ID_RE, streamYouTube } from "./youtube";
 
 export { RoomDurableObject };
 
@@ -52,6 +53,13 @@ export default {
           },
         }
       );
+    }
+
+    // YouTube audio proxy (step 4 spike): /api/yt/:videoId
+    const ytMatch = path.match(/^\/api\/yt\/([^/]+)$/);
+    if (ytMatch && request.method === "GET") {
+      if (!YT_ID_RE.test(ytMatch[1])) return json({ error: "Invalid video id" }, 400);
+      return streamYouTube(ytMatch[1], request, CORS_HEADERS);
     }
 
     // Private room creation: random id + token, so an existing room can't be taken over
