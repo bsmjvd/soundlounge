@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - **Repository Root:** `C:\Users\basim\projects\soundlounge`
-- **Zero Server Audio Proxying:** Worker acts strictly as a metadata coordinator and presigner; audio streams directly from R2 CDN, YouTube stream endpoints, or SoundCloud CDN.
+- **Minimal Server Audio Proxying:** Worker coordinates rooms and presigns uploads; R2 and SoundCloud audio stream directly from their CDNs. YouTube is the exception: googlevideo URLs are IP-locked, so the Worker resolves them via Innertube and streams the bytes (`/api/yt/:id`, rate-limited, resolved URLs cached per colo). Decided 2026-11-09 over the IFrame player, Invidious rotation, and a paid VPS.
 - **Accountless Operation:** No login required. Playlists, liked songs, and session snapshots persist in `localStorage` (`soundlounge:library-v1`).
 - **Private Room Protection:** Private sessions require an invite token (`?invite=<token>`); unauthorized connections are rejected with close code `4003`.
 - **Latency & Sync:** Multi-listener rooms achieve sub-30ms sync using Huygens coded probe pairs; solo sessions start playing in under 2 seconds.

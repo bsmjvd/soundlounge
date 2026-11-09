@@ -1,5 +1,5 @@
-// Spike: resolve a YouTube id via Innertube and stream the audio bytes in the same request,
-// so the IP-locked googlevideo URL is fetched from the same egress that resolved it.
+// Resolve a YouTube id via Innertube and stream the audio bytes from the Worker, so the
+// IP-locked googlevideo URL is fetched from Cloudflare egress rather than the browser.
 
 export const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
@@ -52,25 +52,55 @@ export async function resolveAudio(videoId: string): Promise<Format> {
   return format;
 }
 
-export async function streamYouTube(videoId: string, request: Request, cors: Record<string, string>): Promise<Response> {
-  let format: Format;
+// Resolved formats are cached per colo until the googlevideo URL expires (max 1h), so the
+// player's follow-up Range requests and the app's probe don't each hit Innertube.
+const cacheKey = (videoId: string) => new Request(`https://yt-format.cache/${videoId}`);
+
+async function cachedResolve(videoId: string, fresh: boolean, ctx: { waitUntil(p: Promise<unknown>): void }): Promise<Format> {
+  const cache = (caches as any).default as Cache;
+  if (!fresh) {
+    const hit = await cache.match(cacheKey(videoId));
+    if (hit) return hit.json();
+  }
+  const format = await resolveAudio(videoId);
+  const expire = Number(new URL(format.url!).searchParams.get("expire")) * 1000;
+  const ttl = Math.min(3600, Math.floor((expire - Date.now()) / 1000) - 60);
+  if (ttl > 0) {
+    ctx.waitUntil(
+      cache.put(cacheKey(videoId), new Response(JSON.stringify(format), { headers: { "Cache-Control": `max-age=${ttl}` } }))
+    );
+  }
+  return format;
+}
+
+export async function streamYouTube(
+  videoId: string,
+  request: Request,
+  cors: Record<string, string>,
+  ctx: { waitUntil(p: Promise<unknown>): void }
+): Promise<Response> {
+  const range = request.headers.get("Range");
+  let upstream: Response | undefined;
   try {
-    format = await resolveAudio(videoId);
+    // A cached URL can 403 if this request left from a different egress IP, so re-resolve once
+    for (const fresh of [false, true]) {
+      const format = await cachedResolve(videoId, fresh, ctx);
+      upstream = await fetch(format.url!, {
+        headers: { "User-Agent": USER_AGENT, ...(range ? { Range: range } : {}) },
+      });
+      if (upstream.status !== 403) break;
+    }
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 502,
       headers: { "Content-Type": "application/json", ...cors },
     });
   }
-  const range = request.headers.get("Range");
-  const upstream = await fetch(format.url!, {
-    headers: { "User-Agent": USER_AGENT, ...(range ? { Range: range } : {}) },
-  });
   const headers = new Headers(cors);
   for (const h of ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"]) {
-    const v = upstream.headers.get(h);
+    const v = upstream!.headers.get(h);
     if (v) headers.set(h, v);
   }
   headers.set("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges");
-  return new Response(upstream.body, { status: upstream.status, headers });
+  return new Response(upstream!.body, { status: upstream!.ok ? upstream!.status : 502, headers });
 }

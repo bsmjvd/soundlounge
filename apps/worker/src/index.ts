@@ -9,6 +9,7 @@ export interface WorkerEnv extends Env {
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   R2_BUCKET_NAME?: string;
+  YT_LIMITER?: { limit(opts: { key: string }): Promise<{ success: boolean }> };
 }
 
 const CORS_HEADERS = {
@@ -55,11 +56,16 @@ export default {
       );
     }
 
-    // YouTube audio proxy (step 4 spike): /api/yt/:videoId
+    // YouTube audio proxy: /api/yt/:videoId
     const ytMatch = path.match(/^\/api\/yt\/([^/]+)$/);
     if (ytMatch && request.method === "GET") {
       if (!YT_ID_RE.test(ytMatch[1])) return json({ error: "Invalid video id" }, 400);
-      return streamYouTube(ytMatch[1], request, CORS_HEADERS);
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      // Binding is absent in tests; limiting is per colo and approximate
+      if (env.YT_LIMITER && !(await env.YT_LIMITER.limit({ key: ip })).success) {
+        return json({ error: "Too many requests" }, 429);
+      }
+      return streamYouTube(ytMatch[1], request, CORS_HEADERS, ctx);
     }
 
     // Private room creation: random id + token, so an existing room can't be taken over
