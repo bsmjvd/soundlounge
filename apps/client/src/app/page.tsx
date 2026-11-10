@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { TopBar, type TopNavTab } from "../components/TopBar";
 import { DiscoverHero } from "../components/DiscoverHero";
@@ -263,6 +263,11 @@ export default function SoundloungeApp() {
       }}
     />
   );
+
+  // Library, queue and settings come from localStorage, which the server render can't see; render only on the client
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+  if (!isMounted) return <div className="min-h-screen bg-[#0e1422]" />;
 
   if (playerState.mode === "synced" && sync.isAccessDenied) {
     return (
