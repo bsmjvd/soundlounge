@@ -62,6 +62,8 @@ export function TopBar({
 }: TopBarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState<"all" | "tracks" | "artists" | "albums">("all");
@@ -76,6 +78,7 @@ export function TopBar({
   });
   const [liveTracks, setLiveTracks] = useState<Track[]>([]);
   const [isLoadingLive, setIsLoadingLive] = useState(false);
+  const [liveError, setLiveError] = useState(false);
   const [addedTrackId, setAddedTrackId] = useState<string | null>(null);
 
   const saveRecentSearch = (query: string) => {
@@ -115,6 +118,17 @@ export function TopBar({
     });
   };
 
+  // The mobile search sheet must clear the real header, including the nav row and safe area
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const update = () => setHeaderHeight(el.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   // Global Cmd+K / Ctrl+K focus
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,6 +141,7 @@ export function TopBar({
       }
       if (e.key === "Escape") {
         setIsDropdownOpen(false);
+        searchInputRef.current?.focus();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -205,22 +220,29 @@ export function TopBar({
     if (!q || q.length < 2) {
       setLiveTracks([]);
       setIsLoadingLive(false);
+      setLiveError(false);
       return;
     }
 
     setIsLoadingLive(true);
+    setLiveError(false);
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
-        if (res.ok) {
-          const data = await res.json();
-          setLiveTracks(data.tracks?.slice(0, 6) || []);
-          // Only the top hit: this list changes as you type, and each warm-up is a real download
-          prefetchTrack(data.tracks?.[0]);
+        if (!res.ok) {
+          setLiveError(true);
+          return;
         }
+        const data = await res.json();
+        setLiveTracks(data.tracks?.slice(0, 6) || []);
+        // Only the top hit: this list changes as you type, and each warm-up is a real download
+        prefetchTrack(data.tracks?.[0]);
       } catch (err) {
-        if (!controller.signal.aborted) console.warn("TopBar live search error:", err);
+        if (!controller.signal.aborted) {
+          console.warn("TopBar live search error:", err);
+          setLiveError(true);
+        }
       } finally {
         if (!controller.signal.aborted) setIsLoadingLive(false);
       }
@@ -270,7 +292,10 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-[100] w-full bg-[#080d14]/90 backdrop-blur-md px-3 sm:px-8 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2.5 sm:pb-3.5 transition-colors border-b border-white/[0.04]">
+    <header
+      ref={headerRef}
+      className="sticky top-0 z-[100] w-full bg-canvas/90 backdrop-blur-md px-3 sm:px-8 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2.5 sm:pb-3.5 transition-colors border-b border-line/40"
+    >
       <div className="flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: Mobile Trigger & Desktop Navigation Tabs */}
         <div className="flex items-center gap-2 sm:gap-6 flex-shrink-0">
@@ -280,7 +305,7 @@ export function TopBar({
                 hapticLight();
                 onToggleMobileMenu();
               }}
-              className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              className="lg:hidden h-11 w-11 -ml-1 flex items-center justify-center text-ink-muted hover:text-ink rounded-control hover:bg-surface-raised transition-colors cursor-pointer"
               aria-label="Open playlist menu"
             >
               <Menu className="w-5 h-5" />
@@ -293,10 +318,11 @@ export function TopBar({
                 hapticLight();
                 onTopTabChange && onTopTabChange("discover");
               }}
-              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
+              aria-current={activeTopTab === "discover" ? "page" : undefined}
+              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition cursor-pointer ${
                 activeTopTab === "discover"
-                  ? "text-[#00e5ff] border-[#00e5ff]"
-                  : "text-slate-400 border-transparent hover:text-white"
+                  ? "text-accent border-accent"
+                  : "text-ink-muted border-transparent hover:text-ink"
               }`}
             >
               Discover
@@ -307,10 +333,11 @@ export function TopBar({
                 hapticLight();
                 onTopTabChange && onTopTabChange("library");
               }}
-              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
+              aria-current={activeTopTab === "library" ? "page" : undefined}
+              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition cursor-pointer ${
                 activeTopTab === "library"
-                  ? "text-[#00e5ff] border-[#00e5ff]"
-                  : "text-slate-400 border-transparent hover:text-white"
+                  ? "text-accent border-accent"
+                  : "text-ink-muted border-transparent hover:text-ink"
               }`}
             >
               My Library
@@ -321,10 +348,11 @@ export function TopBar({
                 hapticLight();
                 onTopTabChange && onTopTabChange("radio");
               }}
-              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition-all cursor-pointer ${
+              aria-current={activeTopTab === "radio" ? "page" : undefined}
+              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition cursor-pointer ${
                 activeTopTab === "radio"
-                  ? "text-[#00e5ff] border-[#00e5ff]"
-                  : "text-slate-400 border-transparent hover:text-white"
+                  ? "text-accent border-accent"
+                  : "text-ink-muted border-transparent hover:text-ink"
               }`}
             >
               Radio
@@ -337,14 +365,23 @@ export function TopBar({
         {/* Center/Right: Fluid Responsive Pill Search Input + Dropdown */}
         <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end min-w-0 max-w-full md:max-w-md lg:max-w-lg">
           <div className="relative w-full min-w-0">
-            <form onSubmit={handleSearchSubmit} className="relative w-full">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+            <form onSubmit={handleSearchSubmit} role="search" aria-label="Search music" className="relative w-full">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-muted">
                 <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
 
               <input
                 ref={searchInputRef}
                 type="text"
+                name="search"
+                aria-label="Search songs, artists, and albums"
+                aria-expanded={isDropdownOpen}
+                aria-controls="global-search-results"
+                aria-autocomplete="list"
+                inputMode="search"
+                enterKeyHint="search"
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => {
@@ -354,7 +391,7 @@ export function TopBar({
                 onFocus={() => {
                   setIsDropdownOpen(true);
                 }}
-                className="w-full h-8.5 sm:h-9 bg-slate-800/60 hover:bg-slate-800 focus:bg-slate-800/90 border border-slate-700/60 focus:border-[#00e5ff] rounded-full pl-8 sm:pl-9 pr-8 sm:pr-14 text-base sm:text-xs text-white placeholder-slate-400 outline-none transition-all shadow-inner"
+                className="w-full h-11 sm:h-9 bg-surface-raised/60 hover:bg-surface-raised focus:bg-surface-raised/90 border border-line-strong focus:border-accent rounded-full pl-8 sm:pl-9 pr-8 sm:pr-14 text-base sm:text-xs text-ink placeholder-ink-muted outline-none transition shadow-inner"
               />
 
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -365,12 +402,13 @@ export function TopBar({
                       setSearchQuery("");
                       searchInputRef.current?.focus();
                     }}
-                    className="p-0.5 text-slate-400 hover:text-white rounded cursor-pointer"
+                    aria-label="Clear search"
+                    className="flex h-9 w-9 items-center justify-center text-ink-muted hover:text-ink rounded cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
-                <kbd className="hidden sm:inline-flex items-center rounded border border-slate-700 bg-slate-900/60 px-1 py-0.2 text-[9px] font-mono text-slate-400">
+                <kbd className="hidden sm:inline-flex items-center rounded border border-line bg-surface-sunken/60 px-1 py-0.5 text-[11px] font-mono text-ink-muted">
                   ⌘K
                 </kbd>
               </div>
@@ -380,20 +418,26 @@ export function TopBar({
             {isDropdownOpen && (
               <div
                 ref={dropdownRef}
-                className="fixed inset-x-3 top-13 md:absolute md:inset-x-0 md:top-full md:mt-2 bg-[#0c121e] border border-[#1b273d] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden z-[120] max-h-[75vh] flex flex-col"
+                id="global-search-results"
+                style={{ "--header-h": `${headerHeight}px` } as React.CSSProperties}
+                className="animate-popover-in fixed inset-x-3 top-[calc(var(--header-h,7.5rem)+0.5rem)] md:absolute md:inset-x-0 md:top-full md:mt-2 bg-surface border border-line rounded-card shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden z-[120] max-h-[75vh] flex flex-col"
               >
+                <span className="sr-only" role="status">
+                  {addedTrackId ? "Added to queue" : ""}
+                </span>
                 {/* 1. Category Filter Segmented Chips (Visible when searching) */}
                 {searchQuery.trim().length > 0 && (
-                  <div className="flex items-center gap-1 px-3 py-2 bg-slate-900/70 border-b border-slate-800/80">
+                  <div className="flex items-center gap-1 px-3 py-2 bg-surface-sunken/70 border-b border-line/80">
                     {(["all", "tracks", "artists", "albums"] as const).map((filter) => (
                       <button
                         key={filter}
                         type="button"
                         onClick={() => setSearchFilter(filter)}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        aria-pressed={searchFilter === filter}
+                        className={`min-h-10 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider transition cursor-pointer ${
                           searchFilter === filter
-                            ? "bg-[#00e5ff] text-[#07090e] shadow-[0_0_10px_rgba(0,229,255,0.4)]"
-                            : "text-slate-400 hover:text-white hover:bg-slate-800"
+                            ? "bg-accent text-accent-foreground shadow-[0_0_10px_rgba(0,229,255,0.4)]"
+                            : "text-ink-muted hover:text-ink hover:bg-surface-raised"
                         }`}
                       >
                         {filter}
@@ -406,14 +450,15 @@ export function TopBar({
                 {searchQuery.trim().length === 0 && (
                   <div className="p-3">
                     <div className="flex items-center justify-between pb-2 px-1">
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                        <History className="w-3.5 h-3.5 text-[#00e5ff]" />
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-muted">
+                        <History className="w-3.5 h-3.5 text-accent" />
                         <span>Recent Searches</span>
                       </div>
                       {recentSearches.length > 0 && (
                         <button
+                          type="button"
                           onClick={clearRecentSearches}
-                          className="text-[10px] text-slate-500 hover:text-rose-400 flex items-center gap-1 cursor-pointer transition-colors"
+                          className="min-h-10 text-[11px] text-ink-subtle hover:text-danger flex items-center gap-1 cursor-pointer transition-colors"
                         >
                           <Trash2 className="w-3 h-3" />
                           <span>Clear</span>
@@ -426,16 +471,24 @@ export function TopBar({
                         {recentSearches.map((item) => (
                           <div
                             key={item}
-                            onClick={() => {
-                              setSearchQuery(item);
-                              onSearch(item);
-                            }}
-                            className="group flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white text-xs px-2.5 py-1 rounded-full cursor-pointer transition-all border border-slate-700/50 hover:border-[#00e5ff]/50"
+                            className="group flex min-h-10 items-center rounded-full bg-surface-raised/80 hover:bg-surface-overlay/80 border border-line-strong hover:border-accent/50 transition"
                           >
-                            <span>{item}</span>
                             <button
+                              type="button"
+                              onClick={() => {
+                                setSearchQuery(item);
+                                onSearch(item);
+                                setIsDropdownOpen(false);
+                              }}
+                              className="min-h-10 max-w-[220px] truncate pl-2.5 pr-1 text-xs text-ink-secondary hover:text-ink cursor-pointer"
+                            >
+                              {item}
+                            </button>
+                            <button
+                              type="button"
                               onClick={(e) => removeRecentSearch(item, e)}
-                              className="text-slate-500 hover:text-slate-200 p-0.5 rounded-full"
+                              aria-label={`Remove ${item} from recent searches`}
+                              className="flex h-10 w-7 items-center justify-center pr-1 text-ink-subtle hover:text-ink cursor-pointer"
                             >
                               <X className="w-2.5 h-2.5" />
                             </button>
@@ -443,18 +496,18 @@ export function TopBar({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-500 px-1 py-2">No recent searches</p>
+                      <p className="text-[11px] text-ink-subtle px-1 py-2">No recent searches</p>
                     )}
                   </div>
                 )}
 
                 {/* 3. Search Results */}
                 {searchQuery.trim().length > 0 && (
-                  <div className="p-3 overflow-y-auto space-y-4 flex-1 scrollbar-thin scrollbar-thumb-slate-800">
+                  <div className="p-3 overflow-y-auto space-y-4 flex-1 scrollbar-none">
                     {/* ARTISTS */}
                     {(searchFilter === "all" || searchFilter === "artists") && matchingArtists.length > 0 && (
                       <div>
-                        <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
+                        <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-accent uppercase">
                           <User className="w-3 h-3" />
                           <span>Artists</span>
                         </div>
@@ -466,7 +519,7 @@ export function TopBar({
                                 saveRecentSearch(artist.name);
                                 handleSelectArtistClick(artist);
                               }}
-                              className="w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-800/70 text-left transition-colors cursor-pointer"
+                              className="w-full min-h-12 flex items-center gap-2.5 p-1.5 rounded-control hover:bg-surface-raised/70 text-left transition-colors cursor-pointer"
                             >
                               <img
                                 src={artist.avatarUrl}
@@ -474,8 +527,8 @@ export function TopBar({
                                 className="w-8 h-8 rounded-full object-cover"
                               />
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold text-white truncate">{artist.name}</p>
-                                <p className="text-[10px] text-slate-400 truncate">{artist.genre}</p>
+                                <p className="text-xs font-semibold text-ink truncate">{artist.name}</p>
+                                <p className="text-[11px] text-ink-muted truncate">{artist.genre}</p>
                               </div>
                             </button>
                           ))}
@@ -486,7 +539,7 @@ export function TopBar({
                     {/* ALBUMS */}
                     {(searchFilter === "all" || searchFilter === "albums") && matchingAlbums.length > 0 && (
                       <div>
-                        <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
+                        <div className="px-2 pb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-accent uppercase">
                           <Disc className="w-3 h-3" />
                           <span>Albums</span>
                         </div>
@@ -498,12 +551,12 @@ export function TopBar({
                                 saveRecentSearch(album.title);
                                 handleSelectAlbumClick(album);
                               }}
-                              className="w-full flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-800/70 text-left transition-colors cursor-pointer"
+                              className="w-full min-h-12 flex items-center gap-2.5 p-1.5 rounded-control hover:bg-surface-raised/70 text-left transition-colors cursor-pointer"
                             >
                               <img src={album.coverUrl} alt={album.title} className="w-8 h-8 rounded-lg object-cover" />
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold text-white truncate">{album.title}</p>
-                                <p className="text-[10px] text-slate-400 truncate">
+                                <p className="text-xs font-semibold text-ink truncate">{album.title}</p>
+                                <p className="text-[11px] text-ink-muted truncate">
                                   {album.primaryArtist} • {album.releaseYear}
                                 </p>
                               </div>
@@ -513,16 +566,22 @@ export function TopBar({
                       </div>
                     )}
 
+                    {liveError && (searchFilter === "all" || searchFilter === "tracks") && (
+                      <p role="status" className="px-2 pb-1 text-[11px] text-danger">
+                        Live results are unavailable. Showing saved catalog matches.
+                      </p>
+                    )}
+
                     {/* SONGS (Local + Live YouTube) */}
                     {(searchFilter === "all" || searchFilter === "tracks") &&
                       (matchingLocalTracks.length > 0 || liveTracks.length > 0) && (
                         <div>
-                          <div className="px-2 pb-1.5 flex items-center justify-between text-[10px] font-bold tracking-wider text-[#00e5ff] uppercase">
+                          <div className="px-2 pb-1.5 flex items-center justify-between text-[11px] font-bold tracking-wider text-accent uppercase">
                             <div className="flex items-center gap-1.5">
                               <Music2 className="w-3 h-3" />
                               <span>Songs</span>
                             </div>
-                            {isLoadingLive && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+                            {isLoadingLive && <Loader2 className="w-3 h-3 animate-spin text-ink-muted" />}
                           </div>
 
                           <div className="space-y-1">
@@ -533,10 +592,10 @@ export function TopBar({
                                   saveRecentSearch(track.title);
                                   handlePlayDirect(track);
                                 }}
-                                className="group flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-800/70 cursor-pointer transition-colors"
+                                className="group min-h-12 flex items-center justify-between p-1.5 rounded-control hover:bg-surface-raised/70 cursor-pointer transition-colors"
                               >
                                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0">
+                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-surface-raised flex-shrink-0">
                                     <TrackArtwork
                                       coverUrl={track.coverUrl}
                                       trackId={track.id}
@@ -545,10 +604,10 @@ export function TopBar({
                                     />
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-medium text-white truncate group-hover:text-[#00e5ff]">
+                                    <p className="text-xs font-medium text-ink truncate group-hover:text-accent">
                                       {track.title}
                                     </p>
-                                    <p className="text-[10px] text-slate-400 truncate">{track.artist}</p>
+                                    <p className="text-[11px] text-ink-muted truncate">{track.artist}</p>
                                   </div>
                                 </div>
 
@@ -558,11 +617,12 @@ export function TopBar({
                                       e.stopPropagation();
                                       handleAddDirect(track);
                                     }}
-                                    className="p-1 rounded-full hover:bg-slate-700 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="p-2 rounded-full hover:bg-surface-overlay text-ink-secondary opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 transition-opacity"
+                                    aria-label={`Add ${track.title} to queue`}
                                     title="Add to queue"
                                   >
                                     {addedTrackId === track.id ? (
-                                      <Check className="w-3 h-3 text-emerald-400" />
+                                      <Check className="w-3 h-3 text-positive" />
                                     ) : (
                                       <Plus className="w-3 h-3" />
                                     )}
@@ -573,7 +633,8 @@ export function TopBar({
                                       saveRecentSearch(track.title);
                                       handlePlayDirect(track);
                                     }}
-                                    className="p-1.5 rounded-full bg-[#00e5ff] text-[#0a0e17] opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="p-2 rounded-full bg-accent text-accent-foreground opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 transition-opacity"
+                                    aria-label={`Play ${track.title}`}
                                     title="Play song"
                                   >
                                     <Play className="w-3 h-3 fill-current ml-0.5" />
@@ -588,13 +649,13 @@ export function TopBar({
                 )}
 
                 {searchQuery.trim().length > 0 && (
-                  <div className="p-2 border-t border-slate-800/80 bg-slate-900/40 text-center">
+                  <div className="p-2 border-t border-line/80 bg-surface-sunken/40 text-center">
                     <button
                       onClick={(e) => {
                         saveRecentSearch(searchQuery);
                         handleSearchSubmit(e);
                       }}
-                      className="text-xs text-[#00e5ff] hover:underline font-semibold cursor-pointer"
+                      className="text-xs text-accent hover:underline font-semibold cursor-pointer"
                     >
                       View all results for &ldquo;{searchQuery}&rdquo; →
                     </button>
@@ -615,10 +676,11 @@ export function TopBar({
                   onToggleLeaves();
                 }}
                 title={isLeavesEnabled ? "Disable falling autumn leaves" : "Enable falling autumn leaves"}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all cursor-pointer border ${
+                aria-label={isLeavesEnabled ? "Disable falling leaves" : "Enable falling leaves"}
+                className={`w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm transition cursor-pointer border ${
                   isLeavesEnabled
-                    ? "bg-amber-500/20 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.35)] scale-105"
-                    : "bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-white"
+                    ? "bg-ember/20 border-ember/40 text-ember shadow-[0_0_12px_rgba(245,179,107,0.35)] scale-105"
+                    : "bg-surface-raised/60 border-line/60 text-ink-muted hover:text-ink"
                 }`}
               >
                 🍂
@@ -628,7 +690,8 @@ export function TopBar({
             <button
               onClick={() => onTopTabChange && onTopTabChange("library")}
               title="My Library & Profile"
-              className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-[#00e5ff]/40 shadow-[0_0_12px_rgba(0,229,255,0.25)] flex-shrink-0 hover:ring-[#00e5ff] transition-all cursor-pointer hover:scale-105 active:scale-95"
+              aria-label="Open my library"
+              className="w-11 h-11 sm:w-8 sm:h-8 rounded-full overflow-hidden ring-2 ring-accent/40 shadow-[0_0_12px_rgba(0,229,255,0.25)] flex-shrink-0 hover:ring-accent transition cursor-pointer hover:scale-105 active:scale-95"
             >
               <img
                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
@@ -639,6 +702,7 @@ export function TopBar({
           </div>
         </div>
       </div>
+
     </header>
   );
 }

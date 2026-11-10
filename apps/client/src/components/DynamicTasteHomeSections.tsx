@@ -79,8 +79,8 @@ export function DynamicTasteHomeSections({
         <section className="w-full">
           <div className="flex items-center justify-between mb-3.5">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#00e5ff]" />
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">
+              <Clock className="w-4 h-4 text-accent" />
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink font-display">
                 Jump Back In
               </h2>
             </div>
@@ -88,14 +88,14 @@ export function DynamicTasteHomeSections({
             <div className="flex items-center gap-2.5">
               <button
                 onClick={() => scrollJumpBack("left")}
-                className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+                className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
                 aria-label="Scroll left"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => scrollJumpBack("right")}
-                className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+                className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
                 aria-label="Scroll right"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -116,13 +116,13 @@ export function DynamicTasteHomeSections({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className={`group flex-shrink-0 flex items-center gap-2.5 sm:gap-3 w-[210px] xs:w-[240px] sm:w-[280px] p-2 sm:p-2.5 rounded-xl transition-all duration-200 cursor-pointer snap-start ${
+                  className={`group flex-shrink-0 flex items-center gap-2.5 sm:gap-3 w-[210px] xs:w-[240px] sm:w-[280px] p-2 sm:p-2.5 rounded-control transition duration-200 cursor-pointer snap-start focus-visible:ring-2 focus-visible:ring-accent ${
                     isOverHero
-                      ? "bg-[#0c1424]/80 hover:bg-[#121c32]/95 backdrop-blur-md border border-white/15 hover:border-[#00e5ff]/50 shadow-lg shadow-black/40"
-                      : "bg-[#131b2e]/80 hover:bg-[#1a253f] border border-slate-800/80 hover:border-slate-700"
+                      ? "bg-surface-raised/80 hover:bg-surface-raised border border-ink/15 hover:border-accent/50 shadow-lg shadow-black/40"
+                      : "bg-surface-raised/80 hover:bg-surface-overlay border border-line/80 hover:border-line"
                   } ${
                     isCurrent
-                      ? "!border-[#00e5ff] shadow-[0_0_15px_rgba(0,229,255,0.25)]"
+                      ? "!border-accent shadow-[0_0_15px_rgba(0,229,255,0.25)]"
                       : ""
                   }`}
                   role="button"
@@ -134,7 +134,7 @@ export function DynamicTasteHomeSections({
                     }
                   }}
                 >
-                  <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800 shadow-md">
+                  <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-surface-raised shadow-md">
                     <ImageWithFallback
                       src={track.coverUrl || "/albums/rockstar.webp"}
                       alt={track.title}
@@ -147,7 +147,7 @@ export function DynamicTasteHomeSections({
                         isItemPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       }`}
                     >
-                      <div className="w-7 h-7 rounded-full bg-[#00e5ff] flex items-center justify-center text-slate-950 shadow-md">
+                      <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-accent-foreground shadow-md">
                         {isItemPlaying ? (
                           <Pause className="w-3.5 h-3.5 fill-current" />
                         ) : (
@@ -160,13 +160,13 @@ export function DynamicTasteHomeSections({
                   <div className="min-w-0 flex-1">
                     <p
                       className={`text-sm font-semibold truncate transition-colors ${
-                        isCurrent ? "text-[#00e5ff]" : "text-white group-hover:text-[#00e5ff]"
+                        isCurrent ? "text-accent" : "text-ink group-hover:text-accent"
                       }`}
                     >
                       {track.title}
                     </p>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{track.artist}</p>
-                    <span className="inline-block text-[10px] text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded mt-1.5 font-medium">
+                    <p className="text-xs text-ink-muted truncate mt-0.5">{track.artist}</p>
+                    <span className="inline-block text-[11px] text-ink-muted bg-surface-raised/60 px-1.5 py-0.5 rounded mt-1.5 font-medium">
                       Recent
                     </span>
                   </div>
@@ -183,19 +183,19 @@ export function DynamicTasteHomeSections({
           <div className="flex items-center justify-between mb-3.5">
             <div>
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#00e5ff]" />
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink font-display">
                   {becauseSection.title}
                 </h2>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">{becauseSection.subtitle}</p>
+              <p className="text-xs text-ink-muted mt-0.5">{becauseSection.subtitle}</p>
             </div>
 
             <div className="flex items-center gap-2.5">
               {onPlayMix && (
                 <button
                   onClick={() => onPlayMix(becauseSection.tracks)}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00e5ff]/15 hover:bg-[#00e5ff]/25 text-[#00e5ff] text-xs font-semibold border border-[#00e5ff]/30 transition-all cursor-pointer"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/15 hover:bg-accent/25 text-accent text-xs font-semibold border border-accent/30 transition cursor-pointer"
                 >
                   <Play className="w-3 h-3 fill-current" />
                   <span>Play Mix</span>
@@ -203,14 +203,14 @@ export function DynamicTasteHomeSections({
               )}
               <button
                 onClick={() => scrollBecause("left")}
-                className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+                className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
                 aria-label="Scroll left"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => scrollBecause("right")}
-                className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+                className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
                 aria-label="Scroll right"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -231,7 +231,7 @@ export function DynamicTasteHomeSections({
                 <div
                   key={track.id}
                   onClick={() => onPlayTrack(track)}
-                  className="group flex-shrink-0 flex flex-col w-[130px] xs:w-[150px] sm:w-[170px] snap-start cursor-pointer focus:outline-none"
+                  className="group flex-shrink-0 flex flex-col w-[130px] xs:w-[150px] sm:w-[170px] snap-start cursor-pointer rounded-card focus-visible:ring-2 focus-visible:ring-accent"
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
@@ -242,10 +242,10 @@ export function DynamicTasteHomeSections({
                   }}
                 >
                   <div
-                    className={`relative aspect-square w-full rounded-xl overflow-hidden shadow-md group-hover:shadow-2xl transition-all duration-300 group-hover:scale-[1.03] ${
+                    className={`relative aspect-square w-full rounded-xl overflow-hidden shadow-md group-hover:shadow-2xl transition duration-300 group-hover:scale-[1.03] ${
                       isOverHero
-                        ? "bg-[#0c1424]/60 backdrop-blur-sm ring-1 ring-white/15 group-hover:ring-[#00e5ff]/60"
-                        : "bg-slate-800/80 ring-1 ring-slate-800/60"
+                        ? "bg-surface-raised/70 ring-1 ring-ink/15 group-hover:ring-accent/60"
+                        : "bg-surface-raised/80 ring-1 ring-line/60"
                     }`}
                   >
                     <ImageWithFallback
@@ -262,7 +262,7 @@ export function DynamicTasteHomeSections({
                         isItemPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       }`}
                     >
-                      <div className="w-10 h-10 rounded-full bg-[#00e5ff] flex items-center justify-center text-slate-950 shadow-lg group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-accent-foreground shadow-lg group-hover:scale-110 transition-transform">
                         {isItemPlaying ? (
                           <Pause className="w-5 h-5 fill-current" />
                         ) : (
@@ -274,12 +274,12 @@ export function DynamicTasteHomeSections({
 
                   <p
                     className={`text-sm font-semibold truncate mt-2 transition-colors ${
-                      isCurrent ? "text-[#00e5ff]" : "text-white group-hover:text-[#00e5ff]"
+                      isCurrent ? "text-accent" : "text-ink group-hover:text-accent"
                     }`}
                   >
                     {track.title}
                   </p>
-                  <p className="text-xs text-slate-400 truncate mt-0.5">{track.artist}</p>
+                  <p className="text-xs text-ink-muted truncate mt-0.5">{track.artist}</p>
                 </div>
               );
             })}

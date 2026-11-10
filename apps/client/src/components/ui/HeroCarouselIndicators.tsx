@@ -25,10 +25,10 @@ export function HeroCarouselIndicators({ total, activeIndex, onChange }: HeroCar
               e.stopPropagation();
               onChange(idx);
             }}
-            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+            className={`h-1.5 rounded-full transition duration-300 cursor-pointer ${
               isActive
-                ? "w-6 bg-[#00e5ff] shadow-[0_0_8px_rgba(0,229,255,0.6)]"
-                : "w-1.5 bg-white/20 hover:bg-white/40"
+                ? "w-6 bg-accent shadow-[0_0_8px_rgba(0,229,255,0.6)]"
+                : "w-1.5 bg-ink/20 hover:bg-ink/40"
             }`}
           />
         );

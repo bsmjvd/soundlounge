@@ -58,11 +58,11 @@ export function AmbientBackground({ currentTrack, isPlaying }: AmbientBackground
   }, [currentTrack?.id, currentTrack?.coverUrl, activeAura]);
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-[#080f14]">
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-canvas">
       {/* 1. Fading Previous Track Aura */}
       {prevAura && isCrossFading && (
         <div
-          className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-0 scale-125 filter blur-[110px] saturate-[200%]"
+          className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-0 scale-125 filter blur-[110px] saturate-[200%] max-md:blur-[64px] max-md:saturate-[160%]"
           style={{ backgroundImage: `url(${prevAura})` }}
         />
       )}
@@ -70,19 +70,16 @@ export function AmbientBackground({ currentTrack, isPlaying }: AmbientBackground
       {/* 2. Active Track Dynamic Color Aura (Organic, no hard cuts or seams) */}
       {activeAura && (
         <div
-          className={`absolute -top-[10%] left-0 right-0 h-[85vh] bg-cover bg-center transition-all duration-1000 scale-110 filter blur-[110px] saturate-[220%] ${
-            isPlaying ? "opacity-40 animate-pulse" : "opacity-25"
+          className={`absolute -top-[10%] left-0 right-0 h-[85vh] bg-cover bg-center transition-opacity duration-1000 scale-110 filter blur-[110px] saturate-[220%] max-md:blur-[64px] max-md:saturate-[160%] ${
+            isPlaying ? "opacity-40" : "opacity-25"
           }`}
-          style={{
-            backgroundImage: `url(${activeAura})`,
-            animationDuration: "10s",
-          }}
+          style={{ backgroundImage: `url(${activeAura})` }}
         />
       )}
 
       {/* 3. Smooth Radial & Vertical Darkening Scrims (Guarantees zero harsh edges) */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#080f14]/60 to-[#080f14]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#080f14]/30 via-[#080f14]/80 to-[#080f14]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-canvas/60 to-canvas" />
+      <div className="absolute inset-0 bg-gradient-to-b from-canvas/30 via-canvas/80 to-canvas" />
     </div>
   );
 }

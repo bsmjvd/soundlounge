@@ -2,36 +2,166 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Soundlounge design tokens
+   One source of truth for every surface, viewport, and platform.
+   ============================================================ */
+
 :root {
-  --background: #080f14;
-  --surface: #0d181e;
-  --surface-raised: #112027;
-  --border: #1a2c35;
-  --accent-cyan: #00e5c9;
-  --accent-coral: #f43f5e;
-  --foreground: #f8fafc;
+  color-scheme: dark;
+
+  /* Native UI stacks: zero network cost, correct per platform */
+  --font-inter: "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "SF Pro Display", "Segoe UI Variable Display", "Segoe UI Semibold", "Segoe UI",
+    system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+
+  /* Neutral surfaces: midnight tinted toward the signal hue */
+  --canvas-rgb: 6 10 17;
+  --surface-rgb: 11 18 32;
+  --surface-raised-rgb: 17 26 43;
+  --surface-overlay-rgb: 22 34 58;
+  --surface-sunken-rgb: 4 7 13;
+
+  /* Lines: default is decorative, strong is the 3:1 control boundary */
+  --line-rgb: 42 58 82;
+  --line-strong-rgb: 91 113 144;
+
+  /* Ink: four steps, every one readable on every surface */
+  --ink-rgb: 242 246 252;
+  --ink-secondary-rgb: 195 205 221;
+  --ink-muted-rgb: 159 173 194;
+  --ink-subtle-rgb: 124 138 160;
+
+  /* Signal accent: playback, live sync, one primary action per view */
+  --accent-rgb: 0 229 255;
+  --accent-strong-rgb: 0 194 217;
+  --accent-foreground-rgb: 4 20 27;
+
+  /* Warm secondary: lounge / human moments */
+  --ember-rgb: 245 179 107;
+
+  /* Semantic */
+  --positive-rgb: 52 211 153;
+  --warning-rgb: 251 191 36;
+  --danger-rgb: 251 113 133;
+  --like-rgb: 249 168 212;
+
+  /* Geometry */
+  --radius-card: 1.25rem;
+  --radius-control: 0.875rem;
+  --player-h: 72px;
+
+  /* Motion */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-enter: 240ms;
+  --dur-slow: 320ms;
+
+  --background: rgb(var(--canvas-rgb));
+  --surface: rgb(var(--surface-rgb));
+  --surface-raised: rgb(var(--surface-raised-rgb));
+  --border: rgb(var(--line-rgb));
+  --foreground: rgb(var(--ink-rgb));
+  --accent-cyan: rgb(var(--accent-rgb));
+  --accent-coral: rgb(var(--danger-rgb));
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+* {
+  border-color: rgb(var(--line-rgb));
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: rgb(var(--canvas-rgb));
+  color: rgb(var(--ink-rgb));
   overflow-x: hidden;
-  user-select: none;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  -webkit-touch-callout: none;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Smooth momentum scrolling on iOS WebKit */
-.overflow-y-auto, .overflow-x-auto {
-  -webkit-overflow-scrolling: touch;
+/* Selection is a product feature: invite links and tokens must be copyable */
+::selection {
+  background-color: rgb(var(--accent-rgb) / 0.3);
+  color: rgb(var(--ink-rgb));
 }
 
-/* Dynamic viewport height class */
+/* Only controls opt out of selection, never the document */
+button,
+[role="button"],
+a,
+select,
+input[type="range"],
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Press feedback is immediate, even when a button has no transition class. */
+button:not(:disabled):active {
+  scale: 0.98;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.022em;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* Native focus is the floor: one visible ring everywhere */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--accent-rgb));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   Layout & safe areas
+   ============================================================ */
+
 .h-dvh {
   height: 100vh;
   height: 100dvh;
+}
+
+.min-h-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top));
 }
 
 .pb-safe {
@@ -42,12 +172,103 @@ body {
   padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
 }
 
-/* Tabular numbers for clocks, metrics, and timers */
+.pl-safe {
+  padding-left: env(safe-area-inset-left);
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Mobile: clear the player and the docked primary nav. Desktop: clear the player only. */
+.pb-player {
+  padding-bottom: calc(var(--player-h) + 5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .pb-player {
+    padding-bottom: calc(var(--player-h) + 1.5rem);
+  }
+}
+
+/* Primary mobile nav sits in the thumb zone, directly above the player. */
+.mobile-nav-dock {
+  bottom: calc(max(0.6rem, env(safe-area-inset-bottom)) + var(--player-h) + 0.5rem);
+}
+
+.mobile-nav-dock[data-player="false"] {
+  bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+}
+
+/* Minimum touch target. Visual size can stay small. */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* ============================================================
+   Composition
+   ============================================================ */
+
+/* The cinematic discover stage. Hero art direction lives here, not in the page. */
+.hero-stage {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 70% 55% at 12% 0%, rgb(var(--accent-rgb) / 0.22), transparent 62%),
+    radial-gradient(ellipse 70% 65% at 88% 0%, rgb(27 61 104 / 0.45), transparent 70%),
+    linear-gradient(180deg, #0d2833 0%, #0a1c2a 42%, rgb(var(--canvas-rgb)) 100%);
+}
+
+.hero-stage::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 11rem;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(var(--canvas-rgb) / 0.82) 55%, rgb(var(--canvas-rgb)));
+  z-index: 3;
+}
+
+/* Real elevation: used for panels that sit above content */
+.surface-panel {
+  background-color: rgb(var(--surface-rgb) / 0.92);
+  border: 1px solid rgb(var(--line-rgb));
+  box-shadow: 0 18px 50px -24px rgb(0 0 0 / 0.8);
+}
+
+.surface-panel--raised {
+  background-color: rgb(var(--surface-raised-rgb) / 0.94);
+}
+
+/* Blur is reserved for surfaces that float above the page */
+.floating-surface {
+  background-color: rgb(var(--canvas-rgb) / 0.82);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* ============================================================
+   Type helpers
+   ============================================================ */
+
 .font-tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom scrollbars */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+/* ============================================================
+   Scrollbars
+   ============================================================ */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -58,24 +279,44 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1a2c35;
-  border-radius: 3px;
+  background: rgb(var(--line-strong-rgb));
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #243b47;
+  background: rgb(var(--ink-subtle-rgb));
 }
 
-/* Range input styling for volume and scrubber */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================
+   Controls
+   ============================================================ */
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
   cursor: pointer;
+  accent-color: rgb(var(--accent-rgb));
 }
 
-input[type="range"]:focus {
-  outline: none;
+input[type="range"]:focus-visible {
+  outline: 2px solid rgb(var(--accent-rgb));
+  outline-offset: 6px;
+  border-radius: 999px;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -84,74 +325,197 @@ input[type="range"]::-webkit-slider-thumb {
   height: 12px;
   width: 12px;
   border-radius: 50%;
-  background: #00e5c9;
+  background: rgb(var(--accent-rgb));
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(0, 229, 201, 0.5);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.5);
+  transition: transform var(--dur-fast) var(--ease-out-quart), box-shadow var(--dur-fast) var(--ease-out-quart);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.25);
-  box-shadow: 0 0 12px rgba(0, 229, 201, 0.8);
+  box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.8);
 }
 
 input[type="range"]::-moz-range-thumb {
   height: 12px;
   width: 12px;
   border-radius: 50%;
-  background: #00e5c9;
+  background: rgb(var(--accent-rgb));
   cursor: pointer;
   border: none;
-  box-shadow: 0 0 8px rgba(0, 229, 201, 0.5);
+  box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.5);
 }
 
-/* Audiophile Studio Vinyl Record & Tone Arm */
-@keyframes spin-vinyl {
+/* iOS zoom is handled by text-base sm:text-* on each field, so the cascade stays intact. */
+
+/* ============================================================
+   Motion
+   ============================================================ */
+
+@keyframes fade-in {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
   }
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    translate: 0 -6px;
+    scale: 0.98;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.98;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes player-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes icon-swap {
+  from {
+    opacity: 0;
+    scale: 0.8;
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes hero-copy-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* Replaces tailwindcss-animate, which is not installed */
+.animate-in {
+  animation: fade-in var(--dur-slow) var(--ease-out-quart) both;
+}
+
+.animate-fadeIn {
+  animation: fade-in var(--dur-base) var(--ease-out-quart) both;
+}
+
+.animate-view-in {
+  animation: view-in var(--dur-enter) var(--ease-out-expo) both;
+}
+
+.animate-popover-in {
+  animation: popover-in 180ms var(--ease-out-expo) both;
+}
+
+.animate-modal-overlay-in {
+  animation: modal-overlay-in 160ms var(--ease-out-quart) both;
+}
+
+.animate-modal-panel-in {
+  animation: modal-panel-in var(--dur-enter) var(--ease-out-expo) both;
+}
+
+.animate-player-in {
+  animation: player-in var(--dur-enter) var(--ease-out-expo) both;
+}
+
+.animate-icon-swap {
+  animation: icon-swap 180ms var(--ease-out-quart) both;
+}
+
+.animate-hero-copy-in {
+  animation: hero-copy-in var(--dur-enter) var(--ease-out-expo) both;
+}
+
+@keyframes spin-vinyl {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .audiophile-vinyl-disc {
-  box-shadow: 
-    0 25px 70px rgba(0, 0, 0, 0.98),
-    inset 0 0 25px rgba(0, 0, 0, 0.95),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
-    0 0 0 1px rgba(0, 0, 0, 0.9);
+  box-shadow:
+    0 25px 70px rgb(0 0 0 / 0.98),
+    inset 0 0 25px rgb(0 0 0 / 0.95),
+    inset 0 0 0 2px rgb(255 255 255 / 0.12),
+    0 0 0 1px rgb(0 0 0 / 0.9);
   background:
     radial-gradient(
       circle at center,
       transparent 38%,
-      rgba(255, 255, 255, 0.03) 40%,
+      rgb(255 255 255 / 0.03) 40%,
       transparent 42%,
-      rgba(255, 255, 255, 0.04) 55%,
+      rgb(255 255 255 / 0.04) 55%,
       transparent 57%,
-      rgba(255, 255, 255, 0.03) 72%,
+      rgb(255 255 255 / 0.03) 72%,
       transparent 74%,
-      rgba(255, 255, 255, 0.04) 88%,
+      rgb(255 255 255 / 0.04) 88%,
       transparent 90%
     ),
     conic-gradient(
       from 45deg,
-      rgba(255, 255, 255, 0.22) 0deg,
-      rgba(8, 11, 16, 0.96) 35deg,
-      rgba(255, 255, 255, 0.06) 90deg,
-      rgba(8, 11, 16, 0.98) 140deg,
-      rgba(255, 255, 255, 0.22) 180deg,
-      rgba(8, 11, 16, 0.96) 215deg,
-      rgba(255, 255, 255, 0.06) 270deg,
-      rgba(8, 11, 16, 0.98) 325deg,
-      rgba(255, 255, 255, 0.22) 360deg
+      rgb(255 255 255 / 0.22) 0deg,
+      rgb(8 11 16 / 0.96) 35deg,
+      rgb(255 255 255 / 0.06) 90deg,
+      rgb(8 11 16 / 0.98) 140deg,
+      rgb(255 255 255 / 0.22) 180deg,
+      rgb(8 11 16 / 0.96) 215deg,
+      rgb(255 255 255 / 0.06) 270deg,
+      rgb(8 11 16 / 0.98) 325deg,
+      rgb(255 255 255 / 0.22) 360deg
     ),
-    repeating-radial-gradient(
-      circle at center,
-      #080a0f 0px,
-      #0e121a 1.5px,
-      #080a0f 3px
-    );
+    repeating-radial-gradient(circle at center, #080a0f 0px, #0e121a 1.5px, #080a0f 3px);
 }
 
 .spin-vinyl-running-33 {
@@ -167,46 +531,62 @@ input[type="range"]::-moz-range-thumb {
   animation-play-state: paused;
 }
 
-/* Equalizer bar wave animations */
-@keyframes eq-pulse-1 {
-  0%, 100% { height: 4px; }
-  50% { height: 22px; }
-}
-@keyframes eq-pulse-2 {
-  0%, 100% { height: 18px; }
-  50% { height: 6px; }
-}
-@keyframes eq-pulse-3 {
-  0%, 100% { height: 10px; }
-  50% { height: 24px; }
-}
-@keyframes eq-pulse-4 {
-  0%, 100% { height: 20px; }
-  50% { height: 8px; }
-}
-@keyframes eq-pulse-5 {
-  0%, 100% { height: 6px; }
-  50% { height: 19px; }
+@media (prefers-contrast: more) {
+  :root {
+    --line-rgb: 91 113 144;
+    --line-strong-rgb: 148 163 184;
+  }
+
+  .floating-surface {
+    background-color: rgb(var(--surface-rgb));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
-.animate-eq-1 { animation: eq-pulse-1 0.8s ease-in-out infinite; }
-.animate-eq-2 { animation: eq-pulse-2 0.7s ease-in-out infinite 0.1s; }
-.animate-eq-3 { animation: eq-pulse-3 0.9s ease-in-out infinite 0.2s; }
-.animate-eq-4 { animation: eq-pulse-4 0.65s ease-in-out infinite 0.15s; }
-.animate-eq-5 { animation: eq-pulse-5 0.85s ease-in-out infinite 0.05s; }
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 
-/* Floating social listener reaction animation */
-@keyframes float-up {
-  0% {
-    transform: translateY(0) scale(0.8);
-    opacity: 1;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  50% {
-    transform: translateY(-80px) scale(1.2);
-    opacity: 0.9;
+
+  .spin-vinyl-running-33,
+  .spin-vinyl-running-45,
+  .spin-vinyl-paused {
+    animation: none !important;
   }
-  100% {
-    transform: translateY(-160px) scale(1);
-    opacity: 0;
+
+  /* Loading and progress still communicate system state. */
+  .animate-spin {
+    animation-duration: 800ms !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  /* Spatial entrances become short opacity fades. */
+  .animate-in,
+  .animate-fadeIn,
+  .animate-view-in,
+  .animate-popover-in,
+  .animate-modal-overlay-in,
+  .animate-modal-panel-in,
+  .animate-player-in,
+  .animate-hero-copy-in {
+    animation: fade-in 150ms var(--ease-out-quart) both !important;
+    translate: none !important;
+    scale: 1 !important;
+  }
+
+  .animate-icon-swap {
+    animation: fade-in 120ms var(--ease-out-quart) both !important;
+    scale: 1 !important;
+    filter: none !important;
   }
 }

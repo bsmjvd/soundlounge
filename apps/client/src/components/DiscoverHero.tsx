@@ -61,6 +61,7 @@ export function DiscoverHero({
   // Ambient Auto-Rotation (8 seconds, paused on hover)
   useEffect(() => {
     if (isHovered || activeSpotlights.length <= 1) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = setInterval(() => {
       handleNextSpotlight();
     }, 8000);
@@ -110,15 +111,20 @@ export function DiscoverHero({
       onTouchEnd={handleTouchEnd}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative w-full overflow-visible pt-2 pb-10 sm:pb-8 group select-none outline-none focus-visible:ring-1 focus-visible:ring-[#00e5ff]/50 rounded-2xl"
+      onFocusCapture={() => setIsHovered(true)}
+      onBlurCapture={() => setIsHovered(false)}
+      className="relative w-full overflow-visible pt-2 pb-10 sm:pb-8 group select-none outline-none focus-visible:ring-1 focus-visible:ring-accent/50 rounded-2xl"
     >
       {/* Hero Content: display typography & action buttons */}
-      <div className="relative z-10 px-1 sm:px-4 flex flex-col justify-center min-h-[180px] sm:min-h-[260px] max-w-xl">
-        <h1 className="text-2xl xs:text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-2.5 sm:mb-3 drop-shadow-sm font-sans transition-all duration-300">
+      <div
+        key={spotlight.id}
+        className="animate-hero-copy-in relative z-10 px-1 sm:px-4 flex flex-col justify-center min-h-[180px] sm:min-h-[260px] max-w-xl"
+      >
+        <h1 className="text-[clamp(1.75rem,4.4vw,3.75rem)] font-extrabold text-ink tracking-tight leading-[1.05] mb-2.5 sm:mb-3 drop-shadow-sm font-display transition duration-300">
           {spotlight.title}
         </h1>
 
-        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed mb-5 sm:mb-8 max-w-md line-clamp-3 sm:line-clamp-none transition-opacity duration-300">
+        <p className="text-xs sm:text-sm text-ink leading-relaxed mb-5 sm:mb-8 max-w-md line-clamp-3 sm:line-clamp-none transition-opacity duration-300">
           {spotlight.description}
         </p>
 
@@ -127,7 +133,7 @@ export function DiscoverHero({
           <button
             onClick={handlePlayHero}
             aria-label={isTrackPlaying ? "Pause featured track" : "Play featured track"}
-            className="flex items-center gap-2.5 bg-[#00e5ff] hover:bg-[#00d0e6] text-[#0a0e17] font-bold text-xs uppercase tracking-wider sm:tracking-widest px-5 sm:px-9 py-2.5 sm:py-3.5 rounded-full shadow-[0_0_24px_rgba(0,229,255,0.45)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] transition-all cursor-pointer active:scale-95 min-h-[44px]"
+            className="flex items-center gap-2.5 bg-accent hover:bg-accent-strong text-accent-foreground font-bold text-xs uppercase tracking-wider sm:tracking-widest px-5 sm:px-9 py-2.5 sm:py-3.5 rounded-full shadow-[0_0_24px_rgba(0,229,255,0.45)] hover:shadow-[0_0_35px_rgba(0,229,255,0.65)] transition cursor-pointer active:scale-95 min-h-[44px]"
           >
             {isTrackPlaying ? (
               <>
@@ -135,9 +141,9 @@ export function DiscoverHero({
                 <span>Pause</span>
                 {/* Live soundwave equalizer bars */}
                 <span className="flex items-center gap-0.5 ml-1 h-3">
-                  <span className="w-0.5 bg-black animate-pulse h-full rounded-full" />
-                  <span className="w-0.5 bg-black animate-pulse h-2 rounded-full delay-75" />
-                  <span className="w-0.5 bg-black animate-pulse h-3 rounded-full delay-150" />
+                  <span className="w-0.5 h-full origin-bottom rounded-full bg-black animate-sound-wave-1" />
+                  <span className="w-0.5 h-2 origin-bottom rounded-full bg-black animate-sound-wave-2" />
+                  <span className="w-0.5 h-3 origin-bottom rounded-full bg-black animate-sound-wave-3" />
                 </span>
               </>
             ) : (
@@ -151,10 +157,10 @@ export function DiscoverHero({
           <button
             onClick={() => setIsFollowing((f) => !f)}
             aria-label={isFollowing ? "Following featured artist" : "Follow featured artist"}
-            className={`flex items-center gap-2 border-2 font-bold text-xs uppercase tracking-wider sm:tracking-widest px-5 sm:px-9 py-2.5 sm:py-3.5 rounded-full transition-all cursor-pointer active:scale-95 min-h-[44px] ${
+            className={`flex items-center gap-2 border-2 font-bold text-xs uppercase tracking-wider sm:tracking-widest px-5 sm:px-9 py-2.5 sm:py-3.5 rounded-full transition cursor-pointer active:scale-95 min-h-[44px] ${
               isFollowing
-                ? "border-emerald-400 text-emerald-400 bg-emerald-500/10"
-                : "border-[#00e5ff] text-[#00e5ff] hover:bg-[#00e5ff]/10"
+                ? "border-ember text-ember bg-ember/10"
+                : "border-accent text-accent hover:bg-accent/10"
             }`}
           >
             {isFollowing ? (
@@ -181,14 +187,14 @@ export function DiscoverHero({
           <div className="flex items-center gap-1.5 ml-1">
             <button
               onClick={handlePrevSpotlight}
-              className="w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 active:scale-95"
+              className="w-8 h-8 rounded-full bg-surface-sunken/60 hover:bg-surface-raised text-ink-secondary hover:text-ink flex items-center justify-center transition-colors cursor-pointer border border-ink/10 active:scale-95"
               aria-label="Previous featured spotlight"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={handleNextSpotlight}
-              className="w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 active:scale-95"
+              className="w-8 h-8 rounded-full bg-surface-sunken/60 hover:bg-surface-raised text-ink-secondary hover:text-ink flex items-center justify-center transition-colors cursor-pointer border border-ink/10 active:scale-95"
               aria-label="Next featured spotlight"
             >
               <ChevronRight className="w-4 h-4" />

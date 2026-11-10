@@ -85,11 +85,11 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
       {/* Header with Title and Minimalist Pagination Arrows matching mockup */}
       <div className="flex items-center justify-between mb-3.5">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink font-display">
             {hasTaste ? "Artists You Love & Similar" : "Popular Artists"}
           </h2>
           {hasTaste && dominantGenre && (
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-ink-muted mt-0.5">
               Ranked dynamically by your listening in {dominantGenre.toUpperCase()}
             </p>
           )}
@@ -98,14 +98,14 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
         <div className="flex items-center gap-2.5">
           <button
             onClick={scrollLeft}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+            className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
             aria-label="Scroll left"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={scrollRight}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+            className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
             aria-label="Scroll right"
           >
             <ChevronRight className="w-4 h-4" />
@@ -123,7 +123,8 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
           <div
             key={artist.id}
             onClick={() => handleArtistClick(artist)}
-            className="group flex-shrink-0 flex flex-col items-center w-[68px] sm:w-[84px] snap-start cursor-pointer focus:outline-none"
+            className="group flex-shrink-0 flex flex-col items-center w-[68px] sm:w-[84px] snap-start cursor-pointer rounded-control focus-visible:ring-2 focus-visible:ring-accent"
+            role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -133,7 +134,7 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
             }}
           >
             {/* Circular Avatar with Glowing Ambient Halo on Hover */}
-            <div className="relative w-[68px] h-[68px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-[#0c1424]/70 backdrop-blur-md ring-2 ring-white/15 group-hover:ring-[#00e5ff] shadow-xl shadow-black/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(0,229,255,0.4)]">
+            <div className="relative w-[68px] h-[68px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-surface-raised/80 ring-2 ring-ink/15 group-hover:ring-accent shadow-xl shadow-black/50 transition duration-300 group-hover:scale-105 group-hover:shadow-glow">
               <ImageWithFallback
                 src={artist.avatarUrl}
                 alt={artist.name}
@@ -144,13 +145,13 @@ export function PopularArtistsRow({ onSelectArtist }: PopularArtistsRowProps) {
               />
 
               {/* Verified Badge icon on hover */}
-              <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#00e5ff] rounded-full flex items-center justify-center text-slate-950 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+              <div className="absolute bottom-0 right-0 w-4 h-4 bg-accent rounded-full flex items-center justify-center text-accent-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
                 <Check className="w-2.5 h-2.5 stroke-[3]" />
               </div>
             </div>
 
             {/* Centered Name */}
-            <span className="text-xs font-medium text-slate-300 group-hover:text-white mt-2.5 text-center truncate w-full transition-colors leading-tight">
+            <span className="text-xs font-medium text-ink-secondary group-hover:text-ink mt-2.5 text-center truncate w-full transition-colors leading-tight">
               {artist.name}
             </span>
           </div>
