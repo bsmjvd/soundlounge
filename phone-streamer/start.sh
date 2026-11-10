@@ -18,6 +18,8 @@ while true; do
     # cloudflared also logs its own API host (api.trycloudflare.com) when a request fails
     URL=$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' tunnel.log | grep -v '//api\.' | head -1)
     [ -n "$URL" ] && break
+    # cloudflared exits at once when DNS isn't up yet (e.g. right after boot): retry sooner
+    kill -0 $CF 2>/dev/null || break
     sleep 1
   done
   # DNS on this network is flaky, so keep retrying the registration
