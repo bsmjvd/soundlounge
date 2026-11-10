@@ -6,6 +6,7 @@ import { AudioEngineCoordinator, type CoordinatorPlayerState, type PlaybackMode 
 import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibraryStore";
 import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
+import { prefetchTrack } from "../lib/prefetch";
 import type { Track } from "@soundlounge/shared";
 
 // Singleton coordinator instance for the browser tab, preserved on window across fast refresh
@@ -272,17 +273,10 @@ export function usePlaybackController({ roomId, inviteToken, recordPlay }: Playb
     }
   }, [playerState.currentTrack?.id, playerState.status, queue.length, currentIndex, isAutoplayEnabled]);
 
-  // Warm the next YouTube track: the phone streamer downloads a song on first request (~10-20 s),
-  // so asking for one byte while the current song plays makes the next one start instantly.
-  const prefetchedRef = useRef(new Set<string>());
+  // Warm the next two tracks while this one plays, so skipping ahead starts instantly
   useEffect(() => {
-    const next = queue[currentIndex + 1];
-    if (playerState.status !== "playing" || !next?.url?.startsWith("/api/stream/youtube")) return;
-    if (prefetchedRef.current.has(next.url)) return;
-    prefetchedRef.current.add(next.url);
-    fetch(next.url, { headers: { Range: "bytes=0-0" } })
-      .then((res) => res.body?.cancel())
-      .catch(() => prefetchedRef.current.delete(next.url));
+    if (playerState.status !== "playing") return;
+    queue.slice(currentIndex + 1, currentIndex + 3).forEach(prefetchTrack);
   }, [playerState.status, queue, currentIndex]);
 
   const handlePrevious = () => {

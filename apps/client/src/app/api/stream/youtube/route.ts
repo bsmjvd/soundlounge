@@ -333,6 +333,16 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Missing track identifier (id, title, or q required)", { status: 400 });
   }
 
+  // Prefetch only warms the phone's disk cache (its /prefetch answers 204 at once); the other
+  // engines have nothing worth warming, so without the phone this is a no-op.
+  if (searchParams.get("prefetch") === "1") {
+    const vid = await resolveVideoId(rawVideoId, title, artist, query);
+    const phoneUrl = vid ? await phoneStreamUrl(vid) : null;
+    return phoneUrl
+      ? NextResponse.redirect(phoneUrl.replace("/yt/", "/prefetch/"), 307)
+      : new NextResponse(null, { status: 204 });
+  }
+
   // 1. If an external stream proxy (e.g. residential tunnel or dedicated proxy) is configured, route through it
   const rawStreamProxy = process.env.STREAM_PROXY_URL || process.env.NEXT_PUBLIC_STREAM_PROXY_URL;
   const streamProxy = rawStreamProxy

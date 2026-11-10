@@ -24,6 +24,7 @@ import {
 import type { Track, Album } from "@soundlounge/shared";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import { useLibraryStore } from "../lib/store/useLibraryStore";
+import { prefetchTrack } from "../lib/prefetch";
 import { TrackArtwork } from "./TrackArtwork";
 
 interface MusicIngestionProps {
@@ -148,6 +149,7 @@ export function MusicIngestion({
       if (res.ok) {
         const data = await res.json();
         setSearchResults(data.tracks || []);
+        (data.tracks || []).slice(0, 2).forEach(prefetchTrack);
         setTotalTracks(data.totalTracks || data.tracks?.length || 0);
         setTotalPages(data.totalPages || 1);
         setCurrentPage(data.page || page);
