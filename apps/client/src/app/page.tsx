@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { TopBar, type TopNavTab } from "../components/TopBar";
 import { DiscoverHero } from "../components/DiscoverHero";
 import { PopularAlbumsRow } from "../components/PopularAlbumsRow";
@@ -23,36 +24,14 @@ import type { MusicGenre } from "../lib/recommendation/genreTaxonomy";
 import { useTasteProfile } from "../lib/recommendation/useTasteProfile";
 import { DynamicTasteHomeSections } from "../components/DynamicTasteHomeSections";
 
-import { AudioEngineCoordinator, type CoordinatorPlayerState, type PlaybackMode } from "../lib/player";
-import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibraryStore";
+import { useLibraryStore } from "../lib/store/useLibraryStore";
 import { useQueueStore } from "../lib/store/useQueueStore";
-import { useRoomSync } from "../lib/sync/useRoomSync";
 import { useGlobalAudioHotkeys } from "../hooks/useGlobalAudioHotkeys";
+import { usePlaybackController } from "../hooks/usePlaybackController";
 import { FallingLeavesAmbient } from "../components/ui/FallingLeavesAmbient";
-import type { Track, Playlist, Album } from "@soundlounge/shared";
-
-// Singleton coordinator instance for the browser tab, preserved on window across fast refresh
-let coordinatorSingleton: AudioEngineCoordinator | null = null;
-function getCoordinator(): AudioEngineCoordinator {
-  if (!coordinatorSingleton) {
-    if (typeof window !== "undefined") {
-      const winWithCoord = window as unknown as { __soundlounge_coordinator__?: AudioEngineCoordinator };
-      if (winWithCoord.__soundlounge_coordinator__) {
-        coordinatorSingleton = winWithCoord.__soundlounge_coordinator__;
-      } else {
-        coordinatorSingleton = new AudioEngineCoordinator();
-        winWithCoord.__soundlounge_coordinator__ = coordinatorSingleton;
-      }
-    } else {
-      coordinatorSingleton = new AudioEngineCoordinator();
-    }
-  }
-  return coordinatorSingleton ?? new AudioEngineCoordinator();
-}
+import type { Track, Album } from "@soundlounge/shared";
 
 export default function SoundloungeApp() {
-  const coordinator = getCoordinator();
-
   // Navigation and Modal State
   const [activeTab, setActiveTab] = useState<NavTab>("home");
   const [topNavTab, setTopNavTab] = useState<TopNavTab>("discover");
@@ -137,41 +116,37 @@ export default function SoundloungeApp() {
     });
   };
 
-
-  // Player state subscription
-  const [playerState, setPlayerState] = useState<CoordinatorPlayerState>(() => coordinator.getState());
-
-  const lastRecordedTrackIdRef = useRef<string | null>(null);
-  const lastSessionSavedAtRef = useRef(0);
-
-  useEffect(() => {
-    return coordinator.onStateChange((state) => {
-      setPlayerState(state);
-      // Track ended/stopped: a later replay of the same track counts as a new play
-      if (state.status === "idle") lastRecordedTrackIdRef.current = null;
-      if (!state.currentTrack) return;
-
-      // State emits on every timeupdate, so record taste once per track and throttle session snapshots
-      const isNewPlay = state.status === "playing" && state.currentTrack.id !== lastRecordedTrackIdRef.current;
-      if (isNewPlay) {
-        lastRecordedTrackIdRef.current = state.currentTrack.id;
-        recordPlay(state.currentTrack);
-      }
-      const now = Date.now();
-      if (
-        isNewPlay ||
-        state.status === "paused" ||
-        (state.status === "playing" && now - lastSessionSavedAtRef.current >= 5000)
-      ) {
-        lastSessionSavedAtRef.current = now;
-        useLibraryStore.getState().saveLastSession(state.currentTrack, state.positionMs);
-      }
-    });
-  }, [coordinator, recordPlay]);
+  const {
+    coordinator,
+    playerState,
+    sync,
+    activeTrack,
+    handleModeChange,
+    handleAddTrack,
+    handleAddTracksToQueue,
+    handlePlayQueueTrack,
+    handleRemoveTrack,
+    handlePlayNext,
+    handleClearQueue,
+    handlePlaySingleTrack,
+    handlePlayTracks,
+    handleResumeSession,
+    handleTogglePlay,
+    handleSeek,
+    handleNext,
+    handlePrevious,
+  } = usePlaybackController({ roomId, inviteToken, recordPlay });
 
   // Stores
-  const { queue, currentIndex, isAutoplayEnabled, toggleAutoplay, autoQueueReasons, ensureSimilarQueued } =
-    useQueueStore();
+  const { queue, currentIndex, isAutoplayEnabled, toggleAutoplay, autoQueueReasons } = useQueueStore(
+    useShallow((s) => ({
+      queue: s.queue,
+      currentIndex: s.currentIndex,
+      isAutoplayEnabled: s.isAutoplayEnabled,
+      toggleAutoplay: s.toggleAutoplay,
+      autoQueueReasons: s.autoQueueReasons,
+    }))
+  );
 
   const {
     likedTracks,
@@ -183,16 +158,19 @@ export default function SoundloungeApp() {
     createPlaylist,
     addTrackToPlaylist,
     deletePlaylist,
-    addToHistory,
-  } = useLibraryStore();
-
-  // Synchronized WebSocket engine
-  const sync = useRoomSync({
-    // Only join the room while in synced mode; solo listeners must not affect the shared room
-    roomId: playerState.mode === "synced" ? roomId : "",
-    inviteToken,
-    coordinator,
-  });
+  } = useLibraryStore(
+    useShallow((s) => ({
+      likedTracks: s.likedTracks,
+      playlists: s.playlists,
+      history: s.history,
+      lastSession: s.lastSession,
+      toggleLike: s.toggleLike,
+      isLiked: s.isLiked,
+      createPlaylist: s.createPlaylist,
+      addTrackToPlaylist: s.addTrackToPlaylist,
+      deletePlaylist: s.deletePlaylist,
+    }))
+  );
 
   const handleToggleLike = (track: Track) => {
     const isCurrentlyLiked = isLiked(track.id);
@@ -200,137 +178,10 @@ export default function SoundloungeApp() {
     recordLike(track, !isCurrentlyLiked);
   };
 
-  const handleModeChange = (newMode: PlaybackMode) => {
-    coordinator.setMode(newMode);
-  };
-
-  const handleAddTrack = (track: Track, playNext: boolean = false) => {
-    if (playerState.mode === "synced") {
-      sync.sendAddTrack(track, playNext);
-    } else {
-      const state = useQueueStore.getState();
-      const wasEmpty = state.queue.length === 0;
-      state.addTrack(track, playNext);
-      if (wasEmpty) {
-        coordinator.play(track, 0);
-        addToHistory(track);
-      }
-    }
-  };
-
-  const handlePlayQueueTrack = (track: Track, index: number) => {
-    useQueueStore.getState().setCurrentIndex(index);
-    addToHistory(track);
-
-    if (playerState.mode === "synced") {
-      sync.sendPlay(track.id, 0);
-    } else {
-      coordinator.play(track, 0);
-    }
-  };
-
-  const handleRemoveTrack = (trackId: string) => {
-    if (playerState.mode === "synced") {
-      sync.sendRemoveTrack(trackId);
-    } else {
-      useQueueStore.getState().removeTrack(trackId);
-    }
-  };
-
-  const handlePlayNext = (track: Track) => {
-    if (playerState.mode === "synced") {
-      sync.sendAddTrack(track, true);
-    } else {
-      useQueueStore.getState().addTrack(track, true);
-    }
-  };
-
-  const handleClearQueue = () => {
-    if (playerState.mode === "synced") {
-      sync.sendClearQueue();
-    } else {
-      useQueueStore.getState().clearQueue();
-    }
-  };
-
   const handleSaveQueueAsPlaylist = (name: string) => {
     if (queue.length === 0) return;
     const plId = createPlaylist(name);
     queue.forEach((t) => addTrackToPlaylist(plId, t));
-  };
-
-  // One-time global touch listener to unlock audio on iOS Safari upon first gesture
-  useEffect(() => {
-    const handleFirstTouch = () => {
-      coordinator.primeAudioSession();
-      window.removeEventListener("touchstart", handleFirstTouch, true);
-      window.removeEventListener("click", handleFirstTouch, true);
-    };
-    window.addEventListener("touchstart", handleFirstTouch, { capture: true, once: true });
-    window.addEventListener("click", handleFirstTouch, { capture: true, once: true });
-    return () => {
-      window.removeEventListener("touchstart", handleFirstTouch, true);
-      window.removeEventListener("click", handleFirstTouch, true);
-    };
-  }, [coordinator]);
-
-  const handlePlaySingleTrack = (track: Track) => {
-    addToHistory(track);
-    if (playerState.mode === "synced") {
-      sync.sendClearQueue();
-      sync.sendAddTrack(track, false);
-      sync.sendPlay(track.id, 0);
-    } else {
-      const state = useQueueStore.getState();
-      state.setQueue([track], 0);
-      coordinator.play(track, 0);
-      if (isAutoplayEnabled) {
-        state.seedSimilarQueue(track, history);
-      }
-    }
-  };
-
-  const handlePlayMix = (tracks: Track[]) => {
-    if (tracks.length === 0) return;
-    useQueueStore.getState().setQueue(tracks, 0);
-    addToHistory(tracks[0]);
-    if (playerState.mode === "synced") {
-      sync.sendClearQueue();
-      tracks.forEach((t) => sync.sendAddTrack(t));
-      sync.sendPlay(tracks[0].id, 0);
-    } else {
-      coordinator.play(tracks[0], 0);
-    }
-  };
-
-  const handlePlayArtistAll = (tracks: Track[]) => {
-    if (tracks.length === 0) return;
-    useQueueStore.getState().setQueue(tracks, 0);
-    addToHistory(tracks[0]);
-    if (playerState.mode === "synced") {
-      sync.sendClearQueue();
-      tracks.forEach((t) => sync.sendAddTrack(t));
-      sync.sendPlay(tracks[0].id, 0);
-    } else {
-      coordinator.play(tracks[0], 0);
-    }
-  };
-
-  const handlePlayAlbum = (tracks: Track[]) => {
-    if (tracks.length === 0) return;
-    useQueueStore.getState().setQueue(tracks, 0);
-    addToHistory(tracks[0]);
-    if (playerState.mode === "synced") {
-      sync.sendClearQueue();
-      tracks.forEach((t) => sync.sendAddTrack(t));
-      sync.sendPlay(tracks[0].id, 0);
-    } else {
-      coordinator.play(tracks[0], 0);
-    }
-  };
-
-  const handleAddAlbumToQueue = (tracks: Track[]) => {
-    tracks.forEach((t) => handleAddTrack(t, false));
   };
 
   const handlePlayGenreRadio = (genre: MusicGenre) => {
@@ -344,146 +195,8 @@ export default function SoundloungeApp() {
       starterTracks = genreArtists[0].topTracks;
     }
 
-    if (starterTracks.length > 0) {
-      handlePlayAlbum(starterTracks);
-    }
+    handlePlayTracks(starterTracks);
   };
-
-  const handlePlayPlaylist = (playlist: Playlist) => {
-    if (playlist.tracks.length === 0) return;
-    const firstTrack = playlist.tracks[0];
-    addToHistory(firstTrack);
-
-    if (playerState.mode === "synced") {
-      sync.sendClearQueue();
-      playlist.tracks.forEach((t) => sync.sendAddTrack(t));
-      sync.sendPlay(firstTrack.id, 0);
-    } else {
-      useQueueStore.getState().setQueue(playlist.tracks, 0);
-      coordinator.play(firstTrack, 0);
-    }
-  };
-
-  const handleResumeSession = (session: LastSessionSnapshot) => {
-    addToHistory(session.track);
-    if (playerState.mode === "synced") {
-      sync.sendAddTrack(session.track, true);
-      sync.sendPlay(session.track.id, session.positionMs);
-    } else {
-      const state = useQueueStore.getState();
-      const existingIdx = state.queue.findIndex((t) => t.id === session.track.id);
-      if (existingIdx !== -1) {
-        state.setCurrentIndex(existingIdx);
-      } else if (state.queue.length > 0) {
-        const insertIdx = state.currentIndex >= 0 ? state.currentIndex + 1 : 0;
-        state.addTrack(session.track, true);
-        state.setCurrentIndex(insertIdx);
-      } else {
-        state.setQueue([session.track], 0);
-      }
-      coordinator.play(session.track, session.positionMs);
-    }
-  };
-
-  const handleTogglePlay = () => {
-    if (playerState.status === "playing") {
-      if (playerState.mode === "synced") {
-        sync.sendPause(playerState.positionMs);
-      } else {
-        coordinator.pause();
-      }
-    } else {
-      const cur = playerState.currentTrack || queue[currentIndex] || queue[0];
-      if (cur) {
-        if (playerState.mode === "synced") {
-          sync.sendPlay(cur.id, playerState.positionMs);
-        } else {
-          coordinator.play(cur, playerState.positionMs);
-        }
-      }
-    }
-  };
-
-  const handleSeek = (posMs: number) => {
-    if (playerState.mode === "synced") {
-      sync.sendSeek(posMs);
-    } else {
-      coordinator.seek(posMs);
-    }
-  };
-
-  const handleNext = async () => {
-    let next = useQueueStore.getState().nextTrack();
-    if (!next && isAutoplayEnabled) {
-      const cur = playerState.currentTrack || queue[currentIndex];
-      if (cur) {
-        const autoNext = await ensureSimilarQueued(cur, history);
-        if (autoNext) {
-          if (coordinator.getMode() === "synced") sync.sendAddTrack(autoNext);
-          next = useQueueStore.getState().nextTrack();
-        }
-      }
-    }
-
-    if (next) {
-      addToHistory(next);
-      if (coordinator.getMode() === "synced") {
-        sync.sendPlay(next.id, 0);
-      } else {
-        coordinator.play(next, 0);
-      }
-    }
-  };
-
-  // Autonomous similarity queuing:
-  // ONLY trigger when the current track is playing, autoplay is ON, and there is NO song next to it (tracksAhead <= 0)
-  useEffect(() => {
-    const tracksAhead = queue.length - 1 - currentIndex;
-    const cur = playerState.currentTrack || queue[currentIndex];
-    if (cur && playerState.status === "playing" && isAutoplayEnabled && tracksAhead <= 0) {
-      ensureSimilarQueued(cur, history).then((track) => {
-        // shortcut: every listener may queue its own pick; dedupe server-side if rooms get busy
-        if (track && coordinator.getMode() === "synced") sync.sendAddTrack(track);
-      });
-    }
-  }, [playerState.currentTrack?.id, playerState.status, queue.length, currentIndex, isAutoplayEnabled]);
-
-  // Warm the next YouTube track: the phone streamer downloads a song on first request (~10-20 s),
-  // so asking for one byte while the current song plays makes the next one start instantly.
-  const prefetchedRef = useRef(new Set<string>());
-  useEffect(() => {
-    const next = queue[currentIndex + 1];
-    if (playerState.status !== "playing" || !next?.url?.startsWith("/api/stream/youtube")) return;
-    if (prefetchedRef.current.has(next.url)) return;
-    prefetchedRef.current.add(next.url);
-    fetch(next.url, { headers: { Range: "bytes=0-0" } })
-      .then((res) => res.body?.cancel())
-      .catch(() => prefetchedRef.current.delete(next.url));
-  }, [playerState.status, queue, currentIndex]);
-
-  const handlePrevious = () => {
-    const prev = useQueueStore.getState().previousTrack();
-    if (prev) {
-      addToHistory(prev);
-      if (coordinator.getMode() === "synced") {
-        sync.sendPlay(prev.id, 0);
-      } else {
-        coordinator.play(prev, 0);
-      }
-    }
-  };
-
-  // Wire transport handlers for lock screen and auto-next on track completion.
-  // Registered once through a ref so they always see the latest mode/queue/history.
-  const transportRef = useRef({ handleNext, handlePrevious });
-  transportRef.current = { handleNext, handlePrevious };
-  useEffect(() => {
-    coordinator.setTransportHandlers({
-      onNext: () => transportRef.current.handleNext(),
-      onPrevious: () => transportRef.current.handlePrevious(),
-      onEnded: () => transportRef.current.handleNext(),
-    });
-  }, [coordinator]);
 
   // Global desktop studio keyboard shortcuts (Space, M, Arrow keys, S/F for Studio Mode)
   useGlobalAudioHotkeys({
@@ -503,22 +216,58 @@ export default function SoundloungeApp() {
     enabled: true,
   });
 
+  const topBar = (
+    <TopBar
+      mode={playerState.mode}
+      onModeChange={handleModeChange}
+      roomId={roomId}
+      participantsCount={sync.participantsCount}
+      pingMs={sync.pingMs}
+      onOpenInvite={() => setIsInviteOpen(true)}
+      onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+      isLeavesEnabled={isLeavesEnabled}
+      onToggleLeaves={handleToggleLeaves}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      onSearch={(q) => {
+        if (q.trim()) {
+          setSearchQuery(q.trim());
+          recordSearch(q.trim());
+          setSelectedArtist(null);
+          setSelectedAlbum(null);
+          setActiveTab("search");
+        }
+      }}
+      onNavBack={handleNavBack}
+      onNavForward={handleNavForward}
+      onOpenUpload={() => setActiveTab("search")}
+      onPlayTrack={handlePlaySingleTrack}
+      onAddTrack={handleAddTrack}
+      onSelectArtist={(artist) => {
+        recordArtistView(artist.name);
+        setSelectedArtist(artist);
+      }}
+      onSelectAlbum={(album) => setSelectedAlbum(album)}
+      activeTopTab={topNavTab}
+      onTopTabChange={(tab) => {
+        setSelectedArtist(null);
+        setSelectedAlbum(null);
+        setTopNavTab(tab);
+        if (tab === "discover") {
+          setActiveTab("home");
+        } else if (tab === "library") {
+          setActiveTab("liked");
+        } else if (tab === "radio") {
+          setActiveTab("genres");
+        }
+      }}
+    />
+  );
+
   if (playerState.mode === "synced" && sync.isAccessDenied) {
     return (
       <div className="min-h-screen bg-[#080f14]">
-        <TopBar
-          mode={playerState.mode}
-          onModeChange={handleModeChange}
-          roomId={roomId}
-          participantsCount={sync.participantsCount}
-          pingMs={sync.pingMs}
-          onOpenInvite={() => setIsInviteOpen(true)}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onSearch={(q) => {
-            if (q.trim()) setActiveTab("search");
-          }}
-        />
+        {topBar}
         <AccessDenied
           roomId={roomId}
           onRetryWithToken={(token) => setInviteToken(token)}
@@ -528,7 +277,6 @@ export default function SoundloungeApp() {
     );
   }
 
-  const activeTrack = playerState.currentTrack || queue[currentIndex] || null;
   const isDiscoverHome = !selectedArtist && !selectedAlbum && activeTab === "home" && topNavTab === "discover";
 
   return (
@@ -601,51 +349,7 @@ export default function SoundloungeApp() {
 
                 {/* TopBar sitting seamlessly over the hero stage */}
                 <div className="relative z-20">
-                  <TopBar
-                    mode={playerState.mode}
-                    onModeChange={handleModeChange}
-                    roomId={roomId}
-                    participantsCount={sync.participantsCount}
-                    pingMs={sync.pingMs}
-                    onOpenInvite={() => setIsInviteOpen(true)}
-                    onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
-                    isLeavesEnabled={isLeavesEnabled}
-                    onToggleLeaves={handleToggleLeaves}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    onSearch={(q) => {
-                      if (q.trim()) {
-                        setSearchQuery(q.trim());
-                        recordSearch(q.trim());
-                        setSelectedArtist(null);
-                        setSelectedAlbum(null);
-                        setActiveTab("search");
-                      }
-                    }}
-                    onNavBack={handleNavBack}
-                    onNavForward={handleNavForward}
-                    onOpenUpload={() => setActiveTab("search")}
-                    onPlayTrack={handlePlaySingleTrack}
-                    onAddTrack={handleAddTrack}
-                    onSelectArtist={(artist) => {
-                      recordArtistView(artist.name);
-                      setSelectedArtist(artist);
-                    }}
-                    onSelectAlbum={(album) => setSelectedAlbum(album)}
-                    activeTopTab={topNavTab}
-                    onTopTabChange={(tab) => {
-                      setSelectedArtist(null);
-                      setSelectedAlbum(null);
-                      setTopNavTab(tab);
-                      if (tab === "discover") {
-                        setActiveTab("home");
-                      } else if (tab === "library") {
-                        setActiveTab("liked");
-                      } else if (tab === "radio") {
-                        setActiveTab("genres");
-                      }
-                    }}
-                  />
+                  {topBar}
                 </div>
 
                 {/* Hero Typography & Action Controls */}
@@ -664,7 +368,7 @@ export default function SoundloungeApp() {
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 space-y-12 pt-2">
                   <DynamicTasteHomeSections
                     onPlayTrack={handlePlaySingleTrack}
-                    onPlayMix={handlePlayMix}
+                    onPlayMix={handlePlayTracks}
                     onSelectArtist={(artistName) => {
                       const match = ARTISTS_CATALOG.find(
                         (a) => a.name.toLowerCase() === artistName.toLowerCase()
@@ -684,7 +388,7 @@ export default function SoundloungeApp() {
                   {/* Albums Tailored To Your Vibe / Popular Albums Row */}
                   <PopularAlbumsRow
                     onSelectAlbum={(album) => setSelectedAlbum(album as unknown as Album)}
-                    onPlayAlbum={handlePlayAlbum}
+                    onPlayAlbum={handlePlayTracks}
                     onPlayTrack={handlePlaySingleTrack}
                   />
 
@@ -699,51 +403,7 @@ export default function SoundloungeApp() {
               </div>
             ) : (
               <div>
-                <TopBar
-                  mode={playerState.mode}
-                  onModeChange={handleModeChange}
-                  roomId={roomId}
-                  participantsCount={sync.participantsCount}
-                  pingMs={sync.pingMs}
-                  onOpenInvite={() => setIsInviteOpen(true)}
-                  onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
-                  isLeavesEnabled={isLeavesEnabled}
-                  onToggleLeaves={handleToggleLeaves}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                  onSearch={(q) => {
-                    if (q.trim()) {
-                      setSearchQuery(q.trim());
-                      recordSearch(q.trim());
-                      setSelectedArtist(null);
-                      setSelectedAlbum(null);
-                      setActiveTab("search");
-                    }
-                  }}
-                  onNavBack={handleNavBack}
-                  onNavForward={handleNavForward}
-                  onOpenUpload={() => setActiveTab("search")}
-                  onPlayTrack={handlePlaySingleTrack}
-                  onAddTrack={handleAddTrack}
-                  onSelectArtist={(artist) => {
-                    recordArtistView(artist.name);
-                    setSelectedArtist(artist);
-                  }}
-                  onSelectAlbum={(album) => setSelectedAlbum(album)}
-                  activeTopTab={topNavTab}
-                  onTopTabChange={(tab) => {
-                    setSelectedArtist(null);
-                    setSelectedAlbum(null);
-                    setTopNavTab(tab);
-                    if (tab === "discover") {
-                      setActiveTab("home");
-                    } else if (tab === "library") {
-                      setActiveTab("liked");
-                    } else if (tab === "radio") {
-                      setActiveTab("genres");
-                    }
-                  }}
-                />
+                {topBar}
 
                 {/* Stage Canvas for non-discover views */}
                 <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:pb-28">
@@ -754,7 +414,7 @@ export default function SoundloungeApp() {
                       onBack={() => setSelectedArtist(null)}
                       onPlayTrack={handlePlaySingleTrack}
                       onAddTrack={handleAddTrack}
-                      onPlayAll={handlePlayArtistAll}
+                      onPlayAll={handlePlayTracks}
                       onSelectAlbum={(album) => {
                         setSelectedArtist(null);
                         setSelectedAlbum(album);
@@ -768,8 +428,8 @@ export default function SoundloungeApp() {
                       onBack={() => setSelectedAlbum(null)}
                       onPlayTrack={handlePlaySingleTrack}
                       onAddTrack={handleAddTrack}
-                      onPlayAlbum={handlePlayAlbum}
-                      onAddAlbumToQueue={handleAddAlbumToQueue}
+                      onPlayAlbum={handlePlayTracks}
+                      onAddAlbumToQueue={handleAddTracksToQueue}
                       currentTrack={activeTrack}
                       isPlaying={playerState.status === "playing"}
                       onSelectAlbum={(alb) => setSelectedAlbum(alb)}
@@ -846,7 +506,7 @@ export default function SoundloungeApp() {
                         history={history}
                         lastSession={lastSession}
                         onPlayTrack={handlePlaySingleTrack}
-                        onPlayPlaylist={handlePlayPlaylist}
+                        onPlayPlaylist={(playlist) => handlePlayTracks(playlist.tracks)}
                         onCreatePlaylist={createPlaylist}
                         onDeletePlaylist={deletePlaylist}
                         onResumeSession={handleResumeSession}

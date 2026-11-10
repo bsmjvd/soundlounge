@@ -124,8 +124,12 @@ export function MusicIngestion({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [searchInputRef]);
 
-  // Execute Search query with page and sort options
+  // Execute Search query with page and sort options; a newer search aborts the one in flight
+  const searchAbortRef = useRef<AbortController | null>(null);
   const executeSearch = async (query: string, page: number = 1, sort: "views" | "relevance" | "duration" = sortBy) => {
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
     const clean = query.trim();
     if (!clean || clean.length < 1) {
       setSearchResults([]);
@@ -138,7 +142,8 @@ export function MusicIngestion({
     setIsSearching(true);
     try {
       const res = await fetch(
-        `/api/search?q=${encodeURIComponent(clean)}&page=${page}&limit=${PAGE_SIZE}&sort=${sort}`
+        `/api/search?q=${encodeURIComponent(clean)}&page=${page}&limit=${PAGE_SIZE}&sort=${sort}`,
+        { signal: controller.signal }
       );
       if (res.ok) {
         const data = await res.json();
@@ -148,10 +153,12 @@ export function MusicIngestion({
         setCurrentPage(data.page || page);
       }
     } catch (err) {
-      console.error("Search error:", err);
+      if (!controller.signal.aborted) console.error("Search error:", err);
     } finally {
-      setIsSearching(false);
-      setHasSearched(true);
+      if (!controller.signal.aborted) {
+        setIsSearching(false);
+        setHasSearched(true);
+      }
     }
   };
 
@@ -171,7 +178,10 @@ export function MusicIngestion({
       executeSearch(clean, 1, sortBy);
     }, 250);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      searchAbortRef.current?.abort();
+    };
   }, [searchQuery, sortBy]);
 
   const handleManualSearch = (e: React.FormEvent) => {
