@@ -148,6 +148,9 @@ export const useLibraryStore = create<LibraryState>()(
     {
       name: "soundlounge:library-v1",
       storage: createJSONStorage(() => safeStorage),
+      // Bump version and transform old shapes here; without migrate, zustand drops mismatched saves (likes lost)
+      version: 1,
+      migrate: (persisted) => persisted as LibraryState, // v0 (unversioned) has the same shape as v1
     }
   )
 );

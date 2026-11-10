@@ -208,21 +208,25 @@ export function TopBar({
     }
 
     setIsLoadingLive(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setLiveTracks(data.tracks?.slice(0, 6) || []);
         }
       } catch (err) {
-        console.warn("TopBar live search error:", err);
+        if (!controller.signal.aborted) console.warn("TopBar live search error:", err);
       } finally {
-        setIsLoadingLive(false);
+        if (!controller.signal.aborted) setIsLoadingLive(false);
       }
     }, 250);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [searchQuery]);
 
   const handlePlayDirect = (track: Track) => {
