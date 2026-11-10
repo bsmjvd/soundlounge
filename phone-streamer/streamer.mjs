@@ -62,6 +62,8 @@ function download(id) {
         "-f", "bestaudio[ext=m4a]/bestaudio",
         "-o", path.join(CACHE_DIR, "%(id)s.%(ext)s"),
         "--no-playlist", "--no-warnings", "--no-progress", "--no-part",
+        // Home wifi IPv4 connects stall 7-13 s at random; IPv6 is a steady ~50 ms
+        "--force-ipv6",
         // YouTube's JS challenge needs a runtime; Deno has no Android build, Node does (Termux)
         "--no-js-runtimes", "--js-runtimes", "node",
         `https://www.youtube.com/watch?v=${id}`,
