@@ -24,6 +24,32 @@ describe("Worker Entrypoint & Routing", () => {
     expect(body.name).toBe("soundlounge-worker");
   });
 
+  it("stores the phone tunnel URL only with the secret and only for trycloudflare hosts", async () => {
+    const store = new Map<string, string>();
+    const phoneEnv = {
+      ...env,
+      PHONE_SECRET: "s3cret-s3cret-s3cret",
+      PHONE_KV: { get: async (k: string) => store.get(k) ?? null, put: async (k: string, v: string) => void store.set(k, v) },
+    };
+    const post = (auth: string, url: string) =>
+      worker.fetch(
+        new Request("https://soundlounge.app/api/phone", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${auth}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        }),
+        phoneEnv,
+        {} as any
+      );
+
+    expect((await post("wrong", "https://a-b.trycloudflare.com")).status).toBe(401);
+    expect((await post("s3cret-s3cret-s3cret", "https://evil.example.com")).status).toBe(400);
+    expect((await post("s3cret-s3cret-s3cret", "https://api.trycloudflare.com")).status).toBe(400);
+    expect((await post("s3cret-s3cret-s3cret", "https://a-b.trycloudflare.com")).status).toBe(200);
+    const res = await worker.fetch(new Request("https://soundlounge.app/api/phone"), phoneEnv, {} as any);
+    expect(((await res.json()) as any).url).toBe("https://a-b.trycloudflare.com");
+  });
+
   it("handles CORS OPTIONS preflight request", async () => {
     const req = new Request("https://soundlounge.app/api/health", {
       method: "OPTIONS",

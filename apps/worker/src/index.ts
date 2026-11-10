@@ -8,6 +8,21 @@ export interface WorkerEnv extends Env {
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   R2_BUCKET_NAME?: string;
+  PHONE_SECRET?: string;
+  PHONE_KV?: { get(key: string): Promise<string | null>; put(key: string, value: string): Promise<void> };
+}
+
+// Cloudflare quick-tunnel hosts only, so a leaked secret can't point listeners at arbitrary sites
+// (api.trycloudflare.com is cloudflared's own control host, never a tunnel)
+const PHONE_URL_RE = /^https:\/\/(?!api\.)[a-z0-9-]+\.trycloudflare\.com$/;
+
+async function sameSecret(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  // Compare fixed-length digests in constant time
+  const [ha, hb] = (await Promise.all([a, b].map((s) => crypto.subtle.digest("SHA-256", enc.encode(s))))).map((d) => new Uint8Array(d));
+  let diff = 0;
+  for (let i = 0; i < ha.length; i++) diff |= ha[i] ^ hb[i];
+  return diff === 0;
 }
 
 const CORS_HEADERS = {
@@ -52,6 +67,20 @@ export default {
           },
         }
       );
+    }
+
+    // Phone YouTube streamer registry: the phone POSTs its tunnel URL on start, the app GETs it
+    if (path === "/api/phone") {
+      if (!env.PHONE_KV) return json({ error: "Phone registry not configured" }, 503);
+      if (request.method === "GET") return json({ url: await env.PHONE_KV.get("url") });
+      if (request.method === "POST") {
+        const auth = request.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "";
+        if (!env.PHONE_SECRET || !(await sameSecret(auth, env.PHONE_SECRET))) return json({ error: "Unauthorized" }, 401);
+        const body = (await request.json().catch(() => ({}))) as { url?: string };
+        if (!body.url || !PHONE_URL_RE.test(body.url)) return json({ error: "Invalid tunnel URL" }, 400);
+        await env.PHONE_KV.put("url", body.url);
+        return json({ ok: true });
+      }
     }
 
     // Private room creation: random id + token, so an existing room can't be taken over
