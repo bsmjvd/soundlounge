@@ -9,6 +9,7 @@ import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import { TrackArtwork } from "./TrackArtwork";
 import { SyncHealthBadge } from "./room/SyncHealthBadge";
 import { hapticLight } from "../lib/haptics";
+import { prefetchTrack } from "../lib/prefetch";
 
 export type TopNavTab = "discover" | "library" | "radio";
 
@@ -215,6 +216,8 @@ export function TopBar({
         if (res.ok) {
           const data = await res.json();
           setLiveTracks(data.tracks?.slice(0, 6) || []);
+          // Only the top hit: this list changes as you type, and each warm-up is a real download
+          prefetchTrack(data.tracks?.[0]);
         }
       } catch (err) {
         if (!controller.signal.aborted) console.warn("TopBar live search error:", err);
