@@ -12,6 +12,11 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["RoomDurableObject"]
 
+# Current tunnel URL of the phone YouTube streamer (phone-streamer/), written by the phone
+[[kv_namespaces]]
+binding = "PHONE_KV"
+id = "5034608f34e5450a89e3d5617c621c7f"
+
 [vars]
 R2_PUBLIC_URL_PREFIX = "https://r2.soundlounge.app"
 

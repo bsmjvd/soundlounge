@@ -4,6 +4,7 @@ import CryptoJS from "crypto-js";
 import { isYouTubeVideoId } from "@/lib/youtubeUtils";
 import { INVIDIOUS_INSTANCES, isAllowedStreamUrl } from "@/lib/streamHosts";
 import { getBounded, setBounded } from "@/lib/boundedCache";
+import { phoneStreamUrl } from "@/lib/phoneStreamer";
 import { isRateLimited } from "@/lib/rateLimit";
 
 interface CachedFormat {
@@ -395,12 +396,21 @@ export async function GET(req: NextRequest) {
     // 1. Resolve authentic YouTube video ID
     let targetVid = await resolveVideoId(rawVideoId, title, artist, query);
 
-    // 2. Primary engine: Invidious-proxied audio
+    // 2. Primary engine: our phone streamer (yt-dlp on a residential IP, served from its disk).
+    // shortcut: the phone isn't asked whether the video exists, so a dead id fails there instead of
+    // falling back to Saavn; upgrade by checking catalog ids or adding a phone /check endpoint.
     if (targetVid) {
+      const phoneUrl = await phoneStreamUrl(targetVid);
+      // Short cache: the tunnel URL changes whenever the phone restarts
+      if (phoneUrl) streamInfo = { url: phoneUrl, mimeType: "audio/mp4", expiresAt: Date.now() + 60_000 };
+    }
+
+    // 3. Fallback engine: Invidious-proxied audio
+    if (!streamInfo && targetVid) {
       streamInfo = await fetchInvidiousAudio(targetVid);
     }
 
-    // 3. If primary video failed, try searching for exact alternate YouTube upload
+    // 4. If that video failed, try searching for exact alternate YouTube upload
     if (!streamInfo && (title || query)) {
       const altVid = await searchExactYouTubeSong(title || query || "", artist);
       if (altVid && altVid !== targetVid) {
@@ -421,7 +431,7 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
-    // 4. Secondary fallback: High-fidelity direct 320kbps MP4 audio with byte ranges (zero bot block)
+    // 5. Secondary fallback: High-fidelity direct 320kbps MP4 audio with byte ranges (zero bot block)
     if (!streamInfo && (queryTitle || title)) {
       streamInfo = await fallbackSaavnMatch((queryTitle || title)!, queryArtist || undefined);
     }
@@ -454,6 +464,7 @@ export async function GET(req: NextRequest) {
   const redirectRes = NextResponse.redirect(streamInfo.url, 307);
   redirectRes.headers.set("Access-Control-Allow-Origin", "*");
   redirectRes.headers.set("Access-Control-Allow-Headers", "Range, Accept-Ranges, Content-Type");
-  redirectRes.headers.set("Cache-Control", "public, max-age=3600");
+  // Short: a browser-cached redirect to the phone would outlive its tunnel URL after a restart
+  redirectRes.headers.set("Cache-Control", "private, max-age=60");
   return redirectRes;
 }

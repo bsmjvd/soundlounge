@@ -4,6 +4,8 @@ export const INVIDIOUS_INSTANCES = ["https://yt.chocolatemoo53.com"];
 const ALLOWED_STREAM_DOMAINS = [
   "googlevideo.com",
   "saavncdn.com",
+  // Phone streamer tunnel (URL comes from the worker registry, which only accepts these hosts)
+  "trycloudflare.com",
   ...INVIDIOUS_INSTANCES.map((inst) => new URL(inst).hostname.split(".").slice(-2).join(".")),
 ];
 

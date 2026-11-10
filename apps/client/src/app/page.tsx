@@ -448,6 +448,19 @@ export default function SoundloungeApp() {
     }
   }, [playerState.currentTrack?.id, playerState.status, queue.length, currentIndex, isAutoplayEnabled]);
 
+  // Warm the next YouTube track: the phone streamer downloads a song on first request (~10-20 s),
+  // so asking for one byte while the current song plays makes the next one start instantly.
+  const prefetchedRef = useRef(new Set<string>());
+  useEffect(() => {
+    const next = queue[currentIndex + 1];
+    if (playerState.status !== "playing" || !next?.url?.startsWith("/api/stream/youtube")) return;
+    if (prefetchedRef.current.has(next.url)) return;
+    prefetchedRef.current.add(next.url);
+    fetch(next.url, { headers: { Range: "bytes=0-0" } })
+      .then((res) => res.body?.cancel())
+      .catch(() => prefetchedRef.current.delete(next.url));
+  }, [playerState.status, queue, currentIndex]);
+
   const handlePrevious = () => {
     const prev = useQueueStore.getState().previousTrack();
     if (prev) {
