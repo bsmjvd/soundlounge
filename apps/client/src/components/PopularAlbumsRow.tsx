@@ -186,11 +186,11 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       {/* Header with Title and Minimalist Pagination Arrows matching mockup */}
       <div className="flex items-center justify-between mb-3.5">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-sans">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink font-display">
             {hasTaste ? "Albums Tailored To Your Vibe" : "Popular Albums"}
           </h2>
           {hasTaste && dominantGenre && (
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-ink-muted mt-0.5">
               Highlighting releases in {dominantGenre.toUpperCase()} & related artists
             </p>
           )}
@@ -199,14 +199,14 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
         <div className="flex items-center gap-2.5">
           <button
             onClick={scrollLeft}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+            className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
             aria-label="Scroll left"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={scrollRight}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded-full hover:bg-slate-800/50"
+            className="text-ink-muted hover:text-ink transition-colors cursor-pointer p-1 rounded-full hover:bg-surface-raised/50"
             aria-label="Scroll right"
           >
             <ChevronRight className="w-4 h-4" />
@@ -224,7 +224,8 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
           <div
             key={album.id}
             onClick={() => handleAlbumClick(album)}
-            className="group flex-shrink-0 w-[108px] min-w-[108px] xs:w-[114px] xs:min-w-[114px] sm:w-[128px] sm:min-w-[128px] md:w-[136px] md:min-w-[136px] lg:w-[140px] lg:min-w-[140px] snap-start cursor-pointer transition-all duration-200 hover:-translate-y-1 focus:outline-none"
+            className="group flex-shrink-0 w-[108px] min-w-[108px] xs:w-[114px] xs:min-w-[114px] sm:w-[128px] sm:min-w-[128px] md:w-[136px] md:min-w-[136px] lg:w-[140px] lg:min-w-[140px] snap-start cursor-pointer rounded-card transition duration-200 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-accent"
+            role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -234,7 +235,7 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
             }}
           >
             {/* Album Cover Card: 1:1 Square with high-res image and frosted glassmorphic depth */}
-            <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#0c1424]/70 backdrop-blur-md shadow-lg shadow-black/50 ring-1 ring-white/15 group-hover:ring-[#00e5ff]/60 transition-all duration-300">
+            <div className="relative w-full aspect-square rounded-card overflow-hidden bg-surface-raised/80 shadow-lg shadow-black/50 ring-1 ring-ink/15 group-hover:ring-accent/60 transition duration-300">
               <ImageWithFallback
                 src={album.coverUrl}
                 alt={album.title}
@@ -249,17 +250,17 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
 
               {/* Hover Play Button Overlay */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="w-10 h-10 rounded-full bg-[#00e5ff] text-[#0a0e17] flex items-center justify-center shadow-[0_0_20px_rgba(0,229,255,0.7)] transform scale-75 group-hover:scale-100 transition-transform">
+                <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-[0_0_20px_rgba(0,229,255,0.7)] transform scale-75 group-hover:scale-100 transition-transform">
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 </div>
               </div>
             </div>
 
             {/* Album Title & Artist matching mockup typography */}
-            <h3 className="text-xs sm:text-[13px] font-semibold text-white truncate mt-2 group-hover:text-[#00e5ff] transition-colors leading-tight">
+            <h3 className="text-xs sm:text-[13px] font-semibold text-ink truncate mt-2 group-hover:text-accent transition-colors leading-tight">
               {album.title}
             </h3>
-            <p className="text-[11px] text-[#7888a5] truncate mt-0.5 font-normal">
+            <p className="text-[11px] text-ink-muted truncate mt-0.5 font-normal">
               {album.subtitle || album.artist}
             </p>
           </div>
@@ -267,9 +268,9 @@ export function PopularAlbumsRow({ onSelectAlbum, onPlayAlbum, onPlayTrack }: Po
       </div>
 
       {/* Sleek horizontal scroll progress bar matching mockup */}
-      <div className="w-44 sm:w-56 h-[3px] bg-[#0c222c] rounded-full overflow-hidden mt-3.5 relative">
+      <div className="w-44 sm:w-56 h-[3px] bg-surface-overlay rounded-full overflow-hidden mt-3.5 relative">
         <div
-          className="h-full bg-teal-400 rounded-full transition-transform duration-150 ease-out"
+          className="h-full bg-accent rounded-full transition-transform duration-150 ease-out"
           style={{
             width: "35%",
             transform: `translateX(${scrollProgress * (100 / 0.35 - 100)}%)`,

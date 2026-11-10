@@ -1,21 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
-  themeColor: "#0e1422",
+  themeColor: "#060a11",
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {
@@ -40,11 +32,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`dark ${inter.variable}`}>
+    <html lang="en" className="dark">
       <head>
+        <meta name="color-scheme" content="dark" />
         <script src="https://www.youtube.com/iframe_api" async />
       </head>
-      <body className="min-h-screen bg-[#07090e] text-[#f3f4f6] font-sans antialiased selection:bg-[#00e5ff]/30 selection:text-white">
+      <body className="min-h-dvh bg-canvas text-ink font-sans antialiased selection:bg-accent/30 selection:text-ink">
         {children}
         <SpeedInsights />
       </body>

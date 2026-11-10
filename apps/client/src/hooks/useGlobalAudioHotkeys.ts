@@ -31,14 +31,13 @@ export function useGlobalAudioHotkeys({
     if (!enabled || typeof window === "undefined") return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore hotkeys when typing in forms, search bars, inputs or textareas
+      // Ignore hotkeys when focus is on any interactive control, so Space
+      // activates the control instead of toggling playback a second time.
       const target = e.target as HTMLElement | null;
       if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable ||
-          target.getAttribute("role") === "textbox")
+        target?.closest(
+          "input, textarea, select, button, a[href], [contenteditable='true'], [role='textbox'], [role='combobox'], [role='slider'], [role='button']"
+        )
       ) {
         return;
       }

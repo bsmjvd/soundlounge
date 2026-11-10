@@ -67,6 +67,7 @@ export function MusicIngestion({
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Track[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
 
   // Matching disambiguated albums from catalog
@@ -117,9 +118,6 @@ export function MusicIngestion({
         e.preventDefault();
         searchInputRef.current?.focus();
       }
-      if (e.key === "Escape") {
-        setSearchResults([]);
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -137,25 +135,36 @@ export function MusicIngestion({
       setTotalTracks(0);
       setTotalPages(1);
       setIsSearching(false);
+      setSearchError("");
       return;
     }
 
     setIsSearching(true);
+    setSearchError("");
     try {
       const res = await fetch(
         `/api/search?q=${encodeURIComponent(clean)}&page=${page}&limit=${PAGE_SIZE}&sort=${sort}`,
         { signal: controller.signal }
       );
-      if (res.ok) {
-        const data = await res.json();
-        setSearchResults(data.tracks || []);
-        (data.tracks || []).slice(0, 2).forEach(prefetchTrack);
-        setTotalTracks(data.totalTracks || data.tracks?.length || 0);
-        setTotalPages(data.totalPages || 1);
-        setCurrentPage(data.page || page);
+      if (!res.ok) {
+        setSearchResults([]);
+        setTotalTracks(0);
+        setSearchError("Search is unavailable right now. Check your connection and retry.");
+        return;
       }
+      const data = await res.json();
+      setSearchResults(data.tracks || []);
+      (data.tracks || []).slice(0, 2).forEach(prefetchTrack);
+      setTotalTracks(data.totalTracks || data.tracks?.length || 0);
+      setTotalPages(data.totalPages || 1);
+      setCurrentPage(data.page || page);
     } catch (err) {
-      if (!controller.signal.aborted) console.error("Search error:", err);
+      if (!controller.signal.aborted) {
+        console.error("Search error:", err);
+        setSearchResults([]);
+        setTotalTracks(0);
+        setSearchError("Search didn't complete. Check your connection and retry.");
+      }
     } finally {
       if (!controller.signal.aborted) {
         setIsSearching(false);
@@ -172,6 +181,7 @@ export function MusicIngestion({
       setTotalTracks(0);
       setTotalPages(1);
       setIsSearching(false);
+      setSearchError("");
       return;
     }
 
@@ -310,24 +320,30 @@ export function MusicIngestion({
   };
 
   return (
-    <div className="space-y-6" ref={resultsContainerRef}>
+    <div className="space-y-6" ref={resultsContainerRef} aria-busy={isSearching}>
       {/* Search Input Bar + Quick Upload Action */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <form onSubmit={handleManualSearch} className="relative flex-1">
-          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#5c707d]">
-            {isSearching ? <Loader2 className="w-4 h-4 animate-spin text-[#00e5c9]" /> : <Search className="w-4 h-4" />}
+        <form onSubmit={handleManualSearch} role="search" aria-label="Search music" className="relative flex-1">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-ink-subtle">
+            {isSearching ? <Loader2 className="w-4 h-4 animate-spin text-accent" /> : <Search className="w-4 h-4" />}
           </div>
 
           <input
             ref={searchInputRef}
             type="text"
+            name="search"
+            aria-label="Search songs, artists, or paste a YouTube link"
+            inputMode="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            spellCheck={false}
             placeholder="Search songs, artists, or paste a YouTube audio link..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               onQueryChange?.(e.target.value);
             }}
-            className="w-full h-11 bg-[#0d181e] border border-[#1a2e3a] focus:border-[#00e5c9] rounded-xl pl-10 pr-24 text-xs text-white placeholder-[#5c707d] outline-none transition-colors shadow-inner"
+            className="w-full h-11 bg-surface border border-line-strong focus:border-accent rounded-control pl-10 pr-24 text-base sm:text-xs text-ink placeholder-ink-subtle outline-none transition-colors shadow-inner"
           />
 
           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -339,13 +355,15 @@ export function MusicIngestion({
                   onQueryChange?.("");
                   setSearchResults([]);
                   setTotalTracks(0);
+                  setSearchError("");
                 }}
-                className="p-1 text-[#6b7e8c] hover:text-white rounded-md cursor-pointer"
+                aria-label="Clear search"
+                className="flex h-9 w-9 items-center justify-center text-ink-subtle hover:text-ink rounded-md cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-[#203440] bg-[#14232c] px-1.5 py-0.5 text-[10px] font-mono text-[#718593]">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-line bg-surface-raised px-1.5 py-0.5 text-[11px] font-mono text-ink-muted">
               ⌘K
             </kbd>
           </div>
@@ -366,21 +384,22 @@ export function MusicIngestion({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="h-11 px-4 rounded-xl bg-[#0e1920] hover:bg-[#152631] border border-[#1a2d39] text-xs font-medium text-[#8da0ad] hover:text-[#00e5c9] flex items-center justify-center gap-2 transition-colors cursor-pointer flex-shrink-0"
+          aria-busy={isUploading}
+          className="h-11 px-4 rounded-control bg-surface hover:bg-surface-raised border border-line-strong text-xs font-medium text-ink-muted hover:text-accent flex items-center justify-center gap-2 transition-colors cursor-pointer flex-shrink-0"
         >
           {isUploading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00e5c9]" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
           ) : (
             <UploadCloud className="w-3.5 h-3.5" />
           )}
-          <span>{isUploading ? "Uploading..." : "Upload Audio"}</span>
+          <span>Upload Audio</span>
         </button>
       </div>
 
       {/* Discovery Tags (when no search query is active) */}
       {!searchQuery && (
-        <div className="space-y-3 p-4 rounded-2xl bg-[#0b1419] border border-[#162732]">
-          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wider uppercase text-[#00e5c9]">
+        <div className="space-y-3 p-4 rounded-2xl bg-surface-sunken border border-line">
+          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wider uppercase text-accent">
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Popular Artists & Soundtracks</span>
           </div>
@@ -392,7 +411,7 @@ export function MusicIngestion({
                   setSearchQuery(tag);
                   onQueryChange?.(tag);
                 }}
-                className="px-3 py-1.5 rounded-lg bg-[#0f1d25] hover:bg-[#162b37] border border-[#1b313f] hover:border-[#00e5c9]/40 text-xs text-[#8ca0ad] hover:text-white transition-all cursor-pointer"
+                className="min-h-10 px-3 py-1.5 rounded-control bg-surface-raised hover:bg-surface-overlay border border-line hover:border-accent/40 text-xs text-ink-muted hover:text-ink transition cursor-pointer"
               >
                 {tag}
               </button>
@@ -403,9 +422,9 @@ export function MusicIngestion({
 
       {/* Loading state when fetching results */}
       {isSearching && searchResults.length === 0 && (
-        <div className="text-center py-16 rounded-2xl border border-[#182b36] bg-[#0c161d] flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-[#00e5c9]" />
-          <p className="text-xs text-[#8da0ad] font-medium">
+        <div className="text-center py-16 rounded-2xl border border-line bg-surface flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-accent" />
+          <p className="text-xs text-ink-muted font-medium">
             Searching tracks, artists, and audio for &ldquo;{searchQuery}&rdquo;...
           </p>
         </div>
@@ -413,13 +432,13 @@ export function MusicIngestion({
 
       {/* Matching Disambiguated Albums & Movie Soundtracks */}
       {matchingAlbums.length > 0 && (
-        <div className="space-y-3 p-4 rounded-2xl bg-gradient-to-r from-[#0d1620] via-[#0b131a] to-[#0e1922] border border-[#1b2d39]">
+        <div className="space-y-3 p-4 rounded-2xl bg-gradient-to-r from-surface via-surface-sunken to-surface border border-line">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
-              <Disc3 className="w-4 h-4 text-[#00e5c9]" />
+            <div className="flex items-center gap-2 text-xs font-bold text-ink uppercase tracking-wider">
+              <Disc3 className="w-4 h-4 text-accent" />
               <span>Matching Soundtracks & Albums ({matchingAlbums.length})</span>
             </div>
-            <span className="text-[11px] text-[#718593]">Disambiguated by release year & cast</span>
+            <span className="text-[11px] text-ink-muted">Disambiguated by release year & cast</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -427,7 +446,15 @@ export function MusicIngestion({
               <div
                 key={album.id}
                 onClick={() => onSelectAlbum?.(album)}
-                className="group p-3 rounded-xl bg-[#081014] hover:bg-[#101e28] border border-[#162734] hover:border-[#00e5c9]/50 transition-all cursor-pointer flex items-center gap-3"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectAlbum?.(album);
+                  }
+                }}
+                className="group p-3 rounded-xl bg-canvas hover:bg-surface-raised border border-line hover:border-accent/50 transition cursor-pointer flex items-center gap-3 focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <TrackArtwork
                   coverUrl={album.coverUrl}
@@ -438,7 +465,7 @@ export function MusicIngestion({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-[#00e5c9]/15 text-[#00e5c9]">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold uppercase bg-accent/15 text-accent">
                       {album.type === "movie_soundtrack" ? (
                         <>
                           <Clapperboard className="w-2.5 h-2.5" />
@@ -451,19 +478,19 @@ export function MusicIngestion({
                         </>
                       )}
                     </span>
-                    <span className="text-[10px] text-[#718593] font-mono">{album.releaseYear}</span>
+                    <span className="text-[11px] text-ink-muted font-mono">{album.releaseYear}</span>
                   </div>
-                  <p className="text-xs font-bold text-white group-hover:text-[#00e5c9] transition-colors truncate">
+                  <p className="text-xs font-bold text-ink group-hover:text-accent transition-colors truncate">
                     {album.title}
                   </p>
-                  <p className="text-[11px] text-[#8ca0ad] truncate">{album.disambiguationLabel}</p>
+                  <p className="text-[11px] text-ink-muted truncate">{album.disambiguationLabel}</p>
                   {album.movieDetails?.starCast && (
-                    <p className="text-[10px] text-[#5c707d] truncate">
+                    <p className="text-[11px] text-ink-subtle truncate">
                       Cast: {album.movieDetails.starCast.slice(0, 2).join(", ")}
                     </p>
                   )}
                 </div>
-                <ArrowRight className="w-4 h-4 text-[#5c707d] group-hover:text-[#00e5c9] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                <ArrowRight className="w-4 h-4 text-ink-subtle group-hover:text-accent group-hover:translate-x-0.5 transition flex-shrink-0" />
               </div>
             ))}
           </div>
@@ -474,22 +501,23 @@ export function MusicIngestion({
       {searchResults.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-white">Search Results:</span>
-            <span className="text-xs text-[#718593]">
-              Found <strong className="text-[#00e5c9]">{totalTracks}</strong> authentic tracks
+            <span className="text-xs font-semibold text-ink">Search Results:</span>
+            <span role="status" className="text-xs text-ink-muted">
+              Found <strong className="text-accent">{totalTracks}</strong> authentic tracks
             </span>
           </div>
 
           {/* Sort Filter Tabs */}
-          <div className="flex items-center gap-1.5 bg-[#0b1419] p-1 rounded-xl border border-[#182a36]">
-            <span className="text-[10px] text-[#5c707d] uppercase tracking-wider px-2 font-semibold">Sort:</span>
+          <div className="flex max-w-full items-center gap-1.5 overflow-x-auto scrollbar-none bg-surface-sunken p-1 rounded-control border border-line">
+            <span className="text-[11px] text-ink-subtle uppercase tracking-wider px-2 font-semibold">Sort:</span>
 
             <button
               onClick={() => handleSortChange("relevance")}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              aria-pressed={sortBy === "relevance"}
+              className={`flex min-h-10 shrink-0 items-center gap-1 px-2.5 py-1 rounded-[0.65rem] text-xs font-medium transition cursor-pointer ${
                 sortBy === "relevance"
-                  ? "bg-[#00e5c9] text-[#081014] font-semibold shadow-sm"
-                  : "text-[#7d909d] hover:text-white hover:bg-[#12222b]"
+                  ? "bg-accent text-accent-foreground font-semibold shadow-sm"
+                  : "text-ink-muted hover:text-ink hover:bg-surface-raised"
               }`}
             >
               <Sparkles className="w-3 h-3" />
@@ -498,10 +526,11 @@ export function MusicIngestion({
 
             <button
               onClick={() => handleSortChange("views")}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              aria-pressed={sortBy === "views"}
+              className={`flex min-h-10 shrink-0 items-center gap-1 px-2.5 py-1 rounded-[0.65rem] text-xs font-medium transition cursor-pointer ${
                 sortBy === "views"
-                  ? "bg-[#00e5c9] text-[#081014] font-semibold shadow-sm"
-                  : "text-[#7d909d] hover:text-white hover:bg-[#12222b]"
+                  ? "bg-accent text-accent-foreground font-semibold shadow-sm"
+                  : "text-ink-muted hover:text-ink hover:bg-surface-raised"
               }`}
             >
               <Flame className="w-3 h-3" />
@@ -510,10 +539,11 @@ export function MusicIngestion({
 
             <button
               onClick={() => handleSortChange("duration")}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              aria-pressed={sortBy === "duration"}
+              className={`flex min-h-10 shrink-0 items-center gap-1 px-2.5 py-1 rounded-[0.65rem] text-xs font-medium transition cursor-pointer ${
                 sortBy === "duration"
-                  ? "bg-[#00e5c9] text-[#081014] font-semibold shadow-sm"
-                  : "text-[#7d909d] hover:text-white hover:bg-[#12222b]"
+                  ? "bg-accent text-accent-foreground font-semibold shadow-sm"
+                  : "text-ink-muted hover:text-ink hover:bg-surface-raised"
               }`}
             >
               <Clock className="w-3 h-3" />
@@ -525,9 +555,9 @@ export function MusicIngestion({
 
       {/* Track Results Table with Views and Pagination */}
       {searchResults.length > 0 && (
-        <div className="rounded-2xl border border-[#182b36] bg-[#0c161d] overflow-hidden shadow-xl">
+        <div className="animate-view-in rounded-card border border-line bg-surface overflow-hidden shadow-xl">
           {/* Table Header */}
-          <div className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#162732] text-[10px] font-semibold text-[#5c707d] uppercase tracking-wider bg-[#091217]">
+          <div className="grid grid-cols-[28px_1fr_auto] md:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 border-b border-line text-[11px] font-semibold text-ink-subtle uppercase tracking-wider bg-surface-sunken">
             <span>#</span>
             <span>Title & Artist</span>
             <span className="hidden md:inline text-center">Popularity</span>
@@ -536,7 +566,7 @@ export function MusicIngestion({
           </div>
 
           {/* Table Rows */}
-          <div className="divide-y divide-[#13232d]">
+          <div className="divide-y divide-line">
             {searchResults.map((track, idx) => {
               const added = recentlyAddedId === track.id;
               const liked = isLiked(track.id);
@@ -546,17 +576,18 @@ export function MusicIngestion({
                 <div
                   key={track.id}
                   onClick={() => handleSelectTrack(track, true, false)}
-                  className="group grid grid-cols-[28px_1fr_auto] md:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-[#12232e] transition-colors cursor-pointer"
+                  className="group grid grid-cols-[28px_1fr_auto] md:grid-cols-[40px_1fr_140px_80px_130px] items-center px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-surface-raised transition-colors cursor-pointer"
                 >
-                  {/* Number / Quick Play on Hover */}
-                  <div className="text-xs font-mono text-[#5c707d]">
-                    <span className="group-hover:hidden">{rankNumber}</span>
+                  {/* Number / Quick Play */}
+                  <div className="relative flex h-11 w-7 items-center justify-center text-xs font-mono text-ink-subtle md:h-8 md:w-10">
+                    <span className="hidden md:inline group-hover:opacity-0">{rankNumber}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectTrack(track, true, false);
                       }}
-                      className="hidden group-hover:inline-flex text-[#00e5c9] hover:scale-110 transition-transform cursor-pointer"
+                      aria-label={`Play ${track.title}`}
+                      className="absolute inset-0 flex items-center justify-center text-accent opacity-100 transition-opacity hover:scale-110 cursor-pointer md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
                       title="Play Now"
                     >
                       <Play className="w-4 h-4 fill-current" />
@@ -573,33 +604,33 @@ export function MusicIngestion({
                       iconClassName="w-5 h-5"
                     />
                     <div className="truncate min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-semibold text-white truncate group-hover:text-[#00e5c9] transition-colors">
+                      <p className="text-xs sm:text-sm font-semibold text-ink truncate group-hover:text-accent transition-colors">
                         {track.title}
                       </p>
-                      <p className="text-[11px] text-[#718593] truncate mt-0.5">
+                      <p className="text-[11px] text-ink-muted truncate mt-0.5">
                         {track.artist}
-                        <span className="md:hidden text-[#4a5f6e]"> • {formatDuration(track.durationMs)}</span>
+                        <span className="md:hidden text-ink-subtle"> • {formatDuration(track.durationMs)}</span>
                       </p>
                     </div>
                   </div>
 
                   {/* Popularity / Views Badge */}
                   <div className="hidden md:block text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#10232c] text-[#00e5c9] text-[11px] font-mono font-medium border border-[#1b3a48]">
-                      <Flame className="w-3 h-3 text-orange-400 fill-orange-400/20" />
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-raised text-accent text-[11px] font-mono font-medium border border-line">
+                      <Flame className="w-3 h-3 text-ember fill-ember/20" />
                       <span>{track.viewsFormatted || "Popular"} views</span>
                     </span>
                   </div>
 
                   {/* Duration (font-mono tabular-nums) */}
-                  <div className="hidden md:block text-right text-xs font-mono tabular-nums text-[#718593]">
+                  <div className="hidden md:block text-right text-xs font-mono tabular-nums text-ink-muted">
                     {formatDuration(track.durationMs)}
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center justify-end gap-1.5">
                     {added ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#00e5c9] bg-[#00e5c9]/10 px-2 py-0.5 rounded">
+                      <span role="status" className="animate-icon-swap inline-flex items-center gap-1 text-[11px] font-medium text-accent bg-accent/10 px-2 py-0.5 rounded">
                         <Check className="w-3 h-3" /> Added
                       </span>
                     ) : (
@@ -609,9 +640,10 @@ export function MusicIngestion({
                             e.stopPropagation();
                             toggleLike(track);
                           }}
+                          aria-label={liked ? `Unlike ${track.title}` : `Like ${track.title}`}
                           title={liked ? "Liked" : "Like Track"}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            liked ? "text-[#f43f5e]" : "text-[#5c707d] hover:text-white"
+                          className={`min-h-11 min-w-11 flex items-center justify-center rounded-control transition-colors cursor-pointer ${
+                            liked ? "text-like" : "text-ink-subtle hover:text-ink"
                           }`}
                         >
                           <Heart className={`w-3.5 h-3.5 ${liked ? "fill-current" : ""}`} />
@@ -621,8 +653,9 @@ export function MusicIngestion({
                             e.stopPropagation();
                             handleSelectTrack(track, false, true);
                           }}
+                          aria-label={`Play ${track.title} next`}
                           title="Play Next"
-                          className="p-1.5 rounded-lg text-[#5c707d] hover:text-[#00e5c9] transition-colors cursor-pointer"
+                          className="min-h-11 min-w-11 flex items-center justify-center rounded-control text-ink-subtle hover:text-accent transition-colors cursor-pointer"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
@@ -631,8 +664,9 @@ export function MusicIngestion({
                             e.stopPropagation();
                             handleSelectTrack(track, false, false);
                           }}
+                          aria-label={`Add ${track.title} to queue`}
                           title="Add to Queue"
-                          className="p-1.5 rounded-lg text-[#5c707d] hover:text-white transition-colors cursor-pointer"
+                          className="min-h-11 min-w-11 flex items-center justify-center rounded-control text-ink-subtle hover:text-ink transition-colors cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -646,17 +680,17 @@ export function MusicIngestion({
 
           {/* Pagination Controls Footer */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#091217] border-t border-[#162732]">
-              <span className="text-xs text-[#718593]">
-                Page <strong className="text-white">{currentPage}</strong> of{" "}
-                <strong className="text-white">{totalPages}</strong> ({totalTracks} total tracks)
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-surface-sunken border-t border-line">
+              <span className="text-xs text-ink-muted">
+                Page <strong className="text-ink">{currentPage}</strong> of{" "}
+                <strong className="text-ink">{totalPages}</strong> ({totalTracks} total tracks)
               </span>
 
               <div className="flex items-center gap-1.5">
                 <button
                   disabled={currentPage <= 1 || isSearching}
                   onClick={() => handlePageChange(currentPage - 1)}
-                  className="px-3 py-1.5 rounded-lg bg-[#0e1a22] hover:bg-[#162835] disabled:opacity-30 disabled:cursor-not-allowed border border-[#1c303e] text-xs text-white transition-colors cursor-pointer flex items-center gap-1"
+                  className="px-3 min-h-11 rounded-control bg-surface hover:bg-surface-raised disabled:opacity-30 disabled:cursor-not-allowed border border-line-strong text-xs text-ink transition-colors cursor-pointer flex items-center gap-1"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                   <span>Previous</span>
@@ -668,10 +702,10 @@ export function MusicIngestion({
                     <button
                       key={p}
                       onClick={() => handlePageChange(p)}
-                      className={`w-7 h-7 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+                      className={`w-9 h-9 rounded-[0.65rem] text-xs font-mono transition-colors cursor-pointer ${
                         p === currentPage
-                          ? "bg-[#00e5c9] text-[#081014] font-bold shadow-md shadow-[#00e5c9]/20"
-                          : "bg-[#0e1a22] hover:bg-[#162835] text-[#8ea0ad] border border-[#1c303e]"
+                          ? "bg-accent text-accent-foreground font-bold shadow-md shadow-accent/20"
+                          : "bg-surface hover:bg-surface-raised text-ink-muted border border-line"
                       }`}
                     >
                       {p}
@@ -682,7 +716,7 @@ export function MusicIngestion({
                 <button
                   disabled={currentPage >= totalPages || isSearching}
                   onClick={() => handlePageChange(currentPage + 1)}
-                  className="px-3 py-1.5 rounded-lg bg-[#0e1a22] hover:bg-[#162835] disabled:opacity-30 disabled:cursor-not-allowed border border-[#1c303e] text-xs text-white transition-colors cursor-pointer flex items-center gap-1"
+                  className="px-3 min-h-11 rounded-control bg-surface hover:bg-surface-raised disabled:opacity-30 disabled:cursor-not-allowed border border-line-strong text-xs text-ink transition-colors cursor-pointer flex items-center gap-1"
                 >
                   <span>Next</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -693,11 +727,28 @@ export function MusicIngestion({
         </div>
       )}
 
+      {/* Error State with recovery */}
+      {searchError && !isSearching && (
+        <div
+          role="alert"
+          className="animate-view-in flex flex-col items-start gap-3 rounded-2xl border border-danger/30 bg-danger/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-xs font-medium text-danger">{searchError}</p>
+          <button
+            type="button"
+            onClick={() => executeSearch(searchQuery, currentPage, sortBy)}
+            className="min-h-11 rounded-control border border-danger/40 px-3 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 cursor-pointer"
+          >
+            Retry search
+          </button>
+        </div>
+      )}
+
       {/* Empty State when no results found */}
-      {hasSearched && !isSearching && searchResults.length === 0 && searchQuery && (
-        <div className="text-center py-12 rounded-2xl border border-[#182b36] bg-[#0c161d] space-y-2">
-          <p className="text-xs text-[#8da0ad] font-medium">No matching tracks found for &ldquo;{searchQuery}&rdquo;</p>
-          <p className="text-[11px] text-[#5c707d]">
+      {hasSearched && !isSearching && !searchError && searchResults.length === 0 && searchQuery && (
+        <div className="text-center py-12 rounded-2xl border border-line bg-surface space-y-2">
+          <p className="text-xs text-ink-muted font-medium">No matching tracks found for &ldquo;{searchQuery}&rdquo;</p>
+          <p className="text-[11px] text-ink-subtle">
             Try searching for song titles, artist names, or paste a direct YouTube audio link.
           </p>
         </div>

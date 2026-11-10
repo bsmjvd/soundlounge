@@ -44,33 +44,33 @@ export function ImageWithFallback({
   if (!currentSrc || hasError) {
     return (
       <div
-        className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#101827] to-[#0c1f28] text-slate-400 p-2 select-none relative overflow-hidden ${
+        className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-surface-sunken via-canvas to-surface text-ink-muted p-2 select-none relative overflow-hidden ${
           fallbackType === "artist" ? "rounded-full" : "rounded-xl"
         } ${containerClassName}`}
         role="img"
         aria-label={alt || fallbackTitle || "Cover"}
       >
         {/* Subtle radial disc pattern background */}
-        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-400/30 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent/30 via-transparent to-transparent pointer-events-none" />
 
         {fallbackType === "artist" ? (
           <div className="flex flex-col items-center justify-center text-center">
-            <div className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-1">
+            <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent mb-1">
               <Disc3 className="w-5 h-5 animate-[spin_10s_linear_infinite]" />
             </div>
             {fallbackTitle && (
-              <span className="text-[10px] font-semibold text-slate-300 max-w-[80px] truncate px-1">
+              <span className="text-[11px] font-semibold text-ink-secondary max-w-[80px] truncate px-1">
                 {fallbackTitle}
               </span>
             )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-center z-10">
-            <div className="w-9 h-9 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-1.5 shadow-[0_0_12px_rgba(20,184,166,0.15)]">
+            <div className="w-9 h-9 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent mb-1.5 shadow-[0_0_12px_rgba(20,184,166,0.15)]">
               <Music className="w-4 h-4" />
             </div>
             {fallbackTitle && (
-              <span className="text-[10px] font-medium text-slate-300 max-w-[100px] truncate px-1 leading-tight">
+              <span className="text-[11px] font-medium text-ink-secondary max-w-[100px] truncate px-1 leading-tight">
                 {fallbackTitle}
               </span>
             )}
@@ -84,8 +84,8 @@ export function ImageWithFallback({
     <div className={`relative w-full h-full overflow-hidden ${containerClassName}`}>
       {/* Subtle skeleton shimmer until loaded */}
       {!isLoaded && (
-        <div className="absolute inset-0 bg-slate-800/80 animate-pulse flex items-center justify-center z-0">
-          <Disc3 className="w-5 h-5 text-slate-600 animate-spin opacity-40" />
+        <div className="absolute inset-0 bg-surface-raised/80 animate-pulse flex items-center justify-center z-0">
+          <Disc3 className="w-5 h-5 text-ink-subtle animate-spin opacity-40" />
         </div>
       )}
 

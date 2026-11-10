@@ -358,6 +358,9 @@ export function FallingLeavesAmbient({ enabled = true }: FallingLeavesAmbientPro
     if (!enabled || typeof window === "undefined" || typeof document === "undefined") {
       return;
     }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
 
     const canvas = canvasRef.current;
     if (!canvas) return;

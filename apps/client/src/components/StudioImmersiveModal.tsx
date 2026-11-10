@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Play,
   Pause,
@@ -14,10 +15,12 @@ import {
   Radio,
   Music2,
   Disc,
+  Loader2,
 } from "lucide-react";
 import type { Track } from "@soundlounge/shared";
 import { AudioFrequencyVisualizer } from "./studio/AudioFrequencyVisualizer";
 import { hapticLight, hapticMedium } from "../lib/haptics";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface StudioImmersiveModalProps {
   isOpen: boolean;
@@ -57,6 +60,7 @@ export function StudioImmersiveModal({
   const [isMuted, setIsMuted] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const vinylRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const touchStartY = useRef<number | null>(null);
@@ -110,20 +114,21 @@ export function StudioImmersiveModal({
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-      if (e.key === "Escape") {
-        handleExitStudio();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  const isStudioOpen = isOpen && !!currentTrack;
 
-  if (!isOpen || !currentTrack) return null;
+  useEffect(() => {
+    if (!isStudioOpen) return;
+    const shell = document.getElementById("app-shell");
+    shell?.setAttribute("inert", "");
+    return () => shell?.removeAttribute("inert");
+  }, [isStudioOpen]);
+
+  useFocusTrap(isStudioOpen, dialogRef, handleExitStudio);
+
+  if (!isOpen || !currentTrack || typeof document === "undefined") return null;
 
   const isPlaying = status === "playing";
+  const isBuffering = status === "buffering";
   const effectiveDuration = durationMs || currentTrack.durationMs || 1;
   const progressPercent = Math.min(100, Math.max(0, (positionMs / effectiveDuration) * 100));
 
@@ -180,7 +185,7 @@ export function StudioImmersiveModal({
     onSeek(Math.floor(seekPercent * effectiveDuration));
   };
 
-  return (
+  return createPortal(
     <div
       onTouchStart={handleModalTouchStart}
       onTouchMove={handleModalTouchMove}
@@ -190,16 +195,21 @@ export function StudioImmersiveModal({
         transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
         transition: isDragging ? "none" : "transform 0.28s cubic-bezier(0.25, 0.9, 0.3, 1)",
       }}
-      className="fixed inset-0 z-[200] w-full h-full h-dvh max-h-screen bg-[#07090e] text-[#f8fafc] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300 overscroll-none"
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Studio immersion player"
+      tabIndex={-1}
+      className="fixed inset-0 z-[200] w-full h-full h-dvh max-h-screen bg-canvas text-ink flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300 overscroll-none outline-none"
     >
       {/* iOS Modal Pull-Down Grabber Pill */}
       <div className="sm:hidden w-full flex justify-center pt-2 pb-0.5 z-20 cursor-grab active:cursor-grabbing">
-        <div className="w-10 h-1 rounded-full bg-white/25 active:bg-white/45 transition-colors" />
+        <div className="w-10 h-1 rounded-full bg-ink/25 active:bg-ink/45 transition-colors" />
       </div>
 
       {/* 1. Full-Screen Ambient Studio Backdrop */}
       {bannerUrl && (
-        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden bg-[#06080e]">
+        <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden bg-canvas">
           {/* Ethereal atmospheric glow (Subtle, dark, never pixelated or harsh) */}
           <div
             className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
@@ -215,40 +225,40 @@ export function StudioImmersiveModal({
 
           {/* Radial & vertical cinematic ambient shading */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(6,8,14,0.75)_60%,rgba(6,8,14,0.98)_100%)]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#06080e] via-[#06080e]/60 to-[#06080e]/90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/60 to-canvas/90" />
         </div>
       )}
 
       {/* 2. Top Header Bar with Turntable Speed Controls */}
       <div className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-8 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-600/20 shrink-0">
-            <Radio className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-accent/30 border border-accent/30 flex items-center justify-center text-accent shadow-lg shadow-accent/20 shrink-0">
+            <Radio className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-[11px] sm:text-xs uppercase tracking-widest font-bold text-sky-400">
+              <span className="text-[11px] sm:text-xs uppercase tracking-widest font-bold text-accent">
                 Studio Immersion
               </span>
-              <span className="text-[9px] sm:text-[10px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded-full text-gray-300 font-mono">
+              <span className="text-[11px] sm:text-[11px] bg-ink/10 px-1.5 sm:px-2 py-0.5 rounded-full text-ink-secondary font-mono">
                 Hi-Fi
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-bold text-white tracking-tight">Soundlounge</p>
+            <p className="text-xs sm:text-sm font-bold text-ink tracking-tight">Soundlounge</p>
           </div>
         </div>
 
         {/* Center RPM Speed Selector Pill */}
-        <div className="hidden sm:flex items-center gap-1 bg-black/40 border border-white/10 rounded-full p-1 backdrop-blur-md shadow-inner">
+        <div className="hidden sm:flex items-center gap-1 bg-black/40 border border-ink/10 rounded-full p-1 backdrop-blur-md shadow-inner">
           <button
             onClick={() => {
               hapticLight();
               setRpmSpeed(33);
             }}
-            className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition cursor-pointer ${
               rpmSpeed === 33
-                ? "bg-[#00e5ff] text-[#07090e] shadow-[0_0_12px_rgba(0,229,255,0.6)]"
-                : "text-slate-400 hover:text-white"
+                ? "bg-accent text-accent-foreground shadow-[0_0_12px_rgba(0,229,255,0.6)]"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             33⅓ RPM
@@ -258,10 +268,10 @@ export function StudioImmersiveModal({
               hapticLight();
               setRpmSpeed(45);
             }}
-            className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-full text-xs font-mono font-bold transition cursor-pointer ${
               rpmSpeed === 45
-                ? "bg-[#00e5ff] text-[#07090e] shadow-[0_0_12px_rgba(0,229,255,0.6)]"
-                : "text-slate-400 hover:text-white"
+                ? "bg-accent text-accent-foreground shadow-[0_0_12px_rgba(0,229,255,0.6)]"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             45 RPM
@@ -283,7 +293,7 @@ export function StudioImmersiveModal({
             }}
             aria-label="Toggle Browser Fullscreen"
             title="Toggle Browser Fullscreen (F11)"
-            className="hidden sm:flex items-center justify-center w-9 h-9 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl"
+            className="hidden sm:flex items-center justify-center w-9 h-9 rounded-2xl bg-ink/10 hover:bg-ink/20 border border-ink/15 text-ink transition cursor-pointer hover:scale-105 active:scale-95 shadow-xl"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
@@ -291,11 +301,11 @@ export function StudioImmersiveModal({
           <button
             onClick={handleExitStudio}
             aria-label="Exit Studio Mode"
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold backdrop-blur-xl transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-xl min-h-[40px]"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-2xl bg-ink/10 hover:bg-ink/20 border border-ink/15 text-ink text-xs font-semibold backdrop-blur-xl transition cursor-pointer hover:scale-105 active:scale-95 shadow-xl min-h-11"
           >
             <Minimize2 className="w-4 h-4" />
             <span className="hidden xs:inline">Exit Studio</span>
-            <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-gray-400">
+            <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 rounded bg-black/40 text-[11px] font-mono text-ink-muted">
               ESC
             </kbd>
           </button>
@@ -316,7 +326,7 @@ export function StudioImmersiveModal({
               ref={vinylRef}
               onClick={handleVinylClick}
               title="Click grooves to drop needle and seek"
-              className={`absolute inset-0 z-10 cursor-pointer transition-all duration-1000 ease-[cubic-bezier(0.34,1.25,0.64,1)] ${
+              className={`absolute inset-0 z-10 cursor-pointer transition duration-1000 ease-[cubic-bezier(0.34,1.25,0.64,1)] ${
                 isPlaying
                   ? "translate-x-[36%] sm:translate-x-[56%] opacity-100 scale-100"
                   : "translate-x-[22%] sm:translate-x-[40%] opacity-90 scale-[0.98]"
@@ -332,18 +342,18 @@ export function StudioImmersiveModal({
                 }`}
               >
                 {/* Physical Song Separation Bands */}
-                <div className="absolute inset-[15%] rounded-full border border-white/[0.08] pointer-events-none" />
-                <div className="absolute inset-[24%] rounded-full border border-white/[0.08] pointer-events-none" />
-                <div className="absolute inset-[33%] rounded-full border border-white/[0.08] pointer-events-none" />
+                <div className="absolute inset-[15%] rounded-full border border-ink/[0.08] pointer-events-none" />
+                <div className="absolute inset-[24%] rounded-full border border-ink/[0.08] pointer-events-none" />
+                <div className="absolute inset-[33%] rounded-full border border-ink/[0.08] pointer-events-none" />
 
                 {/* Dead Wax Run-Out Zone with Hand-Etched Matrix Code */}
-                <div className="w-[44%] h-[44%] rounded-full bg-[radial-gradient(circle,#141923_0%,#080a0f_100%)] border border-white/15 shadow-[inset_0_0_15px_rgba(0,0,0,0.95)] flex items-center justify-center relative">
-                  <span className="absolute font-mono text-[5px] sm:text-[6.5px] tracking-[2.5px] text-white/30 uppercase -rotate-45 select-none pointer-events-none">
+                <div className="w-[44%] h-[44%] rounded-full bg-[radial-gradient(circle,#141923_0%,#080a0f_100%)] border border-ink/15 shadow-[inset_0_0_15px_rgba(0,0,0,0.95)] flex items-center justify-center relative">
+                  <span className="absolute font-mono text-[5px] sm:text-[6.5px] tracking-[2.5px] text-ink/30 uppercase -rotate-45 select-none pointer-events-none">
                     SL-2026-HI-FI • SOUNDLOUNGE LATHE CUT
                   </span>
 
                   {/* Center Record Label Badge with Gold Foil Stamp */}
-                  <div className="w-[74%] h-[74%] rounded-full overflow-hidden relative shadow-[0_0_16px_rgba(0,0,0,0.95),0_0_0_1.5px_rgba(217,119,6,0.6)] flex items-center justify-center bg-[#0c1322]">
+                  <div className="w-[74%] h-[74%] rounded-full overflow-hidden relative shadow-[0_0_16px_rgba(0,0,0,0.95),0_0_0_1.5px_rgba(217,119,6,0.6)] flex items-center justify-center bg-surface">
                     {squareCover && (
                       <img
                         src={squareCover}
@@ -357,7 +367,7 @@ export function StudioImmersiveModal({
                       <span className="text-[5.5px] sm:text-[6.5px] font-black tracking-widest text-amber-200 font-mono uppercase drop-shadow-sm">
                         SOUNDLOUNGE
                       </span>
-                      <span className="text-[5px] sm:text-[6px] font-bold text-white max-w-[60px] sm:max-w-[75px] truncate leading-tight mt-0.5">
+                      <span className="text-[5px] sm:text-[6px] font-bold text-ink max-w-[60px] sm:max-w-[75px] truncate leading-tight mt-0.5">
                         {currentTrack.title}
                       </span>
                       <span className="text-[4px] sm:text-[5px] font-mono text-amber-300 mt-0.5 tracking-wider font-semibold">
@@ -366,7 +376,7 @@ export function StudioImmersiveModal({
                     </div>
 
                     {/* Brass Center Spindle Grommet */}
-                    <div className="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-[#050608] border-2 border-amber-300 shadow-[0_0_6px_rgba(0,0,0,0.9),inset_0_0_4px_rgba(0,0,0,0.95)] z-20" />
+                    <div className="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-canvas border-2 border-amber-300 shadow-[0_0_6px_rgba(0,0,0,0.9),inset_0_0_4px_rgba(0,0,0,0.95)] z-20" />
                   </div>
                 </div>
               </div>
@@ -374,9 +384,9 @@ export function StudioImmersiveModal({
 
             {/* 2. Audiophile Gatefold Album Jacket Cover */}
             <div
-              className={`relative z-20 w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden bg-black/80 border border-white/15 shadow-[0_25px_70px_rgba(0,0,0,0.95)] transition-all duration-700 ${
+              className={`relative z-20 w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden bg-black/80 border border-ink/15 shadow-[0_25px_70px_rgba(0,0,0,0.95)] transition duration-700 ${
                 isPlaying
-                  ? "shadow-[0_25px_80px_rgba(99,102,241,0.35),0_0_0_1px_rgba(0,229,255,0.35)]"
+                  ? "shadow-[0_25px_80px_rgba(245,179,107,0.28),0_0_0_1px_rgba(0,229,255,0.35)]"
                   : "shadow-black/95"
               }`}
             >
@@ -388,7 +398,7 @@ export function StudioImmersiveModal({
               {squareCover ? (
                 <img src={squareCover} alt={currentTrack.title} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-600">
+                <div className="w-full h-full flex items-center justify-center text-ink-subtle">
                   <Music2 className="w-24 h-24" />
                 </div>
               )}
@@ -396,14 +406,14 @@ export function StudioImmersiveModal({
 
             {/* 3. Audiophile Turntable Stylus Tone Arm (Pivots onto groove when playing) */}
             <div
-              className={`hidden sm:block absolute -top-6 -right-44 md:-right-48 w-32 h-48 pointer-events-none z-30 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+              className={`hidden sm:block absolute -top-6 -right-44 md:-right-48 w-32 h-48 pointer-events-none z-30 transition duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] ${
                 isPlaying ? "rotate-[-14deg] opacity-100" : "rotate-[-46deg] opacity-40"
               }`}
               style={{ transformOrigin: "70px 22px" }}
             >
               {/* Pivot Base & Bearing Assembly */}
-              <div className="absolute top-2 left-14 w-10 h-10 rounded-full bg-[radial-gradient(circle,#64748b_0%,#1e293b_80%,#0f172a_100%)] border border-white/30 shadow-[0_8px_24px_rgba(0,0,0,0.85)] flex items-center justify-center">
-                <div className="w-4 h-4 rounded-full bg-[#0f172a] border border-slate-400 shadow-[inset_0_0_3px_rgba(0,0,0,0.9)]" />
+              <div className="absolute top-2 left-14 w-10 h-10 rounded-full bg-[radial-gradient(circle,#64748b_0%,#1e293b_80%,#0f172a_100%)] border border-ink/30 shadow-[0_8px_24px_rgba(0,0,0,0.85)] flex items-center justify-center">
+                <div className="w-4 h-4 rounded-full bg-canvas border border-slate-400 shadow-[inset_0_0_3px_rgba(0,0,0,0.9)]" />
               </div>
 
               {/* Brushed Metallic Tone Arm Shaft */}
@@ -413,8 +423,8 @@ export function StudioImmersiveModal({
               />
 
               {/* Cartridge Headshell & Cyan Stylus Tip */}
-              <div className="absolute bottom-5 left-3 w-4.5 h-8 bg-gradient-to-b from-slate-700 to-slate-900 border border-white/30 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.95)] flex flex-col items-center justify-end pb-1 rotate-[10deg]">
-                <div className="w-1 h-2 bg-cyan-400 rounded-xs shadow-[0_0_8px_#00e5ff,0_0_16px_#00e5ff]" />
+              <div className="absolute bottom-5 left-3 w-4.5 h-8 bg-gradient-to-b from-slate-700 to-surface-sunken border border-ink/30 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.95)] flex flex-col items-center justify-end pb-1 rotate-[10deg]">
+                <div className="w-1 h-2 bg-accent rounded-sm shadow-[0_0_8px_#00e5ff,0_0_16px_#00e5ff]" />
               </div>
             </div>
           </div>
@@ -425,10 +435,10 @@ export function StudioImmersiveModal({
           {/* Responsive Audio Frequency Spectrum Visualizer */}
           <AudioFrequencyVisualizer isPlaying={isPlaying} />
 
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-xl line-clamp-1">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-ink tracking-tight drop-shadow-xl line-clamp-1">
             {currentTrack.title}
           </h1>
-          <p className="text-sm sm:text-lg text-gray-300 font-medium drop-shadow-md line-clamp-1">
+          <p className="text-sm sm:text-lg text-ink-secondary font-medium drop-shadow-md line-clamp-1">
             {currentTrack.artist}
           </p>
         </div>
@@ -443,15 +453,26 @@ export function StudioImmersiveModal({
             onClick={handleProgressBarClick}
             onMouseMove={handleProgressBarMouseMove}
             onMouseLeave={() => setHoverSeekPos(null)}
-            className="relative w-full bg-white/15 hover:bg-white/25 h-2.5 sm:h-3 rounded-full cursor-pointer overflow-hidden backdrop-blur-md transition-all group"
+            className="relative w-full bg-ink/15 hover:bg-ink/25 h-2.5 sm:h-3 rounded-full cursor-pointer backdrop-blur-md transition group focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-canvas"
           >
             <div
-              className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400 rounded-full transition-all duration-200 shadow-md shadow-sky-400/50"
-              style={{ width: `${progressPercent}%` }}
+              className="h-full w-full origin-left bg-gradient-to-r from-accent via-accent to-ember rounded-full transition-transform duration-200 shadow-md shadow-accent/50"
+              style={{ transform: `scaleX(${progressPercent / 100})` }}
+            />
+            <input
+              type="range"
+              min="0"
+              max={effectiveDuration}
+              step={1000}
+              value={positionMs}
+              onChange={(e) => onSeek(Number(e.target.value))}
+              aria-label="Seek"
+              aria-valuetext={formatTime(positionMs)}
+              className="absolute inset-x-0 -top-3 -bottom-3 h-auto w-full cursor-pointer opacity-0"
             />
           </div>
 
-          <div className="flex justify-between text-[11px] sm:text-xs font-mono text-gray-400">
+          <div className="flex justify-between text-[11px] sm:text-xs font-mono text-ink-muted">
             <span>{formatTime(hoverSeekPos !== null ? hoverSeekPos : positionMs)}</span>
             <span>{formatTime(effectiveDuration)}</span>
           </div>
@@ -465,8 +486,8 @@ export function StudioImmersiveModal({
               onToggleLike(currentTrack);
             }}
             aria-label="Toggle Like Track"
-            className={`p-2.5 sm:p-3 rounded-full transition-all cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center ${
-              isLiked ? "text-rose-500 bg-rose-500/10 scale-110" : "text-gray-400 hover:text-white hover:bg-white/10"
+            className={`p-2.5 sm:p-3 rounded-full transition cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center ${
+              isLiked ? "text-like bg-like/10 scale-110" : "text-ink-muted hover:text-ink hover:bg-ink/10"
             }`}
           >
             <Heart className={`w-5 h-5 sm:w-6 sm:h-6 ${isLiked ? "fill-current" : ""}`} />
@@ -479,7 +500,7 @@ export function StudioImmersiveModal({
                 onPrevious();
               }}
               aria-label="Previous Track"
-              className="p-2.5 sm:p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2.5 sm:p-3 text-ink-secondary hover:text-ink hover:bg-ink/10 rounded-full transition cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               <SkipBack className="w-5 h-5 sm:w-7 sm:h-7" />
             </button>
@@ -489,14 +510,22 @@ export function StudioImmersiveModal({
                 hapticMedium();
                 onTogglePlay();
               }}
-              aria-label={isPlaying ? "Pause Track" : "Play Track"}
-              className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
+              aria-label={isBuffering ? "Buffering" : isPlaying ? "Pause Track" : "Play Track"}
+              aria-busy={isBuffering}
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-ink text-canvas flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer"
             >
-              {isPlaying ? (
-                <Pause className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
-              ) : (
-                <Play className="w-6 h-6 sm:w-8 sm:h-8 fill-current ml-1" />
-              )}
+              <span
+                key={isBuffering ? "buffering" : isPlaying ? "pause" : "play"}
+                className="animate-icon-swap flex items-center justify-center"
+              >
+                {isBuffering ? (
+                  <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" />
+                ) : isPlaying ? (
+                  <Pause className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
+                ) : (
+                  <Play className="w-6 h-6 sm:w-8 sm:h-8 fill-current ml-1" />
+                )}
+              </span>
             </button>
 
             <button
@@ -505,7 +534,7 @@ export function StudioImmersiveModal({
                 onNext();
               }}
               aria-label="Next Track"
-              className="p-2.5 sm:p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2.5 sm:p-3 text-ink-secondary hover:text-ink hover:bg-ink/10 rounded-full transition cursor-pointer hover:scale-110 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               <SkipForward className="w-5 h-5 sm:w-7 sm:h-7" />
             </button>
@@ -523,7 +552,7 @@ export function StudioImmersiveModal({
                   setIsMuted(true);
                 }
               }}
-              className="p-2.5 text-gray-400 hover:text-white transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2.5 text-ink-muted hover:text-ink transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
@@ -537,11 +566,13 @@ export function StudioImmersiveModal({
                 setIsMuted(false);
                 onVolumeChange(parseFloat(e.target.value));
               }}
-              className="hidden sm:block w-20 sm:w-24 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#00e5ff]"
+              aria-label="Volume"
+              className="hidden sm:block w-20 sm:w-24 h-1.5 bg-ink/20 rounded-lg appearance-none cursor-pointer accent-accent"
             />
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -119,11 +119,11 @@ export function GenreDirectoryView({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Radio className="w-5 h-5 text-[#00e5c9]" />
+          <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight flex items-center gap-2">
+            <Radio className="w-5 h-5 text-accent" />
             <span>Genre Ecosystem & Similar Soundscapes</span>
           </h1>
-          <p className="text-xs text-[#718096] mt-1">
+          <p className="text-xs text-ink-muted mt-1">
             Browse musical genres, legendary artists, landmark albums, and launch continuous sound-alike mixes.
           </p>
         </div>
@@ -139,12 +139,12 @@ export function GenreDirectoryView({
           return (
             <div
               key={card.id}
-              className={`rounded-2xl p-5 border transition-all duration-300 flex flex-col justify-between bg-gradient-to-br ${
+              className={`rounded-2xl p-5 border transition duration-300 flex flex-col justify-between bg-gradient-to-br ${
                 card.gradient
               } ${
                 isSelected
-                  ? "border-[#00e5c9] ring-1 ring-[#00e5c9]/50"
-                  : `border-[#1b2334] ${card.borderHover}`
+                  ? "border-accent ring-1 ring-accent/50"
+                  : `border-line ${card.borderHover}`
               }`}
             >
               <div className="space-y-3">
@@ -154,7 +154,7 @@ export function GenreDirectoryView({
                   </span>
                   <button
                     onClick={() => onPlayGenreRadio(card.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00e5c9] hover:bg-[#00cbb2] text-[#081014] text-xs font-bold transition-all shadow-md shadow-[#00e5c9]/20 hover:scale-105 cursor-pointer"
+                    className="flex min-h-10 items-center gap-1.5 px-3 py-1.5 rounded-control bg-accent hover:bg-accent-strong text-accent-foreground text-xs font-bold transition shadow-md shadow-accent/20 hover:scale-105 cursor-pointer"
                     title={`Start ${card.title} Radio`}
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
@@ -163,10 +163,10 @@ export function GenreDirectoryView({
                 </div>
 
                 <div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
+                  <h3 className="text-base font-bold text-ink tracking-tight">
                     {card.title}
                   </h3>
-                  <p className="text-[11px] text-[#9ba5b9] mt-1 line-clamp-2">
+                  <p className="text-[11px] text-ink-secondary mt-1 line-clamp-2">
                     {card.tagline}
                   </p>
                 </div>
@@ -174,8 +174,8 @@ export function GenreDirectoryView({
                 {/* Leading Artists in Genre */}
                 {artists.length > 0 && (
                   <div className="pt-2">
-                    <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                      <Users className="w-3 h-3 text-[#00e5c9]" />
+                    <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                      <Users className="w-3 h-3 text-accent" />
                       <span>Key Artists</span>
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -183,7 +183,7 @@ export function GenreDirectoryView({
                         <button
                           key={a.id}
                           onClick={() => onSelectArtist(a)}
-                          className="px-2 py-0.5 rounded-md text-[10px] bg-black/40 hover:bg-black/80 text-white border border-white/10 hover:border-[#00e5c9]/40 transition-colors cursor-pointer"
+                          className="min-h-9 px-2 py-0.5 rounded-md text-[11px] bg-black/40 hover:bg-black/80 text-ink border border-ink/10 hover:border-accent/40 transition-colors cursor-pointer"
                         >
                           {a.name}
                         </button>
@@ -195,8 +195,8 @@ export function GenreDirectoryView({
                 {/* Key Albums in Genre */}
                 {albums.length > 0 && (
                   <div className="pt-2">
-                    <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider flex items-center gap-1 mb-1.5">
-                      <Disc3 className="w-3 h-3 text-indigo-400" />
+                    <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                      <Disc3 className="w-3 h-3 text-accent" />
                       <span>Soundtracks & Albums</span>
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -204,7 +204,7 @@ export function GenreDirectoryView({
                         <button
                           key={alb.id}
                           onClick={() => onSelectAlbum(alb)}
-                          className="px-2 py-0.5 rounded-md text-[10px] bg-black/40 hover:bg-black/80 text-white border border-white/10 hover:border-indigo-400/40 transition-colors cursor-pointer truncate max-w-full"
+                          className="min-h-9 px-2 py-0.5 rounded-md text-[11px] bg-black/40 hover:bg-black/80 text-ink border border-ink/10 hover:border-accent/40 transition-colors cursor-pointer truncate max-w-full"
                         >
                           {alb.title} ({alb.releaseYear})
                         </button>
@@ -214,11 +214,11 @@ export function GenreDirectoryView({
                 )}
               </div>
 
-              <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-[#8c94aa]">
+              <div className="pt-4 mt-4 border-t border-ink/10 flex items-center justify-between text-[11px] text-ink-muted">
                 <span>{artists.length} artists cataloged</span>
                 <button
                   onClick={() => onPlayGenreRadio(card.id)}
-                  className="text-[#00e5c9] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                  className="min-h-10 text-accent hover:underline font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <Sparkles className="w-3 h-3" />
                   <span>Start Endless Station</span>

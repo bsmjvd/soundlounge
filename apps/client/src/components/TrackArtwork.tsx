@@ -64,7 +64,7 @@ export function TrackArtwork({
   if (!imgSrc || hasError) {
     return (
       <div
-        className={`${className} bg-[#141722] border border-[#222738] flex items-center justify-center text-[#5a6275] flex-shrink-0 select-none`}
+        className={`${className} bg-surface-raised border border-line flex items-center justify-center text-ink-subtle flex-shrink-0 select-none`}
         title={title}
       >
         <Music2 className={iconClassName} />
@@ -74,7 +74,7 @@ export function TrackArtwork({
 
   return (
     <div
-      className={`${className} overflow-hidden bg-[#141722] border border-[#222738] flex-shrink-0 relative select-none`}
+      className={`${className} overflow-hidden bg-surface-raised border border-line flex-shrink-0 relative select-none`}
     >
       <img
         src={imgSrc}

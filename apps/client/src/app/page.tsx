@@ -15,6 +15,7 @@ import { InviteModal } from "../components/InviteModal";
 import { AccessDenied } from "../components/AccessDenied";
 import { StudioImmersiveModal } from "../components/StudioImmersiveModal";
 import { NavigationSidebar, type NavTab } from "../components/NavigationSidebar";
+import { MobileNav } from "../components/MobileNav";
 import { ArtistDetailView } from "../components/ArtistDetailView";
 import { AlbumDetailView } from "../components/AlbumDetailView";
 import { GenreDirectoryView } from "../components/GenreDirectoryView";
@@ -77,6 +78,25 @@ export default function SoundloungeApp() {
     setActiveTab(tab);
     setNavHistory((prev) => [...prev.slice(0, historyIndex + 1), tab]);
     setHistoryIndex((prev) => prev + 1);
+  };
+
+  const handleTopNavChange = (tab: TopNavTab) => {
+    setSelectedArtist(null);
+    setSelectedAlbum(null);
+    setTopNavTab(tab);
+    if (tab === "discover") {
+      setActiveTab("home");
+    } else if (tab === "library") {
+      setActiveTab("liked");
+    } else if (tab === "radio") {
+      setActiveTab("genres");
+    }
+  };
+
+  const openQueue = () => {
+    setSelectedArtist(null);
+    setSelectedAlbum(null);
+    setActiveTab("queue");
   };
 
   const handleNavBack = () => {
@@ -249,29 +269,18 @@ export default function SoundloungeApp() {
       }}
       onSelectAlbum={(album) => setSelectedAlbum(album)}
       activeTopTab={topNavTab}
-      onTopTabChange={(tab) => {
-        setSelectedArtist(null);
-        setSelectedAlbum(null);
-        setTopNavTab(tab);
-        if (tab === "discover") {
-          setActiveTab("home");
-        } else if (tab === "library") {
-          setActiveTab("liked");
-        } else if (tab === "radio") {
-          setActiveTab("genres");
-        }
-      }}
+      onTopTabChange={handleTopNavChange}
     />
   );
 
   // Library, queue and settings come from localStorage, which the server render can't see; render only on the client
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => setIsMounted(true), []);
-  if (!isMounted) return <div className="min-h-screen bg-[#0e1422]" />;
+  if (!isMounted) return <div className="min-h-dvh bg-canvas" />;
 
   if (playerState.mode === "synced" && sync.isAccessDenied) {
     return (
-      <div className="min-h-screen bg-[#080f14]">
+      <div className="min-h-dvh bg-canvas">
         {topBar}
         <AccessDenied
           roomId={roomId}
@@ -285,7 +294,10 @@ export default function SoundloungeApp() {
   const isDiscoverHome = !selectedArtist && !selectedAlbum && activeTab === "home" && topNavTab === "discover";
 
   return (
-    <div className="min-h-screen bg-[#0e1422] text-[#f3f4f6] relative overflow-x-hidden selection:bg-[#00e5ff]/30 selection:text-white">
+    <div
+      id="app-shell"
+      className="min-h-dvh bg-canvas text-ink relative overflow-x-hidden selection:bg-accent/30 selection:text-ink"
+    >
       {/* Full-bleed Ambient Blurred Song Backdrop */}
       <AmbientBackground currentTrack={activeTrack} isPlaying={playerState.status === "playing"} />
 
@@ -293,7 +305,7 @@ export default function SoundloungeApp() {
       <FallingLeavesAmbient enabled={isLeavesEnabled} />
 
       {/* Main Studio Shell: Left Sidebar ("Playlist") + Right Main Stage */}
-      <div className="relative z-10 flex min-h-screen">
+      <div className="relative z-10 flex min-h-dvh">
         {/* Left Persistent Navigation & Playlist Sidebar */}
         <NavigationSidebar
           activeTab={activeTab}
@@ -319,25 +331,11 @@ export default function SoundloungeApp() {
         />
 
         {/* Right Stage: Top Bar + Content Canvas */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between pb-28">
+        <div className="flex-1 min-w-0 flex flex-col justify-between pb-player">
           <div>
             {isDiscoverHome ? (
-              <div className="relative w-full overflow-hidden min-h-[340px] sm:min-h-[380px] bg-gradient-to-r from-[#175d69] via-[#103a4c] to-[#0c192c] pb-32 sm:pb-24">
-                {/* 1. Ambient Glowing Cyan Atmosphere Matching Reference Design */}
-                <div className="absolute top-0 left-0 w-[680px] h-[550px] bg-[radial-gradient(ellipse_at_top_left,#00e5ff_0%,#187280_45%,transparent_75%)] opacity-40 pointer-events-none z-[1]" />
-                <div className="absolute -top-10 right-0 w-[680px] h-[650px] bg-[radial-gradient(ellipse_at_top_right,#1b3d68_0%,#0f223a_50%,transparent_80%)] opacity-35 pointer-events-none z-[1]" />
-
-                {/* 2. Ambient Blurred Full-Bleed Color Wash reflecting current spotlight artwork across the stage */}
-                <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden opacity-25">
-                  <img
-                    key={`ambient-${currentSpotlight.id}`}
-                    src={currentSpotlight.heroImageUrl}
-                    alt=""
-                    className="w-full h-full object-cover object-center blur-3xl scale-110 select-none animate-in fade-in duration-1000"
-                  />
-                </div>
-
-                {/* 3. THE HERO ARTWORK / ARTIST PORTRAIT: EXTENDS SEAMLESSLY DOWN BEHIND POPULAR ALBUMS (FLAWLESS MULTI-EDGE BLEND) */}
+              <div className="hero-stage w-full overflow-hidden min-h-[340px] sm:min-h-[380px] pb-32 sm:pb-24">
+                {/* THE HERO ARTWORK / ARTIST PORTRAIT: EXTENDS SEAMLESSLY DOWN BEHIND POPULAR ALBUMS (FLAWLESS MULTI-EDGE BLEND) */}
                 <div className="absolute top-0 right-0 w-full sm:w-[70%] lg:w-[62%] xl:w-[56%] h-[580px] sm:h-[880px] pointer-events-none z-[2] overflow-hidden flex items-start justify-end">
                   <img
                     key={currentSpotlight.id}
@@ -346,11 +344,8 @@ export default function SoundloungeApp() {
                     className="w-full h-full object-cover object-top sm:object-[center_top] select-none [mask-image:linear-gradient(to_bottom,black_35%,transparent_95%)] sm:[mask-image:radial-gradient(ellipse_at_70%_35%,black_38%,rgba(0,0,0,0.85)_60%,transparent_88%)] [webkit-mask-image:linear-gradient(to_bottom,black_35%,transparent_95%)] sm:[webkit-mask-image:radial-gradient(ellipse_at_70%_35%,black_38%,rgba(0,0,0,0.85)_60%,transparent_88%)] animate-in fade-in duration-700 opacity-70 sm:opacity-100"
                   />
                   {/* Subtle right-edge lateral fade protecting ultra-wide viewports */}
-                  <div className="absolute inset-y-0 right-0 w-16 sm:w-28 bg-gradient-to-l from-[#0c192c] to-transparent pointer-events-none" />
+                  <div className="absolute inset-y-0 right-0 w-16 sm:w-28 bg-gradient-to-l from-canvas to-transparent pointer-events-none" />
                 </div>
-
-                {/* 4. Ambient Bottom-Edge Smooth Gradient Fade into Deep Canvas (Only below Popular Albums) */}
-                <div className="absolute bottom-0 inset-x-0 h-44 bg-gradient-to-b from-transparent via-[#060b13]/80 to-[#060b13] pointer-events-none z-[3]" />
 
                 {/* TopBar sitting seamlessly over the hero stage */}
                 <div className="relative z-20">
@@ -370,7 +365,7 @@ export default function SoundloungeApp() {
                 </div>
 
                 {/* UNIFIED DISCOVER CONTENT: Taste Profile -> Tailored Albums -> Popular Artists */}
-                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 space-y-12 pt-2">
+                <div className="animate-view-in relative z-10 max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 space-y-12 pt-2">
                   <DynamicTasteHomeSections
                     onPlayTrack={handlePlaySingleTrack}
                     onPlayMix={handlePlayTracks}
@@ -411,7 +406,7 @@ export default function SoundloungeApp() {
                 {topBar}
 
                 {/* Stage Canvas for non-discover views */}
-                <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:pb-28">
+                <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-3 sm:pt-6 pb-player">
                   {/* Detailed Artist Profile & Discography View */}
                   {selectedArtist ? (
                     <ArtistDetailView
@@ -440,11 +435,11 @@ export default function SoundloungeApp() {
                       onSelectAlbum={(alb) => setSelectedAlbum(alb)}
                     />
                   ) : activeTab === "queue" ? (
-                    <div className="max-w-4xl mx-auto space-y-6">
-                      <div className="flex items-center justify-between">
+                    <div className="animate-view-in max-w-4xl mx-auto space-y-6">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <h2 className="text-xl font-bold text-white tracking-tight">Playing Queue</h2>
-                          <p className="text-xs text-slate-400">
+                          <h2 className="text-xl font-bold text-ink tracking-tight font-display">Playing Queue</h2>
+                          <p className="text-xs text-ink-muted">
                             {queue.length} track{queue.length === 1 ? "" : "s"} scheduled • Autoplay similar soundscapes
                           </p>
                         </div>
@@ -453,7 +448,7 @@ export default function SoundloungeApp() {
                             setActiveTab("home");
                             setTopNavTab("discover");
                           }}
-                          className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
+                          className="min-h-11 text-xs text-accent hover:underline cursor-pointer"
                         >
                           Back to Discover
                         </button>
@@ -473,11 +468,11 @@ export default function SoundloungeApp() {
                       />
                     </div>
                   ) : activeTab === "search" ? (
-                    <div className="max-w-4xl mx-auto space-y-6">
-                      <div className="flex items-center justify-between">
+                    <div className="animate-view-in max-w-4xl mx-auto space-y-6">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <h2 className="text-lg font-bold text-white tracking-tight">Music Search & Ingestion</h2>
-                          <p className="text-xs text-slate-400">
+                          <h2 className="text-lg font-bold text-ink tracking-tight font-display">Music Search & Ingestion</h2>
+                          <p className="text-xs text-ink-muted">
                             Direct search powered by YouTube & low-latency edge audio streaming
                           </p>
                         </div>
@@ -487,7 +482,7 @@ export default function SoundloungeApp() {
                             setActiveTab("home");
                             setTopNavTab("discover");
                           }}
-                          className="text-xs text-[#00e5ff] hover:underline cursor-pointer"
+                          className="min-h-11 text-xs text-accent hover:underline cursor-pointer"
                         >
                           Back to Discover
                         </button>
@@ -504,7 +499,7 @@ export default function SoundloungeApp() {
                       />
                     </div>
                   ) : topNavTab === "library" || activeTab === "liked" || activeTab === "history" ? (
-                    <div className="max-w-5xl mx-auto">
+                    <div className="animate-view-in max-w-5xl mx-auto">
                       <LibraryView
                         likedTracks={likedTracks}
                         playlists={playlists}
@@ -519,7 +514,7 @@ export default function SoundloungeApp() {
                       />
                     </div>
                   ) : topNavTab === "radio" || activeTab === "genres" ? (
-                    <div className="max-w-6xl mx-auto">
+                    <div className="animate-view-in max-w-6xl mx-auto">
                       <GenreDirectoryView
                         onPlayGenreRadio={handlePlayGenreRadio}
                         onSelectArtist={(artist) => setSelectedArtist(artist)}
@@ -533,6 +528,17 @@ export default function SoundloungeApp() {
           </div>
         </div>
       </div>
+
+      {/* Mobile primary navigation in the thumb zone. Rendered before the player so
+          the keyboard order matches the visual order from top to bottom. */}
+      <MobileNav
+        activeTopTab={topNavTab}
+        activeTab={activeTab}
+        onSelect={handleTopNavChange}
+        onOpenQueue={openQueue}
+        hasPlayer={!!activeTrack}
+        queueCount={queue.length}
+      />
 
       {/* Persistent Bottom Edge-to-Edge Audio Player Bar */}
       <PlayerBar
@@ -552,7 +558,7 @@ export default function SoundloungeApp() {
         onPrevious={handlePrevious}
         onVolumeChange={(v) => coordinator.setVolume(v)}
         onOpenStudio={() => setIsStudioOpen(true)}
-        onOpenQueue={() => setActiveTab("queue")}
+        onOpenQueue={openQueue}
       />
 
       {/* Share / Invite Modal */}

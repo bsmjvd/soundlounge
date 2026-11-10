@@ -1,16 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Music2,
   Play,
   Pause,
-  MoreVertical,
   X,
   Share2,
-  Compass,
-  Heart,
-  ListMusic,
   Clock,
   Radio,
   Users,
@@ -22,6 +18,7 @@ import type { Track } from "@soundlounge/shared";
 import { TrackArtwork } from "./TrackArtwork";
 import { hapticLight } from "../lib/haptics";
 import { useTasteProfile } from "../lib/recommendation/useTasteProfile";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export type NavTab =
   | "home"
@@ -84,6 +81,19 @@ export function NavigationSidebar({
   historyTracks = [],
 }: NavigationSidebarProps) {
   const [sidebarFilter, setSidebarFilter] = useState<PlaylistSidebarFilter>("my_playlist");
+  const [isDesktop, setIsDesktop] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
+  useFocusTrap(isOpenMobile, asideRef, () => onCloseMobile?.());
+
+  // The drawer stays mounted for its slide animation; keep it out of the tab order
+  // and the accessibility tree on mobile while it is closed.
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   // Prevent background scrolling on mobile when navigation drawer is open
   useEffect(() => {
@@ -97,18 +107,6 @@ export function NavigationSidebar({
       document.body.style.overflow = "";
     };
   }, [isOpenMobile]);
-
-  // Close drawer on Escape key
-  useEffect(() => {
-    if (!isOpenMobile) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onCloseMobile?.();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpenMobile, onCloseMobile]);
 
   const { getSidebarRecommendedTracks } = useTasteProfile();
   const likedTracks = useLibraryStore((s) => s.likedTracks);
@@ -160,25 +158,28 @@ export function NavigationSidebar({
 
       {/* Responsive Left Sidebar Drawer: Fixed & Elevated on Mobile, Static Column on Desktop */}
       <aside
-        role="dialog"
-        aria-modal={isOpenMobile}
+        ref={asideRef}
+        role={isOpenMobile ? "dialog" : undefined}
+        aria-modal={isOpenMobile ? true : undefined}
         aria-label="Navigation & Playlist Sidebar"
-        className={`fixed lg:static top-0 bottom-0 left-0 z-[130] lg:z-30 w-[86vw] max-w-[340px] sm:max-w-[360px] lg:w-80 flex-shrink-0 bg-[#0c121e] border-r border-[#152033] shadow-2xl shadow-black/80 lg:shadow-none flex flex-col justify-between px-4 sm:px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:py-6 transition-transform duration-300 ease-out ${
+        tabIndex={-1}
+        inert={!isOpenMobile && !isDesktop ? true : undefined}
+        className={`fixed lg:static top-0 bottom-0 left-0 z-[130] lg:z-30 w-[86vw] max-w-[340px] sm:max-w-[360px] lg:w-80 flex-shrink-0 bg-surface border-r border-line shadow-2xl shadow-black/80 lg:shadow-none flex flex-col justify-between px-4 sm:px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:py-6 transition-transform duration-300 ease-out ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="flex-1 flex flex-col min-h-0">
           {/* Header & Mobile Close */}
-          <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-800/80 lg:border-none lg:pb-0">
+          <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-line/80 lg:border-none lg:pb-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-xs sm:text-sm shadow-[0_0_12px_rgba(0,229,255,0.4)]">
+              <div className="w-8 h-8 rounded-control bg-accent flex items-center justify-center text-accent-foreground font-black text-sm shadow-glow-soft">
                 SL
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-sans leading-tight">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink font-display leading-tight">
                   Playlist
                 </h1>
-                <span className="text-[10px] text-slate-400 lg:hidden font-mono">
+                <span className="text-[11px] text-ink-muted lg:hidden font-mono">
                   {mode === "synced" ? `Synced Room #${roomId}` : "Solo Player"}
                 </span>
               </div>
@@ -190,7 +191,7 @@ export function NavigationSidebar({
                   hapticLight();
                   onCloseMobile?.();
                 }}
-                className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                className="w-11 h-11 rounded-full bg-surface-raised/80 hover:bg-surface-overlay text-ink-muted hover:text-ink flex items-center justify-center transition-colors cursor-pointer"
                 aria-label="Close navigation"
               >
                 <X className="w-4 h-4" />
@@ -198,128 +199,77 @@ export function NavigationSidebar({
             )}
           </div>
 
-          {/* MOBILE ONLY: Quick Exploration & Library Navigation Hub */}
-          <div className="lg:hidden mb-4 pb-3 border-b border-slate-800/80">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">
-              Navigate
+          {/* MOBILE ONLY: Secondary destinations. Primary nav lives in the thumb dock. */}
+          <div className="lg:hidden mb-4 pb-3 border-b border-line/80">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2 px-1">
+              More
             </p>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               <button
-                onClick={() => handleNavClick("home")}
-                className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === "home"
-                    ? "bg-[#00e5ff]/15 text-[#00e5ff] font-bold ring-1 ring-[#00e5ff]/30"
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                onClick={() => handleNavClick("artists")}
+                aria-current={activeTab === "artists" ? "page" : undefined}
+                className={`flex min-h-11 flex-col items-center justify-center gap-1 rounded-control text-[11px] font-semibold transition cursor-pointer ${
+                  activeTab === "artists"
+                    ? "bg-accent/15 text-accent ring-1 ring-accent/30"
+                    : "text-ink-secondary hover:bg-surface-raised/60 hover:text-ink"
                 }`}
               >
-                <Compass className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">Discover</span>
-              </button>
-
-              <button
-                onClick={() => handleNavClick("liked")}
-                className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === "liked"
-                    ? "bg-[#00e5ff]/15 text-[#00e5ff] font-bold ring-1 ring-[#00e5ff]/30"
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Heart className="w-3.5 h-3.5 flex-shrink-0 text-rose-400" />
-                  <span className="truncate">Liked</span>
-                </div>
-                {likedCount > 0 && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300">
-                    {likedCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => handleNavClick("queue")}
-                className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === "queue"
-                    ? "bg-[#00e5ff]/15 text-[#00e5ff] font-bold ring-1 ring-[#00e5ff]/30"
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <ListMusic className="w-3.5 h-3.5 flex-shrink-0 text-cyan-400" />
-                  <span className="truncate">Queue</span>
-                </div>
-                {queueCount > 0 && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[#00e5ff]/20 text-[#00e5ff]">
-                    {queueCount}
-                  </span>
-                )}
+                <Users className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Artists</span>
               </button>
 
               <button
                 onClick={() => handleNavClick("history")}
-                className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                aria-current={activeTab === "history" ? "page" : undefined}
+                className={`flex min-h-11 flex-col items-center justify-center gap-1 rounded-control text-[11px] font-semibold transition cursor-pointer ${
                   activeTab === "history"
-                    ? "bg-[#00e5ff]/15 text-[#00e5ff] font-bold ring-1 ring-[#00e5ff]/30"
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                    ? "bg-accent/15 text-accent ring-1 ring-accent/30"
+                    : "text-ink-secondary hover:bg-surface-raised/60 hover:text-ink"
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Clock className="w-3.5 h-3.5 flex-shrink-0 text-amber-400" />
-                  <span className="truncate">History</span>
-                </div>
-                {historyCount > 0 && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300">
-                    {historyCount}
-                  </span>
-                )}
+                <Clock className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">History</span>
               </button>
 
               <button
                 onClick={() => handleNavClick("genres")}
-                className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                aria-current={
+                  activeTab === "genres" || activeTab === "radio" ? "page" : undefined
+                }
+                className={`flex min-h-11 flex-col items-center justify-center gap-1 rounded-control text-[11px] font-semibold transition cursor-pointer ${
                   activeTab === "genres" || activeTab === "radio"
-                    ? "bg-[#00e5ff]/15 text-[#00e5ff] font-bold ring-1 ring-[#00e5ff]/30"
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                    ? "bg-accent/15 text-accent ring-1 ring-accent/30"
+                    : "text-ink-secondary hover:bg-surface-raised/60 hover:text-ink"
                 }`}
               >
-                <Radio className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" />
-                <span className="truncate">Radio</span>
-              </button>
-
-              <button
-                onClick={() => handleNavClick("artists")}
-                className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === "artists"
-                    ? "bg-[#00e5ff]/15 text-[#00e5ff] font-bold ring-1 ring-[#00e5ff]/30"
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
-                }`}
-              >
-                <Users className="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" />
-                <span className="truncate">Artists</span>
+                <Radio className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Genres</span>
               </button>
             </div>
           </div>
 
           {/* Sub-navigation Filters: My Playlist, Last Listening, Recommended */}
-          <nav className="space-y-1 mb-3 pb-2.5 border-b border-slate-800/80">
+          <nav className="space-y-1 mb-3 pb-2.5 border-b border-line/80">
             <button
               onClick={() => {
                 hapticLight();
                 setSidebarFilter("my_playlist");
               }}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer min-h-[38px] ${
+              aria-pressed={sidebarFilter === "my_playlist"}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-control text-xs font-semibold tracking-wide transition cursor-pointer min-h-11 ${
                 sidebarFilter === "my_playlist"
-                  ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+                  ? "text-accent bg-accent/10 font-bold"
+                  : "text-ink-muted hover:text-ink hover:bg-surface-raised/40"
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <Music2
-                  className={`w-3.5 h-3.5 ${sidebarFilter === "my_playlist" ? "text-[#00e5ff]" : "text-slate-400"}`}
+                  className={`w-3.5 h-3.5 ${sidebarFilter === "my_playlist" ? "text-accent" : "text-ink-muted"}`}
                 />
                 <span>My Playlist</span>
               </div>
               {queueCount > 0 && (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[#00e5ff]/20 text-[#00e5ff]">
+                <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-full bg-accent/20 text-accent">
                   {queueCount}
                 </span>
               )}
@@ -330,24 +280,25 @@ export function NavigationSidebar({
                 hapticLight();
                 setSidebarFilter("last_listening");
               }}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer min-h-[38px] ${
+              aria-pressed={sidebarFilter === "last_listening"}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-control text-xs font-semibold tracking-wide transition cursor-pointer min-h-11 ${
                 sidebarFilter === "last_listening"
-                  ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+                  ? "text-accent bg-accent/10 font-bold"
+                  : "text-ink-muted hover:text-ink hover:bg-surface-raised/40"
               }`}
             >
               <div className="flex items-center gap-2.5">
                 <span
                   className={`w-2 h-2 rounded-full border ${
                     sidebarFilter === "last_listening"
-                      ? "border-[#00e5ff] bg-[#00e5ff]"
-                      : "border-slate-500 bg-transparent"
+                      ? "border-accent bg-accent"
+                      : "border-ink-subtle bg-transparent"
                   }`}
                 />
                 <span>Last Listening</span>
               </div>
               {historyCount > 0 && (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-full bg-surface-raised text-ink-muted">
                   {historyCount}
                 </span>
               )}
@@ -358,15 +309,16 @@ export function NavigationSidebar({
                 hapticLight();
                 setSidebarFilter("recommended");
               }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer min-h-[38px] ${
+              aria-pressed={sidebarFilter === "recommended"}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition cursor-pointer min-h-11 ${
                 sidebarFilter === "recommended"
-                  ? "text-[#00e5ff] bg-[#00e5ff]/10 font-bold"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+                  ? "text-accent bg-accent/10 font-bold"
+                  : "text-ink-muted hover:text-ink hover:bg-surface-raised/40"
               }`}
             >
               <span
                 className={`w-2 h-2 rounded-full border ${
-                  sidebarFilter === "recommended" ? "border-[#00e5ff] bg-[#00e5ff]" : "border-slate-500 bg-transparent"
+                  sidebarFilter === "recommended" ? "border-accent bg-accent" : "border-ink-subtle bg-transparent"
                 }`}
               />
               <span>Recommended</span>
@@ -375,7 +327,7 @@ export function NavigationSidebar({
 
           {/* Numbered Tracks List (01, 02, 03...) with Touch Optimization */}
           <div
-            className="flex-1 overflow-y-auto pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent overscroll-contain"
+            className="flex-1 overflow-y-auto pr-1 space-y-1.5 scrollbar-none overscroll-contain"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
             {displayedTracks.map((track, idx) => {
@@ -387,16 +339,26 @@ export function NavigationSidebar({
                 <div
                   key={`${track.id}-${idx}`}
                   onClick={() => handleTrackClick(track)}
-                  className={`group relative flex items-center justify-between px-2.5 py-2.5 rounded-xl transition-all cursor-pointer select-none active:scale-[0.98] ${
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Play ${track.title} by ${track.artist}`}
+                  aria-current={isCurrent ? "true" : undefined}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleTrackClick(track);
+                    }
+                  }}
+                  className={`group relative flex items-center justify-between px-2.5 py-2.5 rounded-xl transition cursor-pointer select-none active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-accent ${
                     isCurrent
-                      ? "bg-[#182338] text-white shadow-md ring-1 ring-cyan-500/40"
-                      : "hover:bg-slate-800/50 text-slate-300"
+                      ? "bg-surface-raised text-ink shadow-md ring-1 ring-accent/40"
+                      : "hover:bg-surface-raised/50 text-ink-secondary"
                   }`}
                 >
                   {/* Left: Track Index / Touch-Friendly Play Indicator */}
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                     {/* Number label on desktop; on mobile, clear touch icon */}
-                    <span className="w-5 text-[11px] font-mono text-slate-400 text-center flex-shrink-0 group-hover:hidden hidden sm:inline-block">
+                    <span className="w-5 text-[11px] font-mono text-ink-muted text-center flex-shrink-0 group-hover:hidden hidden sm:inline-block">
                       {trackNum}
                     </span>
 
@@ -404,10 +366,10 @@ export function NavigationSidebar({
                     <div
                       className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-transform ${
                         isTrackPlaying
-                          ? "bg-[#00e5ff] text-[#0a0e17] shadow-[0_0_8px_rgba(0,229,255,0.5)]"
+                          ? "bg-accent text-accent-foreground shadow-[0_0_8px_rgba(0,229,255,0.5)]"
                           : isCurrent
-                            ? "bg-[#00e5ff]/20 text-[#00e5ff]"
-                            : "text-slate-400 group-hover:text-[#00e5ff] sm:hidden sm:group-hover:flex"
+                            ? "bg-accent/20 text-accent"
+                            : "text-ink-muted group-hover:text-accent sm:hidden sm:group-hover:flex"
                       }`}
                     >
                       {isTrackPlaying ? (
@@ -420,14 +382,14 @@ export function NavigationSidebar({
                     {/* Equalizer animation indicator for active / current track */}
                     {isTrackPlaying && (
                       <div className="hidden sm:flex items-end gap-0.5 h-3 flex-shrink-0">
-                        <span className="w-0.5 h-3 bg-[#00e5ff] animate-[sound-wave-1_1s_ease-in-out_infinite]" />
-                        <span className="w-0.5 h-2 bg-[#00e5ff] animate-[sound-wave-2_1.2s_ease-in-out_infinite]" />
-                        <span className="w-0.5 h-3.5 bg-[#00e5ff] animate-[sound-wave-3_0.9s_ease-in-out_infinite]" />
+                        <span className="w-0.5 h-3 origin-bottom bg-accent animate-sound-wave-1" />
+                        <span className="w-0.5 h-2 origin-bottom bg-accent animate-sound-wave-2" />
+                        <span className="w-0.5 h-3.5 origin-bottom bg-accent animate-sound-wave-3" />
                       </div>
                     )}
 
                     {/* Artwork Thumbnail */}
-                    <div className="w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 shadow-sm relative">
+                    <div className="w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-lg overflow-hidden bg-surface-raised flex-shrink-0 shadow-sm relative">
                       <TrackArtwork
                         coverUrl={track.coverUrl}
                         trackId={track.id}
@@ -440,32 +402,21 @@ export function NavigationSidebar({
                     <div className="min-w-0 flex-1">
                       <p
                         className={`text-xs sm:text-[13px] font-semibold truncate leading-tight ${
-                          isCurrent ? "text-white" : "text-slate-200 group-hover:text-white"
+                          isCurrent ? "text-ink" : "text-ink group-hover:text-ink"
                         }`}
                       >
                         {track.title}
                       </p>
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5 font-normal">
+                      <p className="text-[11px] text-ink-muted truncate mt-0.5 font-normal">
                         {track.artist}
                       </p>
                     </div>
                   </div>
 
-                  {/* Right side: Active Indicator or Touch Button */}
+                  {/* Right side: active indicator */}
                   <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                    {isCurrent ? (
-                      <span className="w-2 h-2 rounded-full bg-[#00e5ff] shadow-[0_0_8px_rgba(0,229,255,0.8)]" />
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTrackClick(track);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white transition-opacity cursor-pointer hidden sm:block"
-                        title="Play"
-                      >
-                        <MoreVertical className="w-3.5 h-3.5" />
-                      </button>
+                    {isCurrent && (
+                      <span className="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_rgba(0,229,255,0.8)]" />
                     )}
                   </div>
                 </div>
@@ -475,14 +426,14 @@ export function NavigationSidebar({
         </div>
 
         {/* Bottom Room Sync status pill */}
-        <div className="pt-3.5 mt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+        <div className="pt-3.5 mt-2 border-t border-line/80 flex items-center justify-between text-xs text-ink-muted">
           <div className="flex items-center gap-2">
             <span
               className={`w-2 h-2 rounded-full ${
-                mode === "synced" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-slate-600"
+                mode === "synced" ? "bg-positive shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-line-strong"
               }`}
             />
-            <span className="font-mono text-[11px] text-slate-300">
+            <span className="font-mono text-[11px] text-ink-secondary">
               {mode === "synced" ? `Room: ${roomId}` : "Solo Player"}
             </span>
           </div>
@@ -496,7 +447,7 @@ export function NavigationSidebar({
                 onOpenInvite();
               }
             }}
-            className="text-[11px] font-semibold text-[#00e5ff] hover:underline cursor-pointer flex items-center gap-1 py-1 px-1.5 rounded hover:bg-[#00e5ff]/10"
+            className="text-[11px] font-semibold text-accent hover:underline cursor-pointer flex items-center gap-1 py-1 px-1.5 rounded hover:bg-accent/10"
           >
             {mode === "synced" ? (
               <>

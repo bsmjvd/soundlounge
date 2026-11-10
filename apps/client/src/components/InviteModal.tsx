@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Copy, Check, ShieldCheck, Link2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { X, Copy, Check, ShieldCheck, Link2, Loader2 } from "lucide-react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -14,8 +16,28 @@ export function InviteModal({ isOpen, onClose, roomId, inviteToken }: InviteModa
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [copyError, setCopyError] = useState("");
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const shell = document.getElementById("app-shell");
+    shell?.setAttribute("inert", "");
+    return () => shell?.removeAttribute("inert");
+  }, [isOpen]);
+
+  useFocusTrap(isOpen, panelRef, onClose);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || typeof document === "undefined") return null;
 
   const handleCreatePrivate = async () => {
     setIsCreating(true);
@@ -37,82 +59,129 @@ export function InviteModal({ isOpen, onClose, roomId, inviteToken }: InviteModa
     inviteToken ? `&invite=${encodeURIComponent(inviteToken)}` : ""
   }`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopyError("");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError("Copy failed. Select the link and copy it manually.");
+    }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="bg-[#121622]/95 border border-white/10 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-5 backdrop-blur-2xl">
-        <div className="flex items-center justify-between">
+  return createPortal(
+    <div
+      className="animate-modal-overlay-in fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invite-title"
+        tabIndex={-1}
+        className="animate-modal-panel-in surface-panel rounded-card w-full max-w-md p-5 sm:p-6 space-y-5 outline-none"
+      >
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400 shadow-md shadow-sky-500/20">
+            <div className="w-10 h-10 rounded-control bg-ember/15 border border-ember/30 flex items-center justify-center text-ember">
               <Link2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Invite to Sync Lounge</h3>
-              <p className="text-[11px] text-gray-400">Share instant sub-30ms listening session</p>
+              <h3 id="invite-title" className="text-sm font-bold text-ink font-display">
+                Invite to Sync Lounge
+              </h3>
+              <p className="text-[11px] text-ink-muted">Share instant sub-30ms listening session</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Close invite modal"
-            className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="w-11 h-11 -mr-1 -mt-1 flex items-center justify-center rounded-control text-ink-muted hover:text-ink hover:bg-ink/10 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <p className="text-xs text-gray-300 leading-relaxed">
+        <p className="text-xs text-ink-secondary leading-relaxed">
           Anyone with this private link will join your room and synchronize their audio player to within sub-30ms using
           precision edge NTP clock barriers.
         </p>
 
         <div className="space-y-2">
-          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Shareable Invite URL</label>
+          <label
+            htmlFor="invite-url"
+            className="text-[11px] font-bold text-ink-muted uppercase tracking-wider"
+          >
+            Shareable Invite URL
+          </label>
 
-          <div className="flex items-center gap-2 bg-black/60 border border-white/10 rounded-2xl p-2 shadow-inner">
+          <div className="flex items-center gap-2 bg-canvas/60 border border-line-strong rounded-control p-2">
             <input
+              id="invite-url"
               type="text"
               readOnly
               value={inviteUrl}
-              className="bg-transparent border-none text-xs text-gray-200 w-full outline-none px-2 font-mono"
+              className="bg-transparent border-none text-base sm:text-xs text-ink-secondary w-full outline-none px-2 font-mono"
             />
             <button
+              type="button"
               onClick={handleCopy}
-              className="flex items-center gap-1.5 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-white/10 transition-all hover:scale-105 active:scale-95 cursor-pointer flex-shrink-0"
+              className="flex items-center gap-1.5 bg-accent hover:bg-accent-strong text-accent-foreground px-4 min-h-11 rounded-control text-xs font-bold transition-colors active:scale-[0.98] cursor-pointer flex-shrink-0"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? "Copied!" : "Copy"}
+              <span
+                key={copied ? "copied" : "copy"}
+                className="animate-icon-swap flex items-center gap-1.5"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Copied!" : "Copy"}
+              </span>
             </button>
           </div>
+          <span className="sr-only" role="status">
+            {copied ? "Invite link copied" : ""}
+          </span>
+          {copyError && (
+            <p role="alert" className="text-[11px] text-danger">
+              {copyError}
+            </p>
+          )}
         </div>
 
         {inviteToken ? (
-          <div className="flex items-center gap-2.5 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl p-3 text-xs text-emerald-300">
-            <ShieldCheck className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+          <div className="flex items-center gap-2.5 bg-positive/15 border border-positive/30 rounded-2xl p-3 text-xs text-positive">
+            <ShieldCheck className="w-4 h-4 flex-shrink-0 text-positive" />
             <span>Private room access key is securely embedded in the link.</span>
           </div>
         ) : (
           <div className="space-y-1.5">
             <button
+              type="button"
               onClick={handleCreatePrivate}
               disabled={isCreating}
-              className="w-full flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-2xl p-3 text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+              aria-busy={isCreating}
+              className="w-full min-h-11 flex items-center justify-center gap-2 border border-positive/30 bg-positive/10 hover:bg-positive/20 text-positive rounded-control p-3 text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
             >
-              <ShieldCheck className="w-4 h-4" />
-              {isCreating ? "Creating private room…" : "Create a private room instead"}
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="w-4 h-4" />
+              )}
+              Create a private room instead
             </button>
             {createError && (
-              <p role="alert" className="text-[11px] text-rose-400 text-center">
+              <p role="alert" className="text-[11px] text-danger text-center">
                 {createError}
               </p>
             )}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

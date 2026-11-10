@@ -21,6 +21,8 @@ export function AudioFrequencyVisualizer({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const reduceMotion =
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let bars = Array.from({ length: barCount }, () => Math.random() * 0.2 + 0.1);
     let targetBars = Array.from({ length: barCount }, () => 0.1);
@@ -57,8 +59,8 @@ export function AudioFrequencyVisualizer({
         // Gradient from cyan to indigo/emerald
         const grad = ctx.createLinearGradient(0, height, 0, 0);
         grad.addColorStop(0, "rgba(0, 229, 255, 0.4)");
-        grad.addColorStop(0.6, "rgba(56, 189, 248, 0.85)");
-        grad.addColorStop(1, "rgba(129, 140, 248, 1)");
+        grad.addColorStop(0.6, "rgba(0, 229, 255, 0.85)");
+        grad.addColorStop(1, "rgba(245, 179, 107, 1)");
 
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -76,7 +78,9 @@ export function AudioFrequencyVisualizer({
         }
       }
 
-      animFrameIdRef.current = requestAnimationFrame(render);
+      if (!reduceMotion) {
+        animFrameIdRef.current = requestAnimationFrame(render);
+      }
     };
 
     render();
