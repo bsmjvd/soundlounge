@@ -171,18 +171,25 @@ export function usePlaybackController({ roomId, inviteToken, recordPlay }: Playb
     }
   };
 
-  // Replace the queue with a list (album, mix, playlist, artist) and start the first track
-  const handlePlayTracks = (tracks: Track[]) => {
+  // Replace the queue with a list (album, mix, playlist, artist) and start playback
+  // at startIndex, so list views (sidebar playlist, liked songs) continue in order
+  const handlePlayTracksFrom = (tracks: Track[], startIndex: number) => {
     if (tracks.length === 0) return;
-    useQueueStore.getState().setQueue(tracks, 0);
-    addToHistory(tracks[0]);
+    const clamped = Math.max(0, Math.min(startIndex, tracks.length - 1));
+    const startTrack = tracks[clamped];
+    useQueueStore.getState().setQueue(tracks, clamped);
+    addToHistory(startTrack);
     if (playerState.mode === "synced") {
       sync.sendClearQueue();
       tracks.forEach((t) => sync.sendAddTrack(t));
-      sync.sendPlay(tracks[0].id, 0);
+      sync.sendPlay(startTrack.id, 0);
     } else {
-      coordinator.play(tracks[0], 0);
+      coordinator.play(startTrack, 0);
     }
+  };
+
+  const handlePlayTracks = (tracks: Track[]) => {
+    handlePlayTracksFrom(tracks, 0);
   };
 
   const handleAddTracksToQueue = (tracks: Track[]) => {
@@ -317,6 +324,7 @@ export function usePlaybackController({ roomId, inviteToken, recordPlay }: Playb
     handleClearQueue,
     handlePlaySingleTrack,
     handlePlayTracks,
+    handlePlayTracksFrom,
     handleResumeSession,
     handleTogglePlay,
     handleSeek,

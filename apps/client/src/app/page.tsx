@@ -150,6 +150,7 @@ export default function SoundloungeApp() {
     handleClearQueue,
     handlePlaySingleTrack,
     handlePlayTracks,
+    handlePlayTracksFrom,
     handleResumeSession,
     handleTogglePlay,
     handleSeek,
@@ -326,6 +327,7 @@ export default function SoundloungeApp() {
           currentTrack={activeTrack}
           isPlaying={playerState.status === "playing"}
           onPlayTrack={handlePlaySingleTrack}
+          onPlayTrackFromList={handlePlayTracksFrom}
           queue={queue}
           historyTracks={history}
         />

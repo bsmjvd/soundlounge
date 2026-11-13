@@ -54,6 +54,7 @@ interface NavigationSidebarProps {
   currentTrack?: Track | null;
   isPlaying?: boolean;
   onPlayTrack?: (track: Track) => void;
+  onPlayTrackFromList?: (tracks: Track[], startIndex: number) => void;
   queue?: Track[];
   historyTracks?: Track[];
 }
@@ -77,6 +78,7 @@ export function NavigationSidebar({
   currentTrack,
   isPlaying = false,
   onPlayTrack,
+  onPlayTrackFromList,
   queue = [],
   historyTracks = [],
 }: NavigationSidebarProps) {
@@ -129,9 +131,12 @@ export function NavigationSidebar({
     return getSidebarRecommendedTracks();
   }, [sidebarFilter, historyTracks, likedTracks, getSidebarRecommendedTracks]);
 
-  const handleTrackClick = (track: Track) => {
+  const handleTrackClick = (track: Track, idx: number) => {
     hapticLight();
-    if (onPlayTrack) {
+    // Play the whole sidebar list starting here, like a playlist
+    if (onPlayTrackFromList) {
+      onPlayTrackFromList(displayedTracks, idx);
+    } else if (onPlayTrack) {
       onPlayTrack(track);
     }
   };
@@ -338,7 +343,7 @@ export function NavigationSidebar({
               return (
                 <div
                   key={`${track.id}-${idx}`}
-                  onClick={() => handleTrackClick(track)}
+                  onClick={() => handleTrackClick(track, idx)}
                   role="button"
                   tabIndex={0}
                   aria-label={`Play ${track.title} by ${track.artist}`}
@@ -346,7 +351,7 @@ export function NavigationSidebar({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      handleTrackClick(track);
+                      handleTrackClick(track, idx);
                     }
                   }}
                   className={`group relative flex items-center justify-between px-2.5 py-2.5 rounded-xl transition cursor-pointer select-none active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-accent ${
