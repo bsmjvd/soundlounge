@@ -346,6 +346,21 @@ describe("Similar Tracks relevance guards (related tier + verified fallbacks)", 
     expect(res!.reason).toContain("Related to");
   });
 
+  it("never re-suggests a track the user removed", async () => {
+    const rejectedSameArtist = makeTrack("yt_aa3", "Neon Drift", "Autonomous Ambient Ensemble");
+    const freshSameArtist = makeTrack("yt_aa4", "Static Bloom", "Autonomous Ambient Ensemble");
+
+    const res = await findSimilarTrack({
+      currentTrack: obscureTrack,
+      existingQueue: [obscureTrack],
+      rejectedTracks: [rejectedSameArtist],
+      fetchFn: urlAwareFetch([], [rejectedSameArtist, freshSameArtist]),
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.track.id).toBe("yt_aa4");
+  });
+
   it("never accepts an unverified cross-artist candidate for unknown-genre tracks", async () => {
     const unrelated = makeTrack("yt_bolly_unrelated", "Tum Hi Ho", "Arijit Singh");
 

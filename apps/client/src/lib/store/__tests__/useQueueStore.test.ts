@@ -34,6 +34,8 @@ describe("useQueueStore", () => {
     useQueueStore.setState({
       queue: [],
       currentIndex: -1,
+      removedSuggestions: [],
+      autoQueueReasons: {},
     });
   });
 
@@ -155,6 +157,31 @@ describe("useQueueStore", () => {
     // trackC moved to index 1, right after trackA
     expect(queue.map((t) => t.id)).toEqual(["track_a", "track_c", "track_b"]);
     expect(queue.length).toBe(3);
+  });
+
+  it("never re-suggests an auto-queued track the user removed", async () => {
+    const sidhuTrack: Track = {
+      id: "yt_295",
+      title: "295",
+      artist: "Sidhu Moose Wala",
+      durationMs: 270000,
+      url: "/api/stream/youtube?id=295",
+      source: "youtube",
+    };
+
+    useQueueStore.getState().setQueue([sidhuTrack], 0);
+    const first = await useQueueStore.getState().ensureSimilarQueued(sidhuTrack);
+    expect(first).not.toBeNull();
+
+    // User removes the suggested song — that's a thumbs-down
+    useQueueStore.getState().removeTrack(first!.id);
+    expect(useQueueStore.getState().removedSuggestions.some((t) => t.id === first!.id)).toBe(true);
+
+    // The next suggestion must be a DIFFERENT track, not the removed one again
+    const second = await useQueueStore.getState().ensureSimilarQueued(sidhuTrack);
+    expect(second).not.toBeNull();
+    expect(second!.id).not.toBe(first!.id);
+    expect(useQueueStore.getState().queue.some((t) => t.id === first!.id)).toBe(false);
   });
 
   it("replaces active queue cleanly when user starts a new track, seeding autoplay with the new artist", async () => {

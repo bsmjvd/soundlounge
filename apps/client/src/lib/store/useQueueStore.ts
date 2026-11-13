@@ -2,12 +2,35 @@ import { create } from "zustand";
 import type { Track } from "@soundlounge/shared";
 import { findSimilarTrack, findSimilarBatch, normalizeSongTitle } from "../recommendation/SimilarTracksEngine";
 
+const REMOVED_SUGGESTIONS_KEY = "soundlounge_removed_suggestions_v1";
+const REMOVED_SUGGESTIONS_LIMIT = 50;
+
+function loadRemovedSuggestions(): Track[] {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const raw = window.localStorage.getItem(REMOVED_SUGGESTIONS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((t) => t && typeof t.id === "string").slice(-REMOVED_SUGGESTIONS_LIMIT) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRemovedSuggestions(tracks: Track[]): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(REMOVED_SUGGESTIONS_KEY, JSON.stringify(tracks.slice(-REMOVED_SUGGESTIONS_LIMIT)));
+  } catch {}
+}
+
 export interface QueueState {
   queue: Track[];
   currentIndex: number;
   isAutoplayEnabled: boolean;
   autoQueueReasons: Record<string, string>;
   isFetchingSimilar: boolean;
+  /** Auto-queued suggestions the user removed — excluded from future suggestions. */
+  removedSuggestions: Track[];
 
   // Actions
   addTrack: (track: Track, playNext?: boolean) => void;
@@ -32,6 +55,7 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
   isAutoplayEnabled: true,
   autoQueueReasons: {},
   isFetchingSimilar: false,
+  removedSuggestions: loadRemovedSuggestions(),
 
   toggleAutoplay: () => {
     set((state) => ({ isAutoplayEnabled: !state.isAutoplayEnabled }));
@@ -65,6 +89,7 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
         currentTrack,
         existingQueue: state.queue,
         history,
+        rejectedTracks: state.removedSuggestions,
       });
 
       if (res && res.track) {
@@ -115,6 +140,7 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
           currentTrack,
           existingQueue: state.queue,
           history,
+          rejectedTracks: state.removedSuggestions,
         },
         4
       );
@@ -204,23 +230,38 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
   },
 
   removeTrack: (trackId: string) => {
-    set((state) => {
-      const idx = state.queue.findIndex((t) => t.id === trackId);
-      if (idx === -1) return state;
+    const state = get();
+    const idx = state.queue.findIndex((t) => t.id === trackId);
+    if (idx === -1) return;
 
-      const newQueue = state.queue.filter((t) => t.id !== trackId);
-      let newCurrentIndex = state.currentIndex;
+    const removed = state.queue[idx];
 
-      if (idx < state.currentIndex) {
-        newCurrentIndex = Math.max(0, state.currentIndex - 1);
-      } else if (idx === state.currentIndex) {
+    set((s) => {
+      const newQueue = s.queue.filter((t) => t.id !== trackId);
+      let newCurrentIndex = s.currentIndex;
+
+      if (idx < s.currentIndex) {
+        newCurrentIndex = Math.max(0, s.currentIndex - 1);
+      } else if (idx === s.currentIndex) {
         newCurrentIndex = Math.min(newCurrentIndex, newQueue.length - 1);
       }
 
-      return {
+      const patch: Partial<QueueState> = {
         queue: newQueue,
         currentIndex: newQueue.length === 0 ? -1 : newCurrentIndex,
       };
+
+      // A removed AUTO-QUEUED suggestion is a thumbs-down: never suggest it again
+      if (s.autoQueueReasons[trackId]) {
+        const newReasons = { ...s.autoQueueReasons };
+        delete newReasons[trackId];
+        const removedSuggestions = [...s.removedSuggestions, removed].slice(-REMOVED_SUGGESTIONS_LIMIT);
+        saveRemovedSuggestions(removedSuggestions);
+        patch.autoQueueReasons = newReasons;
+        patch.removedSuggestions = removedSuggestions;
+      }
+
+      return patch;
     });
   },
 

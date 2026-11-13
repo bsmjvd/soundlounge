@@ -6,6 +6,8 @@ export interface FindSimilarOptions {
   currentTrack: Track;
   existingQueue: Track[];
   history?: Track[];
+  /** Suggestions the user manually removed — never offered again this session. */
+  rejectedTracks?: Track[];
   searchApiUrl?: string;
   relatedApiUrl?: string;
   fetchFn?: typeof fetch;
@@ -216,6 +218,7 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
     currentTrack,
     existingQueue,
     history = [],
+    rejectedTracks = [],
     searchApiUrl = "/api/search",
     relatedApiUrl = "/api/related",
     fetchFn = typeof fetch !== "undefined" ? fetch : undefined,
@@ -251,6 +254,12 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
     addExcludedTitle(t);
   }
   for (const t of history) {
+    addExcludedTitle(t);
+  }
+  // Tracks the user explicitly removed from the suggestions are never offered again
+  for (const t of rejectedTracks) {
+    if (!t) continue;
+    excludedIds.add(t.id);
     addExcludedTitle(t);
   }
 
