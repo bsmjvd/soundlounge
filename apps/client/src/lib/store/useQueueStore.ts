@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Track } from "@soundlounge/shared";
-import { findSimilarTrack, findSimilarBatch, normalizeSongTitle } from "../recommendation/SimilarTracksEngine";
+import { findSimilarTrack, findSimilarBatch } from "../recommendation/SimilarTracksEngine";
+import { normalizeSongTitle } from "../recommendation/normalizeTitle";
 
 const REMOVED_SUGGESTIONS_KEY = "soundlounge_removed_suggestions_v1";
 const REMOVED_SUGGESTIONS_LIMIT = 50;

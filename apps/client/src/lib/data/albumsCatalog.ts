@@ -1,4 +1,4 @@
-import type { Album } from "@soundlounge/shared";
+import type { Album, Track } from "@soundlounge/shared";
 
 export const ALBUMS_CATALOG: Album[] = [
   // 1. The Train (2007) - Bollywood Film Soundtrack
@@ -1385,3 +1385,87 @@ export const ALBUMS_CATALOG: Album[] = [
     ],
   },
 ];
+
+// Seeded Coke Studio tracks use title/artist-only stream URLs — the stream route
+// resolves them by YouTube search, so no video IDs are fabricated here.
+function seedTrack(title: string, artist: string, durationSec: number): Track {
+  return {
+    id: `seed_${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}_${artist.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    title,
+    artist,
+    durationMs: durationSec * 1000,
+    url: `/api/stream/youtube?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`,
+    source: "youtube",
+    createdAt: 0,
+  };
+}
+
+const COKE_STUDIO_14_COVER = "/albums/coke-studio-14.png";
+const COKE_STUDIO_15_COVER = "/albums/coke-studio-15.png";
+const COKE_STUDIO_8_COVER = "/albums/coke-studio-8.webp";
+
+ALBUMS_CATALOG.push(
+  {
+    id: "coke_studio_season_14",
+    title: "Coke Studio Pakistan - Season 14",
+    releaseYear: 2022,
+    type: "compilation",
+    disambiguationLabel: "2022 Coke Studio Season • Ali Sethi, Shae Gill, Kaifi Khalil ('Pasoori')",
+    primaryArtist: "Coke Studio Pakistan",
+    featuredSingers: [
+      "Ali Sethi",
+      "Shae Gill",
+      "Kaifi Khalil",
+      "Eva B",
+      "Hasan Raheem",
+      "Faris Shafi",
+      "Aima Baig",
+      "Abida Parveen",
+      "Naseebo Lal",
+      "Talal Qureshi",
+      "Xulfi",
+    ],
+    genres: ["Pakistani Pop", "Sufi", "Fusion", "World Music"],
+    coverUrl: COKE_STUDIO_14_COVER,
+    totalDurationMs: 1600000,
+    tracks: [
+      seedTrack("Pasoori", "Ali Sethi, Shae Gill", 230),
+      seedTrack("Kana Yaari", "Kaifi Khalil, Eva B, Abdul Wahab Bugti", 285),
+      seedTrack("Peechay Hutt", "Justin Bibis, Hasan Raheem, Talal Qureshi, Faris Shafi", 250),
+      seedTrack("Tu Jhoom", "Naseebo Lal, Abida Parveen", 290),
+      seedTrack("Baazi", "Aima Baig, Sahir Ali Bagga", 260),
+    ],
+  },
+  {
+    id: "coke_studio_season_15",
+    title: "Coke Studio Pakistan - Season 15",
+    releaseYear: 2023,
+    type: "compilation",
+    disambiguationLabel: "2023 Coke Studio Season • Maanu, Annural Khalid ('Jhol')",
+    primaryArtist: "Coke Studio Pakistan",
+    featuredSingers: ["Maanu", "Annural Khalid", "Nabeel Shaukat Ali", "Zulfiqar Jabbar Khan", "Xulfi"],
+    genres: ["Pakistani Pop", "Sufi", "Fusion", "World Music"],
+    coverUrl: COKE_STUDIO_15_COVER,
+    totalDurationMs: 900000,
+    tracks: [
+      seedTrack("Jhol", "Maanu, Annural Khalid", 265),
+      seedTrack("Aayi Aayi", "Nabeel Shaukat Ali, Saad Sultan, Babar Naveed", 300),
+    ],
+  },
+  {
+    id: "coke_studio_season_8",
+    title: "Coke Studio Pakistan - Season 8",
+    releaseYear: 2015,
+    type: "compilation",
+    disambiguationLabel: "2015 Coke Studio Season • Atif Aslam ('Tajdar-e-Haram')",
+    primaryArtist: "Coke Studio Pakistan",
+    featuredSingers: ["Atif Aslam", "Gul Panra", "Abida Parveen", "Ali Sethi", "Umair Jaswal", "Meesha Shafi"],
+    genres: ["Pakistani Pop", "Sufi", "Fusion", "World Music"],
+    coverUrl: COKE_STUDIO_8_COVER,
+    totalDurationMs: 900000,
+    tracks: [
+      seedTrack("Tajdar-e-Haram", "Atif Aslam", 610),
+      seedTrack("Man Aamadeh Am", "Gul Panra, Atif Aslam", 250),
+    ],
+  }
+);

@@ -6,6 +6,9 @@ import { TopBar, type TopNavTab } from "../components/TopBar";
 import { DiscoverHero } from "../components/DiscoverHero";
 import { PopularAlbumsRow } from "../components/PopularAlbumsRow";
 import { PopularArtistsRow } from "../components/PopularArtistsRow";
+import { NewReleasesRow } from "../components/NewReleasesRow";
+import { PlaylistsView, type PlaylistRef } from "../components/PlaylistsView";
+import { PlaylistDetailView } from "../components/PlaylistDetailView";
 import { AmbientBackground } from "../components/AmbientBackground";
 import { MusicIngestion } from "../components/MusicIngestion";
 import { QueueView } from "../components/QueueView";
@@ -38,6 +41,7 @@ export default function SoundloungeApp() {
   const [topNavTab, setTopNavTab] = useState<TopNavTab>("discover");
   const [selectedArtist, setSelectedArtist] = useState<ArtistProfileData | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistRef | null>(null);
   const [navHistory, setNavHistory] = useState<NavTab[]>(["home"]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,6 +79,7 @@ export default function SoundloungeApp() {
   const handleTabChange = (tab: NavTab) => {
     setSelectedArtist(null);
     setSelectedAlbum(null);
+    setSelectedPlaylist(null);
     setActiveTab(tab);
     setNavHistory((prev) => [...prev.slice(0, historyIndex + 1), tab]);
     setHistoryIndex((prev) => prev + 1);
@@ -83,6 +88,7 @@ export default function SoundloungeApp() {
   const handleTopNavChange = (tab: TopNavTab) => {
     setSelectedArtist(null);
     setSelectedAlbum(null);
+    setSelectedPlaylist(null);
     setTopNavTab(tab);
     if (tab === "discover") {
       setActiveTab("home");
@@ -90,12 +96,15 @@ export default function SoundloungeApp() {
       setActiveTab("liked");
     } else if (tab === "radio") {
       setActiveTab("genres");
+    } else if (tab === "playlists") {
+      setActiveTab("playlists");
     }
   };
 
   const openQueue = () => {
     setSelectedArtist(null);
     setSelectedAlbum(null);
+    setSelectedPlaylist(null);
     setActiveTab("queue");
   };
 
@@ -401,6 +410,13 @@ export default function SoundloungeApp() {
                       setSelectedArtist(artist);
                     }}
                   />
+
+                  {/* Fresh releases in the listener's genres that they haven't heard */}
+                  <NewReleasesRow
+                    onPlayTrack={handlePlaySingleTrack}
+                    onAddTrack={handleAddTrack}
+                    queueTracks={queue}
+                  />
                 </div>
               </div>
             ) : (
@@ -435,6 +451,23 @@ export default function SoundloungeApp() {
                       currentTrack={activeTrack}
                       isPlaying={playerState.status === "playing"}
                       onSelectAlbum={(alb) => setSelectedAlbum(alb)}
+                    />
+                  ) : selectedPlaylist ? (
+                    <PlaylistDetailView
+                      playlistRef={selectedPlaylist}
+                      onBack={() => setSelectedPlaylist(null)}
+                      onPlayTracks={handlePlayTracks}
+                      onPlayTrack={handlePlaySingleTrack}
+                      onAddTrack={handleAddTrack}
+                      onAddTracksToQueue={handleAddTracksToQueue}
+                      currentTrack={activeTrack}
+                      isPlaying={playerState.status === "playing"}
+                    />
+                  ) : activeTab === "playlists" ? (
+                    <PlaylistsView
+                      onOpenPlaylist={(ref) => {
+                        setSelectedPlaylist(ref);
+                      }}
                     />
                   ) : activeTab === "queue" ? (
                     <div className="animate-view-in max-w-4xl mx-auto space-y-6">

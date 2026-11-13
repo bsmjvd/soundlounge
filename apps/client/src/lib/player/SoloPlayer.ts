@@ -48,6 +48,7 @@ export class SoloPlayer {
   private resumeRetryTimers: ReturnType<typeof setTimeout>[] = [];
   private playToken = 0;
   private lastPositionStateAt = 0;
+  private mediaSessionHandlersRegistered = false;
 
   constructor() {
     this.initAudioElement();
@@ -107,6 +108,7 @@ export class SoloPlayer {
       if (this.priming) return;
       this.clearInterruption();
       this.state.status = "playing";
+      this.syncElementDuration();
       this.updatePositionState();
       this.emitState();
     });
@@ -129,15 +131,8 @@ export class SoloPlayer {
       }
     });
 
-    el.addEventListener("durationchange", () => {
-      if (this.audioElement && !isNaN(this.audioElement.duration)) {
-        this.state.durationMs = Math.floor(this.audioElement.duration * 1000);
-        this.updatePositionState();
-        this.emitState();
-      }
-    });
-
-    el.addEventListener("loadedmetadata", () => this.updatePositionState());
+    el.addEventListener("durationchange", () => this.syncElementDuration());
+    el.addEventListener("loadedmetadata", () => this.syncElementDuration());
     el.addEventListener("seeked", () => this.updatePositionState());
     el.addEventListener("ratechange", () => this.updatePositionState());
 
@@ -208,48 +203,54 @@ export class SoloPlayer {
         });
       } catch {}
 
-      // Each handler is registered separately: setActionHandler throws for
-      // unsupported actions and one failure must not drop the rest.
-      try {
-        navigator.mediaSession.setActionHandler("play", () => {
-          void this.resume();
-        });
-      } catch {}
-      try {
-        navigator.mediaSession.setActionHandler("pause", () => this.pause());
-      } catch {}
-      try {
-        navigator.mediaSession.setActionHandler("stop", () => this.stop());
-      } catch {}
-      try {
-        navigator.mediaSession.setActionHandler("seekbackward", (details) => {
-          const offset = details.seekOffset || 10;
-          this.seek(Math.max(0, (this.audioElement?.currentTime ?? 0) - offset) * 1000);
-        });
-      } catch {}
-      try {
-        navigator.mediaSession.setActionHandler("seekforward", (details) => {
-          const offset = details.seekOffset || 10;
-          this.seek(((this.audioElement?.currentTime ?? 0) + offset) * 1000);
-        });
-      } catch {}
-      try {
-        navigator.mediaSession.setActionHandler("seekto", (details) => {
-          if (details.seekTime !== undefined) {
-            this.seek(details.seekTime * 1000);
-          }
-        });
-      } catch {}
-      try {
-        navigator.mediaSession.setActionHandler("nexttrack", () => {
-          if (this.onNextCallback) this.onNextCallback();
-        });
-      } catch {}
-      try {
-        navigator.mediaSession.setActionHandler("previoustrack", () => {
-          if (this.onPreviousCallback) this.onPreviousCallback();
-        });
-      } catch {}
+      // iOS requires action handlers to be assigned exactly ONCE — registering
+      // them again on every track change makes the lock screen drop the
+      // next/previous buttons. Metadata above still updates per track.
+      if (!this.mediaSessionHandlersRegistered) {
+        // Each handler is registered separately: setActionHandler throws for
+        // unsupported actions and one failure must not drop the rest.
+        try {
+          navigator.mediaSession.setActionHandler("play", () => {
+            void this.resume();
+          });
+        } catch {}
+        try {
+          navigator.mediaSession.setActionHandler("pause", () => this.pause());
+        } catch {}
+        try {
+          navigator.mediaSession.setActionHandler("stop", () => this.stop());
+        } catch {}
+        try {
+          navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+            const offset = details.seekOffset || 10;
+            this.seek(Math.max(0, (this.audioElement?.currentTime ?? 0) - offset) * 1000);
+          });
+        } catch {}
+        try {
+          navigator.mediaSession.setActionHandler("seekforward", (details) => {
+            const offset = details.seekOffset || 10;
+            this.seek(((this.audioElement?.currentTime ?? 0) + offset) * 1000);
+          });
+        } catch {}
+        try {
+          navigator.mediaSession.setActionHandler("seekto", (details) => {
+            if (details.seekTime !== undefined) {
+              this.seek(details.seekTime * 1000);
+            }
+          });
+        } catch {}
+        try {
+          navigator.mediaSession.setActionHandler("nexttrack", () => {
+            if (this.onNextCallback) this.onNextCallback();
+          });
+        } catch {}
+        try {
+          navigator.mediaSession.setActionHandler("previoustrack", () => {
+            if (this.onPreviousCallback) this.onPreviousCallback();
+          });
+        } catch {}
+        this.mediaSessionHandlersRegistered = true;
+      }
 
       this.updatePositionState();
     }
@@ -274,6 +275,23 @@ export class SoloPlayer {
 
   private updatePositionStateThrottled(): void {
     if (Date.now() - this.lastPositionStateAt < POSITION_STATE_INTERVAL_MS) return;
+    this.updatePositionState();
+  }
+
+  // The element's real duration always wins over the catalog's estimate —
+  // hand-authored track durations and title-search-resolved streams are often
+  // wrong, which desyncs the seek bar (dragging past the audio's actual end
+  // kills playback). Infinity (unknown/live) is treated as "not known yet".
+  private syncElementDuration(): void {
+    const el = this.audioElement;
+    if (!el) return;
+    const duration = el.duration;
+    if (!isFinite(duration) || duration <= 0) return;
+    const elementMs = Math.round(duration * 1000);
+    if (Math.abs(elementMs - this.state.durationMs) > 1500) {
+      this.state.durationMs = elementMs;
+      this.emitState();
+    }
     this.updatePositionState();
   }
 
@@ -522,10 +540,13 @@ export class SoloPlayer {
   }
 
   seek(positionMs: number): void {
-    const clampedPos = Math.max(0, Math.min(positionMs, this.state.durationMs || positionMs));
+    const el = this.audioElement;
+    const elementMs = el && isFinite(el.duration) && el.duration > 0 ? Math.round(el.duration * 1000) : 0;
+    const maxMs = elementMs || this.state.durationMs || positionMs;
+    const clampedPos = Math.max(0, Math.min(positionMs, maxMs));
     this.state.positionMs = clampedPos;
-    if (this.audioElement) {
-      this.audioElement.currentTime = clampedPos / 1000;
+    if (el) {
+      el.currentTime = clampedPos / 1000;
     }
     this.updatePositionState();
     this.emitState();

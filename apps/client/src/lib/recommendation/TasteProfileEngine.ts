@@ -6,7 +6,8 @@ import {
   getPeerArtistsForGenre,
   GENRE_DEFINITIONS,
 } from "./genreTaxonomy";
-import { resolveEffectiveArtist, normalizeSongTitle } from "./SimilarTracksEngine";
+import { resolveEffectiveArtist } from "./SimilarTracksEngine";
+import { normalizeSongTitle } from "./normalizeTitle";
 import { ARTISTS_CATALOG, type ArtistProfileData } from "../data/artistsCatalog";
 import { ALBUMS_CATALOG } from "../data/albumsCatalog";
 import { type DisplayAlbum, type DisplayArtist, type FeaturedSpotlight, FEATURED_SPOTLIGHTS } from "../data/mockupData";

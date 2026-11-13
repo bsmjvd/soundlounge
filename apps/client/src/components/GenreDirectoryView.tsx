@@ -55,6 +55,22 @@ const GENRE_CARDS: GenreCardInfo[] = [
     iconColor: "text-[#10b981]",
   },
   {
+    id: "pakistani",
+    title: "Pakistani Pop & Coke Studio",
+    tagline: "Coke Studio fusions, Urdu indie, qawwali-pop, and Karachi rap",
+    gradient: "from-[#2b1a08]/80 to-[#140b04]/90",
+    borderHover: "hover:border-[#84cc16]/50",
+    iconColor: "text-[#a3e635]",
+  },
+  {
+    id: "kashmiri",
+    title: "Kashmiri & Sufiana",
+    tagline: "Santoor ragas, Sufiana mausiqi, and valley indie voices",
+    gradient: "from-[#0b2740]/80 to-[#051220]/90",
+    borderHover: "hover:border-[#38bdf8]/50",
+    iconColor: "text-[#38bdf8]",
+  },
+  {
     id: "pop",
     title: "Pop & Global R&B",
     tagline: "Billboard chart-toppers, modern synth rhythms, and velvet vocals",

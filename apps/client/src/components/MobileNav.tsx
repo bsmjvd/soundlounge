@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Compass, Library, ListMusic, Radio } from "lucide-react";
+import { Compass, Library, ListMusic, ListOrdered, Radio } from "lucide-react";
 import type { TopNavTab } from "./TopBar";
 import type { NavTab } from "./NavigationSidebar";
 import { hapticLight } from "../lib/haptics";
@@ -27,6 +27,7 @@ export function MobileNav({
   const isDiscover = !isQueue && activeTopTab === "discover";
   const isLibrary = !isQueue && activeTopTab === "library";
   const isRadio = !isQueue && activeTopTab === "radio";
+  const isPlaylists = !isQueue && activeTopTab === "playlists";
 
   const select = (tab: TopNavTab) => {
     hapticLight();
@@ -39,7 +40,7 @@ export function MobileNav({
       data-player={hasPlayer}
       className="mobile-nav-dock animate-view-in floating-surface fixed left-1/2 z-40 w-[calc(100%_-_1.25rem)] max-w-sm -translate-x-1/2 rounded-card border border-line-strong p-1 shadow-panel md:hidden"
     >
-      <div className="grid grid-cols-4 gap-1">
+      <div className="grid grid-cols-5 gap-1">
         <button
           type="button"
           onClick={() => select("discover")}
@@ -78,6 +79,18 @@ export function MobileNav({
 
         <button
           type="button"
+          onClick={() => select("playlists")}
+          aria-current={isPlaylists ? "page" : undefined}
+          className={`flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-control text-[11px] font-semibold transition-colors cursor-pointer ${
+            isPlaylists ? "bg-accent/10 text-accent" : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+          }`}
+        >
+          <ListMusic className="h-[18px] w-[18px]" />
+          <span>Playlists</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => {
             hapticLight();
             onOpenQueue();
@@ -87,7 +100,7 @@ export function MobileNav({
             isQueue ? "bg-accent/10 text-accent" : "text-ink-muted hover:bg-surface-raised hover:text-ink"
           }`}
         >
-          <ListMusic className="h-[18px] w-[18px]" />
+          <ListOrdered className="h-[18px] w-[18px]" />
           <span>Queue</span>
           {queueCount > 0 && (
             <span className="absolute right-2 top-1 min-w-[14px] rounded-full bg-accent px-1 text-center font-mono text-[10px] leading-tight text-accent-foreground">

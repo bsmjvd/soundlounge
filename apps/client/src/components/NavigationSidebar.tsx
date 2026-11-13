@@ -31,6 +31,7 @@ export type NavTab =
   | "history"
   | "queue"
   | "downloaded"
+  | "playlists"
   | "search";
 
 export type PlaylistSidebarFilter = "my_playlist" | "last_listening" | "recommended";

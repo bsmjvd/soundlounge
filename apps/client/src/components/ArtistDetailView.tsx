@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Play,
   ArrowLeft,
@@ -14,11 +14,14 @@ import {
   Music2,
   Sparkles,
   Clapperboard,
+  ListMusic,
+  Loader2,
 } from "lucide-react";
 import type { Track, Album } from "@soundlounge/shared";
 import type { ArtistProfileData } from "../lib/data/artistsCatalog";
 import { ALBUMS_CATALOG } from "../lib/data/albumsCatalog";
 import { useLibraryStore } from "../lib/store/useLibraryStore";
+import { TrackRow } from "./TrackRow";
 import { TrackArtwork } from "./TrackArtwork";
 
 interface ArtistDetailViewProps {
@@ -32,7 +35,7 @@ interface ArtistDetailViewProps {
   isPlaying: boolean;
 }
 
-type DiscographyTab = "top_tracks" | "soundtracks_albums" | "collaborations";
+type DiscographyTab = "top_tracks" | "all_songs" | "soundtracks_albums" | "collaborations";
 
 export function ArtistDetailView({
   artist,
@@ -46,6 +49,30 @@ export function ArtistDetailView({
 }: ArtistDetailViewProps) {
   const { isLiked, toggleLike } = useLibraryStore();
   const [activeTab, setActiveTab] = useState<DiscographyTab>("top_tracks");
+  const [liveTracks, setLiveTracks] = useState<Track[]>([]);
+  const [liveStatus, setLiveStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  // Full discography, resolved live from YouTube Music for this artist.
+  // Catalog top tracks stay the source of truth for ordering; live results fill in the rest.
+  useEffect(() => {
+    let cancelled = false;
+    setLiveTracks([]);
+    setLiveStatus("loading");
+    fetch(`/api/artist-tracks?artist=${encodeURIComponent(artist.name)}&limit=40`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      .then((data: { tracks?: Track[] }) => {
+        if (cancelled) return;
+        setLiveTracks(data.tracks || []);
+        setLiveStatus("done");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLiveStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [artist.name]);
 
   const formatTime = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
@@ -76,7 +103,7 @@ export function ArtistDetailView({
     return matches;
   }, [artist.name]);
 
-  // All songs by the artist across top tracks and albums
+  // All songs by the artist across top tracks, albums, and the live discography fetch
   const allDiscographyTracks = useMemo(() => {
     const list: Track[] = [...artist.topTracks];
     const seenIds = new Set(list.map((t) => t.id));
@@ -89,8 +116,14 @@ export function ArtistDetailView({
         }
       }
     }
+    for (const t of liveTracks) {
+      if (!seenIds.has(t.id)) {
+        seenIds.add(t.id);
+        list.push(t);
+      }
+    }
     return list;
-  }, [artist.topTracks, artistAlbums]);
+  }, [artist.topTracks, artistAlbums, liveTracks]);
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
@@ -188,6 +221,22 @@ export function ArtistDetailView({
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>Top Hits ({artist.topTracks.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("all_songs")}
+          aria-pressed={activeTab === "all_songs"}
+          className={`flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-medium transition-colors cursor-pointer ${
+            activeTab === "all_songs"
+              ? "bg-accent text-accent-foreground font-semibold shadow-sm"
+              : "text-ink-muted hover:text-ink hover:bg-surface-raised"
+          }`}
+        >
+          <ListMusic className="w-3.5 h-3.5" />
+          <span>
+            All Songs
+            {liveStatus === "loading" ? " (…)" : liveTracks.length > 0 ? ` (${allDiscographyTracks.length})` : ""}
+          </span>
         </button>
 
         <button
@@ -320,6 +369,61 @@ export function ArtistDetailView({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* TAB 1b: ALL SONGS (live full discography) */}
+      {activeTab === "all_songs" && (
+        <div className="animate-view-in rounded-2xl bg-surface border border-line p-5 shadow-xl space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-surface-raised">
+            <h2 className="text-sm font-bold text-ink tracking-tight flex items-center gap-2">
+              <span>Every Song by {artist.name}</span>
+              <span className="text-xs text-ink-muted font-normal">({allDiscographyTracks.length} tracks)</span>
+            </h2>
+            <button
+              onClick={() => onPlayAll(allDiscographyTracks)}
+              className="flex min-h-9 items-center gap-1.5 px-3 py-1.5 rounded-control bg-accent hover:bg-accent-strong text-accent-foreground text-[11px] font-bold shadow-md shadow-accent/20 hover:scale-105 active:scale-95 transition cursor-pointer"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>Play All</span>
+            </button>
+          </div>
+
+          {liveStatus === "loading" && (
+            <div className="flex items-center gap-2 py-8 justify-center text-xs text-ink-muted">
+              <Loader2 className="w-4 h-4 animate-spin text-accent" />
+              <span>Fetching the full discography from YouTube Music…</span>
+            </div>
+          )}
+
+          {liveStatus === "error" && (
+            <div className="py-6 text-center space-y-1">
+              <p className="text-xs font-semibold text-ink">Couldn't load the full song list right now.</p>
+              <p className="text-[11px] text-ink-muted">Showing the {artist.topTracks.length} catalog hits instead.</p>
+            </div>
+          )}
+
+          {liveStatus !== "loading" && (
+            <div className="divide-y divide-line">
+              {allDiscographyTracks.map((track, idx) => {
+                const isThisTrack = currentTrack?.id === track.id;
+                const liked = isLiked(track.id);
+                return (
+                  <TrackRow
+                    key={track.id}
+                    track={track}
+                    index={idx}
+                    isCurrent={isThisTrack && isPlaying}
+                    liked={liked}
+                    onPlay={() => onPlayTrack(track)}
+                    onLike={() => toggleLike(track)}
+                    onPlayNext={() => onAddTrack(track, true)}
+                    onAddToQueue={() => onAddTrack(track, false)}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
