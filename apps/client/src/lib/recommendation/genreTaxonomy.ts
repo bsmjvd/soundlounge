@@ -15,6 +15,8 @@ export interface GenreDefinition {
   coreArtists: string[];
   peerArtists: string[];
   keywords: string[];
+  /** Languages typically associated with this genre (used for search queries and matching). */
+  languages: string[];
 }
 
 export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
@@ -62,6 +64,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "jhuki jhuki",
       "woh kagaz ki kashti",
     ],
+    languages: ["hindi", "urdu"],
   },
   punjabi: {
     id: "punjabi",
@@ -113,6 +116,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "with you",
       "excuses",
     ],
+    languages: ["punjabi"],
   },
   pop: {
     id: "pop",
@@ -160,6 +164,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "espresso",
       "anti-hero",
     ],
+    languages: ["english"],
   },
   hiphop: {
     id: "hiphop",
@@ -194,6 +199,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "middle child",
       "superheroes",
     ],
+    languages: ["english"],
   },
   electronic: {
     id: "electronic",
@@ -237,6 +243,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "summer",
       "titanium",
     ],
+    languages: ["english"],
   },
   bollywood: {
     id: "bollywood",
@@ -281,6 +288,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "phir se ud chala",
       "tera hone laga hoon",
     ],
+    languages: ["hindi"],
   },
   rock: {
     id: "rock",
@@ -312,6 +320,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "bohemian rhapsody",
       "do i wanna know",
     ],
+    languages: ["english"],
   },
   retro: {
     id: "retro",
@@ -353,6 +362,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
       "lag ja gale",
       "dum maro dum",
     ],
+    languages: ["hindi"],
   },
   other: {
     id: "other",
@@ -360,6 +370,7 @@ export const GENRE_DEFINITIONS: Record<MusicGenre, GenreDefinition> = {
     coreArtists: [],
     peerArtists: [],
     keywords: [],
+    languages: [],
   },
 };
 
@@ -476,4 +487,12 @@ export function getPeerArtistsForArtist(artistName: string): string[] {
 export function getPeerArtistsForGenre(genre: MusicGenre): string[] {
   const def = GENRE_DEFINITIONS[genre];
   return def ? [...def.peerArtists] : [];
+}
+
+/**
+ * Returns the languages associated with a genre (empty for "other").
+ */
+export function getLanguagesForGenre(genre: MusicGenre): string[] {
+  const def = GENRE_DEFINITIONS[genre];
+  return def ? [...def.languages] : [];
 }

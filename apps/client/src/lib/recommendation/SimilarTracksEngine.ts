@@ -1,12 +1,13 @@
 import type { Track } from "@soundlounge/shared";
 import { ARTISTS_CATALOG } from "../data/artistsCatalog";
-import { classifyGenre, getPeerArtistsForArtist, getPeerArtistsForGenre, type MusicGenre } from "./genreTaxonomy";
+import { classifyGenre, getPeerArtistsForArtist, getPeerArtistsForGenre, getLanguagesForGenre, type MusicGenre } from "./genreTaxonomy";
 
 export interface FindSimilarOptions {
   currentTrack: Track;
   existingQueue: Track[];
   history?: Track[];
   searchApiUrl?: string;
+  relatedApiUrl?: string;
   fetchFn?: typeof fetch;
 }
 
@@ -63,6 +64,16 @@ function matchesWordBoundary(text: string, term: string): boolean {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, "i");
   return regex.test(text);
+}
+
+/**
+ * Extracts the raw YouTube video id from a track (id prefix or stream URL).
+ */
+function extractVideoIdFromTrack(track: Track): string | null {
+  if (track.source !== "youtube") return null;
+  if (track.id && track.id.startsWith("yt_")) return track.id.slice(3);
+  const match = (track.url || "").match(/[?&]id=([\w-]+)/);
+  return match ? match[1] : null;
 }
 
 /**
@@ -206,6 +217,7 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
     existingQueue,
     history = [],
     searchApiUrl = "/api/search",
+    relatedApiUrl = "/api/related",
     fetchFn = typeof fetch !== "undefined" ? fetch : undefined,
   } = options;
 
@@ -270,6 +282,24 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
     artist: effectiveArtist,
   });
   const detectedGenre: MusicGenre = classification.genre;
+
+  // A candidate is "same artist" when artist or title clearly references the effective artist
+  const isSameArtistCandidate = (candidate: Track): boolean => {
+    const candidateCleanArtist = clean(candidate.artist);
+    const candidateCleanTitleFull = clean(candidate.title);
+    return (
+      candidateCleanArtist.includes(cleanArtist) ||
+      cleanArtist.includes(candidateCleanArtist) ||
+      candidateCleanTitleFull.includes(cleanArtist)
+    );
+  };
+
+  // A candidate has a trustworthy identity if its artist is a real performer (not a placeholder/label)
+  const hasTrustedIdentity = (candidate: Track): boolean => {
+    const artist = (candidate.artist || "").trim();
+    if (!artist || artist === "Various Artists" || artist === "Unknown Artist") return false;
+    return !RECORD_LABELS.some((l) => artist.toLowerCase().includes(l));
+  };
 
   // Helper to determine if we can safely make a network fetch
   const isTestEnv =
@@ -361,6 +391,59 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
   }
 
   // --------------------------------------------------------------------------
+  // Tier 2.5: YouTube Music RELATED TRACKS (radio/autoplay) — YouTube's own
+  // similarity signal, which naturally preserves genre, artist and language.
+  // --------------------------------------------------------------------------
+  const currentVideoId = extractVideoIdFromTrack(currentTrack);
+  if (canPerformFetch && currentVideoId) {
+    try {
+      const res = await fetchFn(`${relatedApiUrl}?videoId=${encodeURIComponent(currentVideoId)}&limit=15`);
+
+      if (res.ok) {
+        const data = (await res.json()) as { tracks?: Track[] };
+        const relatedTracks = (data.tracks || []).filter(
+          (t) => !isDuplicateCandidate(t) && t.durationMs >= 50000 && t.durationMs <= 720000
+        );
+
+        // (a) Same artist first
+        const relatedSameArtist = relatedTracks.find(isSameArtistCandidate);
+        if (relatedSameArtist) {
+          if (!hasTrustedIdentity(relatedSameArtist)) {
+            relatedSameArtist.artist = effectiveArtist;
+          }
+          return {
+            track: relatedSameArtist,
+            matchType: "live_search",
+            reason: `Same Artist: ${effectiveArtist}`,
+          };
+        }
+
+        // (b) Same genre (when genre is known), then (c) any related track —
+        // related-list results are inherently relevant to what's playing.
+        const relatedCandidate =
+          (detectedGenre !== "other"
+            ? relatedTracks.find(
+                (t) =>
+                  !isSameArtistCandidate(t) &&
+                  hasTrustedIdentity(t) &&
+                  classifyGenre({ title: t.title, artist: t.artist }).genre === detectedGenre
+              )
+            : undefined) || relatedTracks.find((t) => !isSameArtistCandidate(t) && hasTrustedIdentity(t));
+
+        if (relatedCandidate) {
+          return {
+            track: relatedCandidate,
+            matchType: "live_search",
+            reason: `Related to ${currentTrack.title}`,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("Related tracks fetch error:", err);
+    }
+  }
+
+  // --------------------------------------------------------------------------
   // Tier 3: Check PEER ARTISTS in the same genre cluster (Catalog)
   // --------------------------------------------------------------------------
   const peerArtistNames = getPeerArtistsForArtist(effectiveArtist);
@@ -410,21 +493,36 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
   }
 
   // --------------------------------------------------------------------------
-  // Tier 5: Dynamic Edge YouTube Search Fallback for Genre
+  // Tier 5: Dynamic YouTube Search Fallback for Genre (verified candidates only)
   // --------------------------------------------------------------------------
   if (canPerformFetch) {
     try {
+      const genreLanguages = getLanguagesForGenre(detectedGenre);
       const query =
-        detectedGenre !== "other" ? `best ${detectedGenre} songs` : `${effectiveArtist || currentTrack.title} music`;
+        detectedGenre !== "other"
+          ? `best ${detectedGenre}${genreLanguages[0] ? ` ${genreLanguages[0]}` : ""} songs`
+          : `${effectiveArtist || currentTrack.title} music`;
 
       const res = await fetchFn(`${searchApiUrl}?q=${encodeURIComponent(query)}&limit=10&sort=views`);
       if (res.ok) {
         const data = (await res.json()) as { tracks?: Track[] };
         const fetchedTracks = data.tracks || [];
 
-        const liveCandidate = fetchedTracks.find(
-          (t) => !isDuplicateCandidate(t) && t.durationMs >= 50000 && t.durationMs <= 720000
-        );
+        const liveCandidate = fetchedTracks.find((t) => {
+          if (isDuplicateCandidate(t)) return false;
+          if (t.durationMs < 50000 || t.durationMs > 720000) return false;
+          // Never accept candidates without a verifiable real artist
+          if (!hasTrustedIdentity(t)) return false;
+
+          if (detectedGenre !== "other") {
+            // The candidate must genuinely classify into the detected genre
+            return classifyGenre({ title: t.title, artist: t.artist }).genre === detectedGenre;
+          }
+
+          // Genre unknown: require artist continuity, otherwise the result is
+          // unrelated to what's playing and must be rejected
+          return isSameArtistCandidate(t);
+        });
 
         if (liveCandidate) {
           return {
@@ -440,51 +538,12 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
   }
 
   // --------------------------------------------------------------------------
-  // Tier 6: Taste-Informed & Genre-Consistent Safety Fallback
+  // Tier 6: Genre-Consistent Safety Fallback
   // (Prevents unrelated genres from appearing when current artist tracks are exhausted)
   // --------------------------------------------------------------------------
-  try {
-    const { TasteProfileEngine } = await import("./TasteProfileEngine");
-    const taste = TasteProfileEngine.getInstance();
-    const userTopGenres = taste.getTopGenres(3).map((g) => g.genre);
-    const userTopArtists = taste.getTopArtists(5).map((a) => a.artistName.toLowerCase());
 
-    // 6a. Try catalog artists matching the user's known top genres
-    for (const g of userTopGenres) {
-      const gArtists = ARTISTS_CATALOG.filter(
-        (a) => a.region === g || a.genre.toLowerCase().includes(g)
-      );
-      for (const artist of gArtists) {
-        const candidate = artist.topTracks.find((t) => !isDuplicateCandidate(t));
-        if (candidate) {
-          return {
-            track: candidate,
-            matchType: "genre_match",
-            reason: `From Your Taste in ${g.toUpperCase()}: ${candidate.artist}`,
-          };
-        }
-      }
-    }
-
-    // 6b. Try catalog artists matching user's top artist affinities
-    for (const artistName of userTopArtists) {
-      const match = ARTISTS_CATALOG.find((a) => a.name.toLowerCase().includes(artistName));
-      if (match) {
-        const candidate = match.topTracks.find((t) => !isDuplicateCandidate(t));
-        if (candidate) {
-          return {
-            track: candidate,
-            matchType: "same_artist",
-            reason: `Based on your favorite artist: ${candidate.artist}`,
-          };
-        }
-      }
-    }
-  } catch {
-    // TasteProfileEngine optional during isolated tests
-  }
-
-  // 6c. As a final fallback, choose from catalog artists that match detectedGenre
+  // 6a. FIRST: catalog artists matching the CURRENT track's genre — what's
+  // playing always wins over the user's historical taste.
   const sameGenreCatalog = ARTISTS_CATALOG.filter(
     (a) => a.region === detectedGenre || a.genre.toLowerCase().includes(detectedGenre)
   );
@@ -499,18 +558,65 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
     }
   }
 
-  // 6d. Absolute fallback if no genre match exists: pick from catalog
-  for (const artist of ARTISTS_CATALOG) {
-    const candidate = artist.topTracks.find((t) => !isDuplicateCandidate(t));
-    if (candidate) {
-      return {
-        track: candidate,
-        matchType: "genre_match",
-        reason: `Suggested: ${candidate.artist}`,
-      };
+  // 6b/6c: taste-informed fallbacks — only meaningful when we couldn't detect
+  // the current track's genre (otherwise they would ignore what's playing).
+  if (detectedGenre === "other") {
+    try {
+      const { TasteProfileEngine } = await import("./TasteProfileEngine");
+      const taste = TasteProfileEngine.getInstance();
+      const userTopGenres = taste.getTopGenres(3).map((g) => g.genre);
+      const userTopArtists = taste.getTopArtists(5).map((a) => a.artistName.toLowerCase());
+
+      // 6b. Try catalog artists matching the user's known top genres
+      for (const g of userTopGenres) {
+        const gArtists = ARTISTS_CATALOG.filter(
+          (a) => a.region === g || a.genre.toLowerCase().includes(g)
+        );
+        for (const artist of gArtists) {
+          const candidate = artist.topTracks.find((t) => !isDuplicateCandidate(t));
+          if (candidate) {
+            return {
+              track: candidate,
+              matchType: "genre_match",
+              reason: `From Your Taste in ${g.toUpperCase()}: ${candidate.artist}`,
+            };
+          }
+        }
+      }
+
+      // 6c. Try catalog artists matching user's top artist affinities
+      for (const artistName of userTopArtists) {
+        const match = ARTISTS_CATALOG.find((a) => a.name.toLowerCase().includes(artistName));
+        if (match) {
+          const candidate = match.topTracks.find((t) => !isDuplicateCandidate(t));
+          if (candidate) {
+            return {
+              track: candidate,
+              matchType: "same_artist",
+              reason: `Based on your favorite artist: ${candidate.artist}`,
+            };
+          }
+        }
+      }
+    } catch {
+      // TasteProfileEngine optional during isolated tests
+    }
+
+    // 6d. Absolute fallback (genre unknown only): pick from catalog rather
+    // than suggesting nothing at all.
+    for (const artist of ARTISTS_CATALOG) {
+      const candidate = artist.topTracks.find((t) => !isDuplicateCandidate(t));
+      if (candidate) {
+        return {
+          track: candidate,
+          matchType: "genre_match",
+          reason: `Suggested: ${candidate.artist}`,
+        };
+      }
     }
   }
 
+  // Genre is known but nothing matching exists — do NOT seed an unrelated track.
   return null;
 }
 

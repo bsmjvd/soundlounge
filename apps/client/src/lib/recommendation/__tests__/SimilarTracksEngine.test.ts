@@ -291,3 +291,98 @@ describe("Intelligent Similar Tracks Recommendation Engine", () => {
     expect(normalizeSongTitle("Softly - Lyrical Song", "Karan Aujla")).toBe("softly");
   });
 });
+
+describe("Similar Tracks relevance guards (related tier + verified fallbacks)", () => {
+  const makeTrack = (id: string, title: string, artist: string, durationMs = 250000): Track => ({
+    id,
+    title,
+    artist,
+    durationMs,
+    url: `/api/stream/youtube?id=${id.replace(/^yt_/, "")}`,
+    source: "youtube",
+  });
+
+  const mockResponse = (payload: unknown) =>
+    ({
+      ok: true,
+      json: async () => payload,
+    }) as unknown as Response;
+
+  const urlAwareFetch = (related: Track[], search: Track[]) =>
+    (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/api/related")) return mockResponse({ tracks: related });
+      return mockResponse({ tracks: search });
+    }) as unknown as typeof fetch;
+
+  const obscureTrack: Track = makeTrack("yt_obscureAA1", "Fading Signal", "Autonomous Ambient Ensemble", 300000);
+
+  it("prefers same-artist tracks from the YouTube related list", async () => {
+    const unrelated = makeTrack("yt_pop_unrelated", "Levitating", "Dua Lipa");
+    const sameArtist = makeTrack("yt_aa2", "Ghost Frequencies", "Autonomous Ambient Ensemble", 280000);
+
+    const res = await findSimilarTrack({
+      currentTrack: obscureTrack,
+      existingQueue: [obscureTrack],
+      fetchFn: urlAwareFetch([unrelated, sameArtist], []),
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.track.id).toBe("yt_aa2");
+    expect(res!.reason).toContain("Same Artist");
+  });
+
+  it("falls back to a related-list candidate (which is inherently relevant) when no same-artist match exists", async () => {
+    const unrelated = makeTrack("yt_pop_unrelated", "Levitating", "Dua Lipa");
+
+    const res = await findSimilarTrack({
+      currentTrack: obscureTrack,
+      existingQueue: [obscureTrack],
+      fetchFn: urlAwareFetch([unrelated], []),
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.track.id).toBe("yt_pop_unrelated");
+    expect(res!.reason).toContain("Related to");
+  });
+
+  it("never accepts an unverified cross-artist candidate for unknown-genre tracks", async () => {
+    const unrelated = makeTrack("yt_bolly_unrelated", "Tum Hi Ho", "Arijit Singh");
+
+    const res = await findSimilarTrack({
+      currentTrack: obscureTrack,
+      existingQueue: [obscureTrack],
+      fetchFn: urlAwareFetch([], [unrelated]),
+    });
+
+    expect(res).not.toBeNull();
+    // The unrelated live-search candidate must be rejected; only catalog fallbacks may answer
+    expect(res!.track.id).not.toBe("yt_bolly_unrelated");
+    expect(res!.reason).not.toContain("Discovered Similar");
+  });
+
+  it("verifies the genre of live-search candidates when the genre is known", async () => {
+    const currentTrack: Track = makeTrack("yt_unknown_dj1", "Midnight Techno Pulse", "Unknown DJ");
+    // Exhaust the only catalog electronic artist (Daft Punk) via his catalog tracks
+    const queue: Track[] = [
+      currentTrack,
+      makeTrack("yt_5NV6Rdv1a3I", "Get Lucky", "Daft Punk ft. Pharrell Williams", 248000),
+      makeTrack("yt_L93-7vRte34", "Harder, Better, Faster, Stronger", "Daft Punk", 224000),
+      makeTrack("yt_FGBhQbmPwH8", "One More Time", "Daft Punk", 320000),
+    ];
+
+    const popCandidate = makeTrack("yt_dua_lev", "Levitating", "Dua Lipa", 203000);
+    const electronicCandidate = makeTrack("yt_kavinsky_nc", "Nightcall", "Kavinsky", 258000);
+
+    const res = await findSimilarTrack({
+      currentTrack,
+      existingQueue: queue,
+      fetchFn: urlAwareFetch([], [popCandidate, electronicCandidate]),
+    });
+
+    expect(res).not.toBeNull();
+    // The pop candidate must be rejected; the genre-matching candidate is accepted
+    expect(res!.track.id).toBe("yt_kavinsky_nc");
+    expect(res!.reason).toContain("Discovered Similar");
+  });
+});
