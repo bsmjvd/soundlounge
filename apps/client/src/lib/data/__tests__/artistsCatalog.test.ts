@@ -6,6 +6,7 @@ import {
   getArtistsByRegion,
   searchArtistsCatalog,
 } from "../artistsCatalog";
+import { ALBUMS_CATALOG } from "../albumsCatalog";
 
 describe("Scalable Artists Directory & Discography Catalog", () => {
   it("provides an extensive verified catalog of artists", () => {
@@ -62,6 +63,42 @@ describe("Scalable Artists Directory & Discography Catalog", () => {
     const rock = getArtistsByRegion("rock");
     expect(rock.some((a) => a.name === "Train")).toBe(true);
     expect(rock.some((a) => a.name === "Coldplay")).toBe(true);
+  });
+
+  it("includes Pakistani artists, Coke Studio, and Kashmiri artists with seeded tracks", () => {
+    const pakistani = getArtistsByRegion("pakistani");
+    expect(pakistani.length).toBeGreaterThanOrEqual(10);
+    expect(pakistani.some((a) => a.name === "Ali Sethi")).toBe(true);
+    expect(pakistani.some((a) => a.name === "Atif Aslam")).toBe(true);
+    expect(pakistani.some((a) => a.name === "Young Stunners")).toBe(true);
+
+    const cokeStudio = ARTISTS_CATALOG.find((a) => a.id === "coke-studio-pakistan");
+    expect(cokeStudio).toBeDefined();
+    expect(cokeStudio!.topTracks.some((t) => t.title === "Pasoori")).toBe(true);
+    expect(cokeStudio!.albums?.some((alb) => alb.id === "coke_studio_season_14")).toBe(true);
+
+    // Coke Studio seasons are compilation albums linked to featured singers
+    const cs14 = ALBUMS_CATALOG.find((a) => a.id === "coke_studio_season_14");
+    expect(cs14).toBeDefined();
+    expect(cs14!.type).toBe("compilation");
+    expect(cs14!.featuredSingers).toContain("Ali Sethi");
+    expect(cs14!.tracks.some((t) => t.title === "Kana Yaari")).toBe(true);
+
+    const kashmiri = getArtistsByRegion("kashmiri");
+    expect(kashmiri.length).toBeGreaterThanOrEqual(4);
+    expect(kashmiri.some((a) => a.name === "Ali Saffudin")).toBe(true);
+    expect(kashmiri.some((a) => a.name === "MC Kash")).toBe(true);
+    expect(kashmiri.some((a) => a.name === "Shivkumar Sharma")).toBe(true);
+
+    // Seeded (new) tracks resolve through title/artist search, never fabricated video IDs;
+    // pre-existing entries like Atif Aslam keep their hand-verified video IDs
+    for (const artist of [...pakistani, ...kashmiri]) {
+      for (const track of artist.topTracks) {
+        if (!track.id.startsWith("seed_")) continue;
+        expect(track.url).toMatch(/^\/api\/stream\/youtube\?title=/);
+        expect(track.url).not.toContain("id=");
+      }
+    }
   });
 
   it("disambiguates artists connected to 'The Train' across eras and bands", () => {

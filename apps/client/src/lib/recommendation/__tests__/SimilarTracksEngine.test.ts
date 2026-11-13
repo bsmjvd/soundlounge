@@ -1,5 +1,7 @@
 import { describe, it, expect } from "bun:test";
-import { findSimilarTrack, resolveEffectiveArtist, normalizeSongTitle } from "../SimilarTracksEngine";
+import { findSimilarTrack, resolveEffectiveArtist } from "../SimilarTracksEngine";
+import { normalizeSongTitle } from "../normalizeTitle";
+import { ARTISTS_CATALOG } from "../../data/artistsCatalog";
 import type { Track } from "@soundlounge/shared";
 
 describe("Intelligent Similar Tracks Recommendation Engine", () => {
@@ -312,7 +314,9 @@ describe("Similar Tracks relevance guards (related tier + verified fallbacks)", 
     (async (input: string | URL | Request) => {
       const url = String(input);
       if (url.includes("/api/related")) return mockResponse({ tracks: related });
-      return mockResponse({ tracks: search });
+      if (url.includes("/api/search")) return mockResponse({ tracks: search });
+      // Any other endpoint (e.g. /api/new-releases) answers empty
+      return mockResponse({ tracks: [] });
     }) as unknown as typeof fetch;
 
   const obscureTrack: Track = makeTrack("yt_obscureAA1", "Fading Signal", "Autonomous Ambient Ensemble", 300000);
@@ -399,5 +403,27 @@ describe("Similar Tracks relevance guards (related tier + verified fallbacks)", 
     // The pop candidate must be rejected; the genre-matching candidate is accepted
     expect(res!.track.id).toBe("yt_kavinsky_nc");
     expect(res!.reason).toContain("Discovered Similar");
+  });
+
+  it("re-attributes a title-matched candidate carrying an unrelated channel alias (KK leak)", async () => {
+    const kaujla = ARTISTS_CATALOG.find((a) => a.name === "Karan Aujla")!;
+    const currentTrack: Track = { ...kaujla.topTracks[0] };
+    // Exhaust the whole catalog discography so the live same-artist search fires
+    const dummyQueue: Track[] = kaujla.topTracks.map((t) => ({ ...t }));
+
+    // A "KK" channel upload that only matches because the title names Karan Aujla
+    const kkLeak = makeTrack("yt_kk_leak", "Unknown Karan Aujla Session Tape", "KK", 240000);
+
+    const res = await findSimilarTrack({
+      currentTrack,
+      existingQueue: dummyQueue,
+      fetchFn: urlAwareFetch([], [kkLeak]),
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.track.id).toBe("yt_kk_leak");
+    // The wrong channel alias must be replaced with the real artist
+    expect(res!.track.artist).toBe("Karan Aujla");
+    expect(res!.reason).toContain("Same Artist");
   });
 });

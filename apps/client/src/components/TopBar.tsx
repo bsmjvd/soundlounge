@@ -11,7 +11,7 @@ import { SyncHealthBadge } from "./room/SyncHealthBadge";
 import { hapticLight } from "../lib/haptics";
 import { prefetchTrack } from "../lib/prefetch";
 
-export type TopNavTab = "discover" | "library" | "radio";
+export type TopNavTab = "discover" | "library" | "radio" | "playlists";
 
 interface TopBarProps {
   mode: PlaybackMode;
@@ -356,6 +356,21 @@ export function TopBar({
               }`}
             >
               Radio
+            </button>
+
+            <button
+              onClick={() => {
+                hapticLight();
+                onTopTabChange && onTopTabChange("playlists");
+              }}
+              aria-current={activeTopTab === "playlists" ? "page" : undefined}
+              className={`text-xs font-bold uppercase tracking-wider py-1 border-b-2 transition cursor-pointer ${
+                activeTopTab === "playlists"
+                  ? "text-accent border-accent"
+                  : "text-ink-muted border-transparent hover:text-ink"
+              }`}
+            >
+              Playlists
             </button>
           </nav>
 

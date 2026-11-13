@@ -1,6 +1,7 @@
 import type { Track } from "@soundlounge/shared";
 import { ARTISTS_CATALOG } from "../data/artistsCatalog";
 import { classifyGenre, getPeerArtistsForArtist, getPeerArtistsForGenre, getLanguagesForGenre, type MusicGenre } from "./genreTaxonomy";
+import { normalizeSongTitle } from "./normalizeTitle";
 
 export interface FindSimilarOptions {
   currentTrack: Track;
@@ -76,41 +77,6 @@ function extractVideoIdFromTrack(track: Track): string | null {
   if (track.id && track.id.startsWith("yt_")) return track.id.slice(3);
   const match = (track.url || "").match(/[?&]id=([\w-]+)/);
   return match ? match[1] : null;
-}
-
-/**
- * Normalizes a song title to its core canonical form to detect duplicates across variations
- * (e.g. "Softly", "SOFTLY KARAN AUJLA", "Softly (Official Music Video)", "Softly - Lyrical").
- */
-export function normalizeSongTitle(title: string, artist?: string): string {
-  let s = (title || "").toLowerCase();
-
-  // Strip pipe or bullet suffix additions (e.g. "| Official Video | Ikky")
-  s = s.split(/\s*[|•]\s*/)[0];
-
-  // Strip artist name if embedded in title (e.g. "SOFTLY KARAN AUJLA" -> "softly")
-  if (artist && artist.trim().length >= 3) {
-    const escaped = artist
-      .trim()
-      .toLowerCase()
-      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    s = s.replace(new RegExp(`\\b${escaped}\\b`, "gi"), "");
-  }
-
-  // Strip common YouTube audio/video badges, parentheticals, and extra punctuation
-  s = s
-    .replace(/\s*[-–—:]\s*(lyrical|official|video|audio|full song|song).*/i, "")
-    .replace(/\(.*?\)/g, "")
-    .replace(/\[.*?\]/g, "")
-    .replace(/feat\..*|ft\..*/i, "")
-    .replace(/official\s+(music\s+)?(video|audio|track)/gi, "")
-    .replace(/lyric(al)?\s+(video|song|audio)/gi, "")
-    .replace(/full\s+(audio|video|song)/gi, "")
-    .replace(/[^\w\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return s;
 }
 
 /**
@@ -376,14 +342,11 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
         });
 
         if (sameArtistCandidate) {
-          // Normalize artist name so label channels or previous KK leaks don't appear in UI
-          if (
-            !sameArtistCandidate.artist ||
-            sameArtistCandidate.artist === "Various Artists" ||
-            sameArtistCandidate.artist === "Unknown Artist" ||
-            sameArtistCandidate.artist === "KK" ||
-            RECORD_LABELS.some((l) => (sameArtistCandidate.artist || "").toLowerCase().includes(l))
-          ) {
+          // A candidate can match through its title while carrying an unrelated
+          // dictionary alias (e.g. a "KK" channel uploading a Karan Aujla song).
+          // When the attributed artist isn't genuinely the effective artist,
+          // re-attribute so the artist label and cover stay correct.
+          if (!matchesWordBoundary(clean(sameArtistCandidate.artist), cleanArtist)) {
             sameArtistCandidate.artist = effectiveArtist;
           }
 
@@ -417,7 +380,7 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
         // (a) Same artist first
         const relatedSameArtist = relatedTracks.find(isSameArtistCandidate);
         if (relatedSameArtist) {
-          if (!hasTrustedIdentity(relatedSameArtist)) {
+          if (!hasTrustedIdentity(relatedSameArtist) || !matchesWordBoundary(clean(relatedSameArtist.artist), cleanArtist)) {
             relatedSameArtist.artist = effectiveArtist;
           }
           return {
@@ -498,6 +461,36 @@ export async function findSimilarTrack(options: FindSimilarOptions): Promise<Sim
         matchType: "genre_match",
         reason: `Similar Style: ${artist.name}`,
       };
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Tier 4.5: FRESH RELEASES — brand-new songs in the current genre the
+  // listener hasn't heard yet, ahead of generic genre-matched catalog tracks.
+  // --------------------------------------------------------------------------
+  if (canPerformFetch && detectedGenre !== "other") {
+    try {
+      const res = await fetchFn(`/api/new-releases?genre=${encodeURIComponent(detectedGenre)}&limit=12`);
+      if (res.ok) {
+        const data = (await res.json()) as { tracks?: Track[] };
+        const freshCandidate = (data.tracks || []).find((t) => {
+          if (isDuplicateCandidate(t)) return false;
+          if (t.durationMs < 50000 || t.durationMs > 720000) return false;
+          if (!hasTrustedIdentity(t)) return false;
+          // A fresh release must genuinely belong to the genre being played
+          return classifyGenre({ title: t.title, artist: t.artist }).genre === detectedGenre;
+        });
+
+        if (freshCandidate) {
+          return {
+            track: freshCandidate,
+            matchType: "live_search",
+            reason: `New ${detectedGenre.toUpperCase()} Release: ${freshCandidate.artist}`,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("New releases fetch error:", err);
     }
   }
 

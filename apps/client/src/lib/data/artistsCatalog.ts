@@ -5,6 +5,8 @@ export type RegionKey =
   | "bollywood"
   | "ghazal"
   | "punjabi"
+  | "pakistani"
+  | "kashmiri"
   | "retro"
   | "global"
   | "rock"
@@ -36,6 +38,21 @@ export interface ArtistProfileData {
   albums?: ArtistAlbumReference[];
   singlesAndEPs?: Track[];
   collaborations?: Track[];
+}
+
+// Seeded tracks for newly added artists use title/artist-only stream URLs — the
+// stream route resolves them by YouTube search, so no video IDs are fabricated here.
+// The artist page's live /api/artist-tracks fetch provides the full discography.
+function seedTrack(title: string, artist: string, durationSec: number): Track {
+  return {
+    id: `seed_${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}_${artist.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    title,
+    artist,
+    durationMs: durationSec * 1000,
+    url: `/api/stream/youtube?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`,
+    source: "youtube",
+    createdAt: 0,
+  };
 }
 
 export const ARTISTS_CATALOG: ArtistProfileData[] = [
@@ -558,8 +575,8 @@ export const ARTISTS_CATALOG: ArtistProfileData[] = [
     id: "atif-aslam",
     name: "Atif Aslam",
     realName: "Muhammad Atif Aslam",
-    genre: "Bollywood / Sufi Rock / Romantic",
-    region: "bollywood",
+    genre: "Pakistani Pop / Sufi Rock / Bollywood Playback",
+    region: "pakistani",
     regionLabel: "Pakistan & South Asia",
     roles: ["Playback Singer", "Songwriter"],
     avatarUrl: "/artists/atif-aslam.webp",
@@ -1867,6 +1884,491 @@ export const ARTISTS_CATALOG: ArtistProfileData[] = [
         source: "youtube",
         createdAt: 0,
       },
+    ],
+  },
+
+  // 30. Ali Sethi
+  {
+    id: "ali-sethi",
+    name: "Ali Sethi",
+    realName: "Ali Sethi",
+    genre: "Pakistani Sufi / Classical Crossover Pop",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Songwriter", "Author"],
+    avatarUrl: "/artists/ali-sethi.png",
+    bannerUrl: "/artists/ali-sethi.png",
+    monthlyListeners: "8.4M",
+    bio: "Harvard-educated scion of a legendary literary family who bridged classical khyal singing and modern pop. His Coke Studio breakout 'Pasoori' became the first Pakistani song to enter Spotify's global top 10.",
+    topTracks: [
+      seedTrack("Pasoori", "Ali Sethi, Shae Gill", 230),
+      seedTrack("Chandni Rat", "Ali Sethi", 260),
+      seedTrack("Rung", "Ali Sethi", 245),
+      seedTrack("Deewane", "Ali Sethi", 240),
+      seedTrack("Ishq", "Ali Sethi", 270),
+    ],
+  },
+
+  // 31. Shae Gill
+  {
+    id: "shae-gill",
+    name: "Shae Gill",
+    realName: "Anum Shaikh Gill",
+    genre: "Pakistani Pop",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer"],
+    avatarUrl: "/artists/shae-gill.png",
+    bannerUrl: "/artists/shae-gill.png",
+    monthlyListeners: "3.1M",
+    bio: "Lahore-born singer who went from church choir to global charts overnight with 'Pasoori'. Her airy, smoky tone has made her one of Coke Studio's most distinctive new voices.",
+    topTracks: [
+      seedTrack("Pasoori", "Ali Sethi, Shae Gill", 230),
+      seedTrack("Fall", "Shae Gill", 200),
+      seedTrack("Sansaar", "Shae Gill", 220),
+    ],
+  },
+
+  // 32. Hasan Raheem
+  {
+    id: "hasan-raheem",
+    name: "Hasan Raheem",
+    realName: "Hasan Raheem",
+    genre: "Pakistani Indie / Alt R&B",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Songwriter"],
+    avatarUrl: "/artists/hasan-raheem.png",
+    bannerUrl: "/artists/hasan-raheem.png",
+    monthlyListeners: "2.9M",
+    bio: "Gilgit-Baltistan-born doctor-turned-indie star whose mellow, whispery R&B made him the voice of Pakistani Gen-Z. Coke Studio's 'Peechay Hutt' cemented his mainstream breakout.",
+    topTracks: [
+      seedTrack("Joona", "Hasan Raheem", 215),
+      seedTrack("Wishes", "Hasan Raheem", 205),
+      seedTrack("Peechay Hutt", "Justin Bibis, Hasan Raheem, Talal Qureshi, Faris Shafi", 250),
+      seedTrack("Aisay Kaisay", "Hasan Raheem", 230),
+      seedTrack("Na Tu Aana", "Hasan Raheem", 220),
+    ],
+  },
+
+  // 33. Abdul Hannan
+  {
+    id: "abdul-hannan",
+    name: "Abdul Hannan",
+    realName: "Abdul Hannan",
+    genre: "Pakistani Indie Pop",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Songwriter", "Producer"],
+    avatarUrl: "/artists/abdul-hannan.png",
+    bannerUrl: "/artists/abdul-hannan.png",
+    monthlyListeners: "2.2M",
+    bio: "Karachi-based singer-producer whose lo-fi bedroom pop ('Iraaday', 'Beparwah') became the soundtrack of Pakistani heartbreak playlists worldwide.",
+    topTracks: [
+      seedTrack("Iraaday", "Abdul Hannan, Rovalio", 235),
+      seedTrack("Beparwah", "Abdul Hannan", 220),
+      seedTrack("Siyaah", "Abdul Hannan", 210),
+      seedTrack("Awara", "Abdul Hannan", 230),
+    ],
+  },
+
+  // 34. Kaifi Khalil
+  {
+    id: "kaifi-khalil",
+    name: "Kaifi Khalil",
+    realName: "Kaifi Khalil",
+    genre: "Pakistani Folk / Balochi Pop",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Songwriter"],
+    avatarUrl: "/artists/kaifi-khalil.png",
+    bannerUrl: "/artists/kaifi-khalil.png",
+    monthlyListeners: "4.6M",
+    bio: "Lyari-raised Baloch singer-guitarist whose raw, gravel-toned 'Kahani Suno 2.0' became one of the most-streamed Pakistani songs ever, bringing Balochi folk melodies to the mainstream.",
+    topTracks: [
+      seedTrack("Kahani Suno 2.0", "Kaifi Khalil", 245),
+      seedTrack("Mujhe Pyar Hua Tha", "Kaifi Khalil", 260),
+      seedTrack("Kana Yaari", "Kaifi Khalil, Eva B, Abdul Wahab Bugti", 285),
+      seedTrack("Judaiyaan", "Kaifi Khalil", 225),
+    ],
+  },
+
+  // 35. Asim Azhar
+  {
+    id: "asim-azhar",
+    name: "Asim Azhar",
+    realName: "Asim Azhar",
+    genre: "Pakistani Pop / R&B",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Songwriter"],
+    avatarUrl: "/artists/asim-azhar.png",
+    bannerUrl: "/artists/asim-azhar.png",
+    monthlyListeners: "2.8M",
+    bio: "YouTube-cover prodigy who grew into Pakistan's pop heartthrob, blending Urdu lyrics with sleek contemporary R&B production across 'Jo Tu Na Mila' and 'Soneya'.",
+    topTracks: [
+      seedTrack("Jo Tu Na Mila", "Asim Azhar", 230),
+      seedTrack("Soneya", "Asim Azhar", 215),
+      seedTrack("Tum Tum", "Asim Azhar, Shamoon Ismail", 220),
+      seedTrack("Bulleya", "Asim Azhar", 250),
+    ],
+  },
+
+  // 36. Aima Baig
+  {
+    id: "aima-baig",
+    name: "Aima Baig",
+    realName: "Aima Baig",
+    genre: "Pakistani Pop / Playback",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Host"],
+    avatarUrl: "/artists/aima-baig.png",
+    bannerUrl: "/artists/aima-baig.png",
+    monthlyListeners: "2.5M",
+    bio: "One of Pakistan's most-streamed female vocalists, equally at home on Coke Studio stages ('Baazi') and Lollywood soundtracks, with a bright pop timbre and effortless high register.",
+    topTracks: [
+      seedTrack("Baazi", "Aima Baig, Sahir Ali Bagga", 260),
+      seedTrack("Malang Sajna", "Sahir Ali Bagga, Aima Baig", 240),
+      seedTrack("Bashang", "Aima Baig, Sahir Ali Bagga", 235),
+    ],
+  },
+
+  // 37. Meesha Shafi
+  {
+    id: "meesha-shafi",
+    name: "Meesha Shafi",
+    realName: "Meesha Shafi",
+    genre: "Pakistani Pop / Electro Rock",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Actor"],
+    avatarUrl: "/artists/meesha-shafi.png",
+    bannerUrl: "/artists/meesha-shafi.png",
+    monthlyListeners: "1.4M",
+    bio: "Fearless rocker and Coke Studio icon whose booming alto powered anthems like 'Boom Boom' and 'Hotline' — Pakistan's unapologetic queen of electro-pop swagger.",
+    topTracks: [
+      seedTrack("Boom Boom", "Meesha Shafi", 250),
+      seedTrack("Hotline", "Meesha Shafi", 230),
+      seedTrack("Mukhtasari", "Meesha Shafi", 240),
+    ],
+  },
+
+  // 38. Sajjad Ali
+  {
+    id: "sajjad-ali",
+    name: "Sajjad Ali",
+    realName: "Sajjad Ali",
+    genre: "Pakistani Classical Pop / Semi-Classical",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Composer", "Actor", "Director"],
+    avatarUrl: "/artists/sajjad-ali.png",
+    bannerUrl: "/artists/sajjad-ali.png",
+    monthlyListeners: "1.8M",
+    bio: "A four-decade legend of Pakistani music — child classical prodigy turned pop pioneer whose 'Tamasha' and ghazal-pop hybrids influenced an entire generation of playback singers.",
+    topTracks: [
+      seedTrack("Tamasha", "Sajjad Ali", 290),
+      seedTrack("Har Zulm", "Sajjad Ali", 270),
+      seedTrack("Tera Mukaddar", "Sajjad Ali", 255),
+      seedTrack("Chandni Raatein", "Sajjad Ali", 280),
+    ],
+  },
+
+  // 39. Ali Zafar
+  {
+    id: "ali-zafar",
+    name: "Ali Zafar",
+    realName: "Ali Zafar",
+    genre: "Pakistani Pop / Rock",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Songwriter", "Actor", "Painter"],
+    avatarUrl: "/artists/ali-zafar.png",
+    bannerUrl: "/artists/ali-zafar.png",
+    monthlyListeners: "2.4M",
+    bio: "Multitalented singer-actor-painter whose breezy pop-rock ('Chal Dil Mere', 'Jhoom') and Coke Studio appearances made him one of Pakistan's most beloved crossover entertainers.",
+    topTracks: [
+      seedTrack("Chal Dil Mere", "Ali Zafar", 260),
+      seedTrack("Jhoom", "Ali Zafar", 270),
+      seedTrack("Madhubala", "Ali Zafar", 240),
+      seedTrack("Rockstar", "Ali Zafar", 225),
+    ],
+  },
+
+  // 40. Strings
+  {
+    id: "strings",
+    name: "Strings",
+    realName: "Strings (Faisal Kapadia & Bilal Maqsood)",
+    genre: "Pakistani Pop Rock",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Band"],
+    avatarUrl: "/artists/strings.png",
+    bannerUrl: "/artists/strings.png",
+    monthlyListeners: "1.9M",
+    bio: "The duo that defined Pakistani pop-rock from the 90s through four Coke Studio eras — melodic guitar-driven classics like 'Duur' and 'Dhaani' with poetry-forward Urdu lyrics.",
+    topTracks: [
+      seedTrack("Duur", "Strings", 280),
+      seedTrack("Dhaani", "Strings", 265),
+      seedTrack("Anjane", "Strings", 250),
+      seedTrack("Zinda", "Strings", 270),
+    ],
+  },
+
+  // 41. Annural Khalid
+  {
+    id: "annural-khalid",
+    name: "Annural Khalid",
+    realName: "Annural Khalid",
+    genre: "Pakistani Indie Pop",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Songwriter"],
+    avatarUrl: "/artists/annural-khalid.png",
+    bannerUrl: "/artists/annural-khalid.png",
+    monthlyListeners: "1.2M",
+    bio: "Islamabad-born newcomer whose silky, jazz-tinged debut on Coke Studio Season 15's 'Jhol' instantly marked her as Pakistani pop's next big voice.",
+    topTracks: [
+      seedTrack("Jhol", "Maanu, Annural Khalid", 265),
+      seedTrack("Kabar", "Annural Khalid", 220),
+      seedTrack("Wadda Vishal", "Annural Khalid", 230),
+    ],
+  },
+
+  // 42. Maanu
+  {
+    id: "maanu",
+    name: "Maanu",
+    realName: "Maheer Mansoor",
+    genre: "Pakistani Indie / Alt Pop",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Singer", "Producer"],
+    avatarUrl: "/artists/maanu.png",
+    bannerUrl: "/artists/maanu.png",
+    monthlyListeners: "1.1M",
+    bio: "Karachi multi-instrumentalist and producer whose lo-fi Urdu alt-pop broke out with Coke Studio Season 15's genre-bending 'Jhol'.",
+    topTracks: [
+      seedTrack("Jhol", "Maanu, Annural Khalid", 265),
+      seedTrack("Mundya", "Maanu", 225),
+      seedTrack("Sabab", "Maanu", 235),
+    ],
+  },
+
+  // 43. Young Stunners
+  {
+    id: "young-stunners",
+    name: "Young Stunners",
+    realName: "Talha Anjum & Talha Yunus",
+    genre: "Pakistani Hip-Hop / Desi Rap",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Duo"],
+    avatarUrl: "/artists/young-stunners.png",
+    bannerUrl: "/artists/young-stunners.png",
+    monthlyListeners: "3.4M",
+    bio: "The Karachi duo that put Urdu rap on the map — razor-sharp bilingual bars about street life, ambition and Karachi's underbelly, and the founders of the modern Pakistani drill/boom-bap wave.",
+    topTracks: [
+      seedTrack("Astar Bazi", "Young Stunners", 240),
+      seedTrack("Mukhray", "Young Stunners", 225),
+      seedTrack("Quarantine", "Young Stunners", 260),
+      seedTrack("Gumaan", "Young Stunners", 245),
+    ],
+  },
+
+  // 44. Talha Anjum
+  {
+    id: "talha-anjum",
+    name: "Talha Anjum",
+    realName: "Talha Anjum",
+    genre: "Pakistani Hip-Hop",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Rapper", "Songwriter"],
+    avatarUrl: "/artists/talha-anjum.png",
+    bannerUrl: "/artists/talha-anjum.png",
+    monthlyListeners: "2.7M",
+    bio: "One half of Young Stunners and Urdu rap's most quotable pen — melancholic, diary-style solo records ('Downers At Dusk') made him the genre's breakout solo star.",
+    topTracks: [
+      seedTrack("Downers At Dusk", "Talha Anjum", 250),
+      seedTrack("Karachi Mera", "Talha Anjum, Umair", 235),
+      seedTrack("Awaam", "Talha Anjum", 245),
+      seedTrack("Open Letter", "Talha Anjum", 260),
+    ],
+  },
+
+  // 45. Faris Shafi
+  {
+    id: "faris-shafi",
+    name: "Faris Shafi",
+    realName: "Faris Shafi",
+    genre: "Pakistani Hip-Hop / Sufi Rap",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Rapper", "Actor"],
+    avatarUrl: "/artists/faris-shafi.png",
+    bannerUrl: "/artists/faris-shafi.png",
+    monthlyListeners: "1.6M",
+    bio: "Actor-rapper and son of playback legend Humaira Channa, whose literate, satirical Urdu bars — from 'Introduction' to Coke Studio's 'Peechay Hutt' — bridge classical poetry and trap.",
+    topTracks: [
+      seedTrack("Peechay Hutt", "Justin Bibis, Hasan Raheem, Talal Qureshi, Faris Shafi", 250),
+      seedTrack("Introduction", "Faris Shafi", 240),
+      seedTrack("Nazar", "Faris Shafi", 230),
+      seedTrack("Formula", "Faris Shafi", 250),
+    ],
+  },
+
+  // 46. Eva B
+  {
+    id: "eva-b",
+    name: "Eva B",
+    realName: "Eva B",
+    genre: "Pakistani Hip-Hop / Balochi Rap",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Rapper"],
+    avatarUrl: "/artists/eva-b.png",
+    bannerUrl: "/artists/eva-b.png",
+    monthlyListeners: "1.0M",
+    bio: "Lyari's hijab-wearing rap pioneer whose Balochi-Urdu flow on Coke Studio's 'Kana Yaari' made her an instant icon for South Asian female rappers.",
+    topTracks: [
+      seedTrack("Kana Yaari", "Kaifi Khalil, Eva B, Abdul Wahab Bugti", 285),
+      seedTrack("Rozi", "Eva B", 220),
+      seedTrack("Shantoo", "Eva B", 230),
+    ],
+  },
+
+  // 47. Coke Studio Pakistan
+  {
+    id: "coke-studio-pakistan",
+    name: "Coke Studio Pakistan",
+    realName: "Coke Studio Pakistan",
+    genre: "Pakistani Sufi / Fusion / Collaborative Sessions",
+    region: "pakistani",
+    regionLabel: "Pakistan",
+    roles: ["Music Series"],
+    avatarUrl: "/artists/coke-studio-pakistan.png",
+    bannerUrl: "/artists/coke-studio-pakistan.png",
+    monthlyListeners: "9.8M",
+    bio: "Since 2008, Pakistan's flagship live-music franchise has fused classical, qawwali, folk and contemporary pop into one-room collaborations — the platform that launched 'Pasoori', 'Afreen Afreen' and a generation of crossover stars.",
+    topTracks: [
+      seedTrack("Pasoori", "Ali Sethi, Shae Gill", 230),
+      seedTrack("Afreen Afreen", "Rahat Fateh Ali Khan, Momina Mustehsan", 335),
+      seedTrack("Tu Jhoom", "Naseebo Lal, Abida Parveen", 290),
+      seedTrack("Kana Yaari", "Kaifi Khalil, Eva B, Abdul Wahab Bugti", 285),
+      seedTrack("Peechay Hutt", "Justin Bibis, Hasan Raheem, Talal Qureshi, Faris Shafi", 250),
+      seedTrack("Man Aamadeh Am", "Gul Panra, Atif Aslam", 250),
+      seedTrack("Tajdar-e-Haram", "Atif Aslam", 610),
+      seedTrack("Jhol", "Maanu, Annural Khalid", 265),
+      seedTrack("Baazi", "Aima Baig, Sahir Ali Bagga", 260),
+    ],
+    albums: [
+      {
+        id: "coke_studio_season_14",
+        title: "Coke Studio Pakistan - Season 14",
+        releaseYear: 2022,
+        coverUrl: "/albums/coke-studio-14.png",
+        type: "compilation",
+        role: "Flagship season",
+      },
+      {
+        id: "coke_studio_season_15",
+        title: "Coke Studio Pakistan - Season 15",
+        releaseYear: 2023,
+        coverUrl: "/albums/coke-studio-15.png",
+        type: "compilation",
+        role: "Flagship season",
+      },
+      {
+        id: "coke_studio_season_8",
+        title: "Coke Studio Pakistan - Season 8",
+        releaseYear: 2015,
+        coverUrl: "/albums/coke-studio-8.webp",
+        type: "compilation",
+        role: "Classic season",
+      },
+    ],
+  },
+
+  // 48. Ali Saffudin
+  {
+    id: "ali-saffudin",
+    name: "Ali Saffudin",
+    realName: "Ali Saffudin",
+    genre: "Kashmiri Indie / Folk Rock",
+    region: "kashmiri",
+    regionLabel: "Kashmir",
+    roles: ["Singer", "Songwriter"],
+    avatarUrl: "/artists/ali-saffudin.png",
+    bannerUrl: "/artists/ali-saffudin.png",
+    monthlyListeners: "320K",
+    bio: "Srinagar-born singer-songwriter whose haunting Kashmiri folk-rock — built on rabab, acoustic guitar and protest-tinged poetry — has become the defining voice of Kashmir's new indie wave.",
+    topTracks: [
+      seedTrack("Awara", "Ali Saffudin", 260),
+      seedTrack("Bumbro", "Ali Saffudin", 240),
+      seedTrack("Wala Yaba", "Ali Saffudin", 250),
+    ],
+  },
+
+  // 49. MC Kash
+  {
+    id: "mc-kash",
+    name: "MC Kash",
+    realName: "Roushan Illahi",
+    genre: "Kashmiri Hip-Hop",
+    region: "kashmiri",
+    regionLabel: "Kashmir",
+    roles: ["Rapper", "Songwriter"],
+    avatarUrl: "/artists/mc-kash.png",
+    bannerUrl: "/artists/mc-kash.png",
+    monthlyListeners: "240K",
+    bio: "Srinagar's pioneering rapper whose hard-hitting English-Kashmiri bars put Kashmiri hip-hop on the world map — storytelling rap rooted in the valley's lived reality.",
+    topTracks: [
+      seedTrack("I Remember", "MC Kash", 250),
+      seedTrack("Kashmiri Cypher", "MC Kash", 240),
+      seedTrack("Bumbro Bass", "MC Kash", 230),
+    ],
+  },
+
+  // 50. Shivkumar Sharma
+  {
+    id: "shivkumar-sharma",
+    name: "Shivkumar Sharma",
+    realName: "Pandit Shivkumar Sharma",
+    genre: "Kashmiri Classical / Santoor",
+    region: "kashmiri",
+    regionLabel: "Kashmir",
+    roles: ["Santoor Maestro", "Composer"],
+    avatarUrl: "/artists/shivkumar-sharma.png",
+    bannerUrl: "/artists/shivkumar-sharma.png",
+    monthlyListeners: "480K",
+    bio: "The Pandit who single-handedly took the 100-string Kashmiri santoor from Sufiana mehfils to the world's classical stages — a Padma Vibhushan legend and composer of beloved film scores with Hariprasad Chaurasia.",
+    topTracks: [
+      seedTrack("Raga Pahadi", "Shivkumar Sharma", 480),
+      seedTrack("Raga Megh", "Shivkumar Sharma", 520),
+      seedTrack("Raga Kirwani", "Shivkumar Sharma", 560),
+    ],
+  },
+
+  // 51. Rahul Sharma
+  {
+    id: "rahul-sharma",
+    name: "Rahul Sharma",
+    realName: "Rahul Sharma",
+    genre: "Kashmiri Classical / Santoor Fusion",
+    region: "kashmiri",
+    regionLabel: "Kashmir",
+    roles: ["Santoor Player", "Composer"],
+    avatarUrl: "/artists/rahul-sharma.png",
+    bannerUrl: "/artists/rahul-sharma.png",
+    monthlyListeners: "390K",
+    bio: "Son and disciple of Shivkumar Sharma, carrying the santoor into the 21st century — from pure Hindustani ragas to fusion collaborations with jazz and electronic artists worldwide.",
+    topTracks: [
+      seedTrack("Raga Bhairav", "Rahul Sharma", 500),
+      seedTrack("Kashmir Suites", "Rahul Sharma", 460),
+      seedTrack("Valley of Flowers", "Rahul Sharma", 420),
     ],
   },
 ];
