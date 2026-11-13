@@ -64,6 +64,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // Node runtime: avoids the edge sandbox, which crashes dev middleware when
+  // NODE_ENV=production leaks into the environment
+  runtime: "nodejs",
   // Everything except Next internals and static files (anything with a file extension)
   matcher: ["/((?!_next/|.*\\..*).*)"],
 };

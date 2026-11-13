@@ -9,6 +9,12 @@ const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname, "../../"),
   serverExternalPackages: ["@distube/ytdl-core"],
+  experimental: {
+    // Run middleware in the Node runtime: the edge sandbox disallows dynamic
+    // codegen, which crashes dev middleware whenever NODE_ENV=production leaks
+    // into the environment (e.g. set globally in a shell profile).
+    nodeMiddleware: true,
+  },
 };
 
 export default nextConfig;
