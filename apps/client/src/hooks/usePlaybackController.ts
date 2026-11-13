@@ -7,6 +7,7 @@ import { useLibraryStore, type LastSessionSnapshot } from "../lib/store/useLibra
 import { useQueueStore } from "../lib/store/useQueueStore";
 import { useRoomSync } from "../lib/sync/useRoomSync";
 import { prefetchTrack } from "../lib/prefetch";
+import { resolveAndCache } from "../lib/player/nextUrlCache";
 import type { Track } from "@soundlounge/shared";
 
 // Singleton coordinator instance for the browser tab, preserved on window across fast refresh
@@ -280,10 +281,15 @@ export function usePlaybackController({ roomId, inviteToken, recordPlay }: Playb
     }
   }, [playerState.currentTrack?.id, playerState.status, queue.length, currentIndex, isAutoplayEnabled]);
 
-  // Warm the next two tracks while this one plays, so skipping ahead starts instantly
+  // Warm the next two tracks while this one plays, so skipping ahead starts instantly.
+  // resolveAndCache pre-resolves their upstream URLs so track changes on a locked
+  // screen swap the audio src synchronously instead of waiting on the stream redirect.
   useEffect(() => {
     if (playerState.status !== "playing") return;
-    queue.slice(currentIndex + 1, currentIndex + 3).forEach(prefetchTrack);
+    queue.slice(currentIndex + 1, currentIndex + 3).forEach((track) => {
+      prefetchTrack(track);
+      void resolveAndCache(track);
+    });
   }, [playerState.status, queue, currentIndex]);
 
   const handlePrevious = () => {

@@ -1,4 +1,5 @@
 import type { Track } from "@soundlounge/shared";
+import { getCachedNextUrl } from "./nextUrlCache";
 
 export interface SoloPlayerState {
   status: "idle" | "playing" | "paused" | "buffering";
@@ -14,6 +15,20 @@ interface WindowWithAudio {
   __soundlounge_active_audio__?: HTMLAudioElement | null;
 }
 
+// 44-byte silent WAV. Playing it muted inside a user gesture unlocks the iOS
+// audio session so later programmatic play() calls are not blocked.
+const SILENT_WAV_DATA_URI =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+
+// Lock-screen scrubber freshness; timeupdate fires ~4x/s but the position state
+// only needs refreshing about once a second.
+const POSITION_STATE_INTERVAL_MS = 1000;
+
+// iOS pauses the element for interruptions (calls, alarms, route changes) and
+// gives no "interruption ended" event, so retry on a timer ladder plus
+// visibility/focus events until a "playing" event confirms recovery.
+const RESUME_RETRY_DELAYS_MS = [1000, 3000, 7000, 15000];
+
 export class SoloPlayer {
   private audioElement: HTMLAudioElement | null = null;
   private state: SoloPlayerState = {
@@ -27,6 +42,12 @@ export class SoloPlayer {
   private onNextCallback?: () => void;
   private onPreviousCallback?: () => void;
   private onEndedCallback?: () => void;
+  private priming = false;
+  private userPaused = false;
+  private interrupted = false;
+  private resumeRetryTimers: ReturnType<typeof setTimeout>[] = [];
+  private playToken = 0;
+  private lastPositionStateAt = 0;
 
   constructor() {
     this.initAudioElement();
@@ -42,6 +63,7 @@ export class SoloPlayer {
     if (track) {
       this.updateMediaSession(track);
     }
+    this.unlockAudioSession();
   }
 
   public getActiveEngine(): "audio" {
@@ -64,64 +86,89 @@ export class SoloPlayer {
         this.audioElement.volume = this.state.volume;
         win.__soundlounge_active_audio__ = this.audioElement;
 
-        this.audioElement.addEventListener("playing", () => {
-          this.state.status = "playing";
-          this.emitState();
-        });
+        this.setupElementListeners(this.audioElement);
 
-        this.audioElement.addEventListener("pause", () => {
-          if (this.state.status !== "idle") {
-            this.state.status = "paused";
-            this.emitState();
-          }
-        });
-
-        this.audioElement.addEventListener("timeupdate", () => {
-          if (this.audioElement) {
-            this.state.positionMs = Math.floor(this.audioElement.currentTime * 1000);
-            this.emitState();
-          }
-        });
-
-        this.audioElement.addEventListener("durationchange", () => {
-          if (this.audioElement && !isNaN(this.audioElement.duration)) {
-            this.state.durationMs = Math.floor(this.audioElement.duration * 1000);
-            this.emitState();
-          }
-        });
-
-        this.audioElement.addEventListener("ended", () => {
-          this.state.status = "idle";
-          this.state.positionMs = 0;
-          this.emitState();
-          if (this.onEndedCallback) {
-            this.onEndedCallback();
-          }
-        });
-
-        this.audioElement.addEventListener("waiting", () => {
-          if (this.state.status === "playing") {
-            this.state.status = "buffering";
-            this.emitState();
-          }
-        });
-
-        this.audioElement.addEventListener("canplay", () => {
-          if (this.state.status === "buffering") {
-            this.state.status = "playing";
-            this.emitState();
-          }
-        });
-
-        this.audioElement.addEventListener("error", () => {
-          console.warn("SoloPlayer: HTMLAudioElement error:", this.audioElement?.error);
-          this.state.status = "idle";
-          this.emitState();
-        });
+        // Interruption recovery triggers that fire outside the element itself
+        if (typeof document !== "undefined") {
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") this.attemptInterruptionResume();
+          });
+          window.addEventListener("pageshow", () => this.attemptInterruptionResume());
+          window.addEventListener("focus", () => this.attemptInterruptionResume());
+        }
       } catch {
         this.audioElement = null;
       }
     }
+  }
+
+  private setupElementListeners(el: HTMLAudioElement) {
+    el.addEventListener("playing", () => {
+      if (this.priming) return;
+      this.clearInterruption();
+      this.state.status = "playing";
+      this.updatePositionState();
+      this.emitState();
+    });
+
+    el.addEventListener("pause", () => {
+      if (this.priming) return;
+      this.handleUnexpectedPause();
+      if (this.state.status !== "idle") {
+        this.state.status = "paused";
+        this.updatePositionState();
+        this.emitState();
+      }
+    });
+
+    el.addEventListener("timeupdate", () => {
+      if (this.audioElement) {
+        this.state.positionMs = Math.floor(this.audioElement.currentTime * 1000);
+        this.updatePositionStateThrottled();
+        this.emitState();
+      }
+    });
+
+    el.addEventListener("durationchange", () => {
+      if (this.audioElement && !isNaN(this.audioElement.duration)) {
+        this.state.durationMs = Math.floor(this.audioElement.duration * 1000);
+        this.updatePositionState();
+        this.emitState();
+      }
+    });
+
+    el.addEventListener("loadedmetadata", () => this.updatePositionState());
+    el.addEventListener("seeked", () => this.updatePositionState());
+    el.addEventListener("ratechange", () => this.updatePositionState());
+
+    el.addEventListener("ended", () => {
+      this.state.status = "idle";
+      this.state.positionMs = 0;
+      this.emitState();
+      if (this.onEndedCallback) {
+        this.onEndedCallback();
+      }
+    });
+
+    el.addEventListener("waiting", () => {
+      if (this.state.status === "playing") {
+        this.state.status = "buffering";
+        this.emitState();
+      }
+    });
+
+    el.addEventListener("canplay", () => {
+      if (this.state.status === "buffering") {
+        this.state.status = "playing";
+        this.emitState();
+      }
+    });
+
+    el.addEventListener("error", () => {
+      console.warn("SoloPlayer: HTMLAudioElement error:", this.audioElement?.error);
+      this.state.status = "idle";
+      this.emitState();
+    });
   }
 
   getState(): SoloPlayerState {
@@ -159,25 +206,189 @@ export class SoloPlayer {
               ]
             : undefined,
         });
+      } catch {}
 
-        navigator.mediaSession.setActionHandler("play", () => this.resume());
+      // Each handler is registered separately: setActionHandler throws for
+      // unsupported actions and one failure must not drop the rest.
+      try {
+        navigator.mediaSession.setActionHandler("play", () => {
+          void this.resume();
+        });
+      } catch {}
+      try {
         navigator.mediaSession.setActionHandler("pause", () => this.pause());
+      } catch {}
+      try {
+        navigator.mediaSession.setActionHandler("stop", () => this.stop());
+      } catch {}
+      try {
+        navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+          const offset = details.seekOffset || 10;
+          this.seek(Math.max(0, (this.audioElement?.currentTime ?? 0) - offset) * 1000);
+        });
+      } catch {}
+      try {
+        navigator.mediaSession.setActionHandler("seekforward", (details) => {
+          const offset = details.seekOffset || 10;
+          this.seek(((this.audioElement?.currentTime ?? 0) + offset) * 1000);
+        });
+      } catch {}
+      try {
         navigator.mediaSession.setActionHandler("seekto", (details) => {
           if (details.seekTime !== undefined) {
             this.seek(details.seekTime * 1000);
           }
         });
+      } catch {}
+      try {
         navigator.mediaSession.setActionHandler("nexttrack", () => {
           if (this.onNextCallback) this.onNextCallback();
         });
+      } catch {}
+      try {
         navigator.mediaSession.setActionHandler("previoustrack", () => {
           if (this.onPreviousCallback) this.onPreviousCallback();
         });
       } catch {}
+
+      this.updatePositionState();
     }
   }
 
+  // The lock-screen scrubber only appears when the session knows duration,
+  // position and rate — without this iOS shows play/pause buttons only.
+  private updatePositionState(): void {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    if (typeof navigator.mediaSession.setPositionState !== "function") return;
+    const el = this.audioElement;
+    if (!el || !isFinite(el.duration) || el.duration <= 0 || isNaN(el.currentTime)) return;
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: el.duration,
+        playbackRate: el.playbackRate,
+        position: Math.min(Math.max(el.currentTime, 0), el.duration),
+      });
+      this.lastPositionStateAt = Date.now();
+    } catch {}
+  }
+
+  private updatePositionStateThrottled(): void {
+    if (Date.now() - this.lastPositionStateAt < POSITION_STATE_INTERVAL_MS) return;
+    this.updatePositionState();
+  }
+
+  private handleUnexpectedPause(): void {
+    if (this.interrupted || this.userPaused || this.priming) return;
+    if (!this.state.currentTrack || this.state.status === "idle") return;
+    this.interrupted = true;
+    RESUME_RETRY_DELAYS_MS.forEach((delay) => {
+      this.resumeRetryTimers.push(setTimeout(() => this.attemptInterruptionResume(), delay));
+    });
+  }
+
+  private attemptInterruptionResume(): void {
+    if (!this.interrupted) return;
+    const el = this.audioElement;
+    if (!el || this.state.status === "playing") {
+      this.clearInterruption();
+      return;
+    }
+    el.play().catch(() => {});
+  }
+
+  private clearInterruption(): void {
+    this.interrupted = false;
+    this.clearResumeRetries();
+  }
+
+  private clearResumeRetries(): void {
+    this.resumeRetryTimers.forEach(clearTimeout);
+    this.resumeRetryTimers = [];
+  }
+
+  private unlockAudioSession(): void {
+    const el = this.audioElement;
+    if (!el || this.priming) return;
+    // Only needed before the first real play; a loaded element is already unlocked
+    if (this.state.status !== "idle" || el.src) return;
+    this.priming = true;
+    const finish = () => {
+      this.priming = false;
+      this.state.status = "idle";
+      this.state.positionMs = 0;
+      el.muted = false;
+      this.emitState();
+    };
+    try {
+      el.muted = true;
+      el.src = SILENT_WAV_DATA_URI;
+      const p = el.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          try {
+            el.pause();
+          } catch {}
+          finish();
+        }).catch(finish);
+      } else {
+        finish();
+      }
+    } catch {
+      finish();
+    }
+  }
+
+  private waitForCanPlay(timeoutMs: number): Promise<void> {
+    const el = this.audioElement;
+    if (!el || el.readyState >= 3) return Promise.resolve();
+    return new Promise((resolve) => {
+      const done = () => {
+        el.removeEventListener("canplay", done);
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(done, timeoutMs);
+      el.addEventListener("canplay", done, { once: true });
+    });
+  }
+
+  private async handlePlayRejection(err: unknown, token: number): Promise<void> {
+    let failure: unknown = err;
+    const name = failure instanceof Error ? failure.name : "";
+
+    if (name === "AbortError") {
+      // load() interrupted the first attempt; retry once the element can play
+      await this.waitForCanPlay(3000);
+      if (token !== this.playToken || !this.audioElement) return;
+      try {
+        await this.audioElement.play();
+        return;
+      } catch (retryErr) {
+        failure = retryErr;
+      }
+    }
+
+    if (failure instanceof Error && failure.name === "NotAllowedError") {
+      // Gesture unlock failed: surface as paused so the UI's play button (a real
+      // gesture) can start audio on the next tap
+      console.warn("SoloPlayer: play() blocked, waiting for a user gesture");
+      this.state.status = "paused";
+      this.emitState();
+      return;
+    }
+
+    console.warn(
+      "SoloPlayer: play() rejected:",
+      failure instanceof Error ? failure.message : String(failure)
+    );
+    this.state.status = "paused";
+    this.emitState();
+  }
+
   async play(track: Track, positionMs: number = 0): Promise<void> {
+    const token = ++this.playToken;
+    this.userPaused = false;
+    this.clearInterruption();
     this.state.currentTrack = track;
     this.state.positionMs = positionMs;
     this.state.durationMs = track.durationMs;
@@ -227,16 +438,19 @@ export class SoloPlayer {
         } catch {}
       }
 
-      const currentSrc = this.audioElement.src;
-      const targetUrl =
-        playUrl.startsWith("http://") || playUrl.startsWith("https://")
+      // A pre-resolved upstream URL skips the /api/stream 307 hop — that round
+      // trip is what kills locked-screen track advancement on iOS.
+      const cachedUrl = getCachedNextUrl(track);
+      const targetUrl = cachedUrl
+        ? cachedUrl
+        : playUrl.startsWith("http://") || playUrl.startsWith("https://")
           ? playUrl
           : typeof window !== "undefined"
             ? `${window.location.origin}${playUrl}`
             : playUrl;
 
-      if (currentSrc !== targetUrl) {
-        this.audioElement.src = playUrl;
+      if (this.audioElement.src !== targetUrl) {
+        this.audioElement.src = targetUrl;
         this.audioElement.load();
       }
 
@@ -248,33 +462,62 @@ export class SoloPlayer {
       try {
         await this.audioElement.play();
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.warn("SoloPlayer: play() rejected or interrupted:", message);
+        if (token !== this.playToken) return;
+        await this.handlePlayRejection(err, token);
       }
     }
 
+    if (token !== this.playToken) return;
     this.updateMediaSession(track);
+    this.updatePositionState();
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.playbackState = this.state.status === "playing" ? "playing" : "paused";
+      } catch {}
+    }
     this.emitState();
   }
 
   async resume(): Promise<void> {
-    if (this.state.currentTrack && this.state.status === "paused") {
+    if (!this.state.currentTrack) return;
+    this.userPaused = false;
+    this.clearInterruption();
+    if (this.state.status !== "playing") {
       this.state.status = "playing";
-      if (this.audioElement) {
-        try {
-          await this.audioElement.play();
-        } catch {}
-      }
-      this.emitState();
     }
+    if (this.audioElement) {
+      try {
+        await this.audioElement.play();
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "NotAllowedError") {
+          this.state.status = "paused";
+        }
+      }
+    }
+    this.updatePositionState();
+    this.emitState();
   }
 
   pause(): void {
+    this.userPaused = true;
+    this.clearInterruption();
     this.state.status = "paused";
     if (this.audioElement) {
       this.audioElement.pause();
       this.state.positionMs = Math.floor(this.audioElement.currentTime * 1000);
     }
+    this.updatePositionState();
+    this.emitState();
+  }
+
+  stop(): void {
+    this.pause();
+    if (this.audioElement) {
+      try {
+        this.audioElement.currentTime = 0;
+      } catch {}
+    }
+    this.state.positionMs = 0;
     this.emitState();
   }
 
@@ -284,6 +527,7 @@ export class SoloPlayer {
     if (this.audioElement) {
       this.audioElement.currentTime = clampedPos / 1000;
     }
+    this.updatePositionState();
     this.emitState();
   }
 
@@ -297,6 +541,7 @@ export class SoloPlayer {
   }
 
   dispose(): void {
+    this.clearResumeRetries();
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement.src = "";

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { SoloPlayer } from "../SoloPlayer";
+import { cacheNextUrl } from "../nextUrlCache";
 import type { Track } from "@soundlounge/shared";
 
 describe("SoloPlayer Engine", () => {
@@ -105,4 +106,134 @@ describe("SoloPlayer Engine", () => {
     expect(state.currentTrack?.id).toBe("yt_6xoB4ZiKKn0");
     expect(player.getActiveEngine()).toBe("audio");
   });
+
+  it("uses the pre-resolved cached URL instead of the /api/stream redirect", async () => {
+    const streamTrack: Track = {
+      id: "yt_abc123",
+      title: "Cached Song",
+      durationMs: 180000,
+      url: "/api/stream/youtube?id=abc123",
+      source: "youtube",
+    };
+    cacheNextUrl(streamTrack, "https://upstream.example/audio.mp4");
+
+    const el = createFakeAudioElement();
+    (player as unknown as { audioElement: unknown }).audioElement = el;
+
+    const fetchSpy = mock(() => {
+      throw new Error("play() must not fetch when the URL is pre-resolved");
+    });
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+    try {
+      await player.play(streamTrack, 0);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+
+    expect(el.src).toBe("https://upstream.example/audio.mp4");
+    expect(player.getState().status).toBe("playing");
+  });
+
+  it("surfaces NotAllowedError as paused so the next user tap can start audio", async () => {
+    const el = createFakeAudioElement();
+    el.playImpl = () =>
+      Promise.reject(Object.assign(new Error("play() failed"), { name: "NotAllowedError" }));
+    (player as unknown as { audioElement: unknown }).audioElement = el;
+
+    await player.play(sampleTrack, 0);
+
+    expect(player.getState().status).toBe("paused");
+  });
+
+  it("schedules resume attempts after an unexpected pause (incoming call)", async () => {
+    const el = createFakeAudioElement();
+    injectAudioElement(player, el);
+
+    await player.play(sampleTrack, 0);
+    el.dispatch("playing");
+    el.dispatch("pause");
+
+    expect(player.getState().status).toBe("paused");
+
+    // The recovery ladder retries at 1s; playback must restart without a user gesture
+    await new Promise((resolve) => setTimeout(resolve, 1150));
+    expect(el.paused).toBe(false);
+  });
+
+  it("does not auto-resume after a user-initiated pause", async () => {
+    const el = createFakeAudioElement();
+    injectAudioElement(player, el);
+
+    await player.play(sampleTrack, 0);
+    player.pause();
+    el.dispatch("pause");
+
+    await new Promise((resolve) => setTimeout(resolve, 1150));
+    expect(el.paused).toBe(true);
+    expect(player.getState().status).toBe("paused");
+  });
 });
+
+// Swaps the (DOM-less in tests) audio element for a fake and wires the real
+// event listeners to it, so element events can be simulated
+function injectAudioElement(
+  player: SoloPlayer,
+  el: ReturnType<typeof createFakeAudioElement>
+): void {
+  (player as unknown as { audioElement: unknown }).audioElement = el;
+  (player as unknown as { setupElementListeners: (el: unknown) => void }).setupElementListeners(el);
+}
+
+function createFakeAudioElement() {
+  const listeners = new Map<string, Set<() => void>>();
+  const el: {
+    src: string;
+    volume: number;
+    muted: boolean;
+    currentTime: number;
+    duration: number;
+    readyState: number;
+    playbackRate: number;
+    paused: boolean;
+    preload: string;
+    playImpl: (() => Promise<void>) | null;
+    play: () => Promise<void>;
+    pause: () => void;
+    load: () => void;
+    addEventListener: (name: string, cb: () => void) => void;
+    removeEventListener: (name: string, cb: () => void) => void;
+    dispatch: (name: string) => void;
+  } = {
+    src: "",
+    volume: 1,
+    muted: false,
+    currentTime: 0,
+    duration: NaN,
+    readyState: 0,
+    playbackRate: 1,
+    paused: true,
+    preload: "auto",
+    playImpl: null,
+    play() {
+      el.paused = false;
+      return el.playImpl ? el.playImpl() : Promise.resolve();
+    },
+    pause() {
+      el.paused = true;
+    },
+    load() {},
+    addEventListener(name, cb) {
+      if (!listeners.has(name)) listeners.set(name, new Set());
+      listeners.get(name)!.add(cb);
+    },
+    removeEventListener(name, cb) {
+      listeners.get(name)?.delete(cb);
+    },
+    dispatch(name) {
+      listeners.get(name)?.forEach((cb) => cb());
+    },
+  };
+  return el;
+}

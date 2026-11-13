@@ -343,6 +343,11 @@ export async function GET(req: NextRequest) {
       : new NextResponse(null, { status: 204 });
   }
 
+  // resolve=1 is for the client's next-track URL cache: answer with the resolved
+  // upstream URL as JSON instead of streaming, so track changes on a locked
+  // screen can swap the audio src without waiting on this redirect.
+  const resolveOnly = searchParams.get("resolve") === "1";
+
   // 1. If an external stream proxy (e.g. residential tunnel or dedicated proxy) is configured, route through it
   const rawStreamProxy = process.env.STREAM_PROXY_URL || process.env.NEXT_PUBLIC_STREAM_PROXY_URL;
   const streamProxy = rawStreamProxy
@@ -352,7 +357,7 @@ export async function GET(req: NextRequest) {
         .replace(/\/+$/, "")
     : null;
 
-  if (streamProxy) {
+  if (streamProxy && !resolveOnly) {
     try {
       const targetUrl = new URL(`${streamProxy}/api/stream/youtube`);
       targetUrl.search = searchParams.toString();
@@ -471,6 +476,16 @@ export async function GET(req: NextRequest) {
 
   // 5. Direct Edge Streaming via HTTP 307 Redirect
   // Cleanly bypasses Vercel datacenter IP restrictions & timeouts, streaming directly to browser
+  if (resolveOnly) {
+    return NextResponse.json(
+      { url: streamInfo.url },
+      {
+        // Short: the phone streamer's tunnel URL changes whenever it restarts
+        headers: { "Cache-Control": "private, max-age=60" },
+      }
+    );
+  }
+
   const redirectRes = NextResponse.redirect(streamInfo.url, 307);
   redirectRes.headers.set("Access-Control-Allow-Origin", "*");
   redirectRes.headers.set("Access-Control-Allow-Headers", "Range, Accept-Ranges, Content-Type");
