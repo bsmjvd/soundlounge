@@ -139,4 +139,43 @@ describe("User Taste Profile Engine", () => {
     // First spotlight should be Karan Aujla or Punjabi hit
     expect(spotlights[0].artistName.toLowerCase()).toContain("karan aujla");
   });
+
+  it("recommends fresh unplayed tracks matching the dominant taste", () => {
+    engine.recordPlay(karanTrack);
+
+    const recs = engine.getSidebarRecommendedTracks();
+    expect(recs.length).toBeGreaterThan(0);
+
+    // The track just played must not be recommended again
+    expect(recs.some((t) => t.id === karanTrack.id)).toBe(false);
+
+    // Recommendations should lean into the dominant Punjabi affinity
+    const isPunjabiArtist = (a: string) =>
+      ["karan aujla", "sidhu", "diljit", "dhillon", "shubh"].some((p) => a.includes(p));
+    const punjabiCount = recs.filter((t) => isPunjabiArtist(t.artist.toLowerCase())).length;
+    expect(punjabiCount).toBeGreaterThanOrEqual(3);
+  });
+
+  it("decays old interactions so recent listening dominates", () => {
+    engine.recordPlay(weekndTrack);
+    engine.recordPlay(karanTrack);
+
+    // Age The Weeknd's interaction by a month; Karan Aujla stays fresh
+    const profile = engine.getProfile();
+    profile.artistAffinities["The Weeknd"].lastInteractedAt = Date.now() - 30 * 86400000;
+
+    expect(engine.getTopArtists()[0].artistName).toBe("Karan Aujla");
+    expect(engine.getDominantArtist()).toBe("Karan Aujla");
+  });
+
+  it("keeps raw affinity scores intact while decaying reads", () => {
+    engine.recordPlay(weekndTrack);
+    const rawScore = engine.getTopArtists()[0].score;
+
+    engine.getProfile().artistAffinities["The Weeknd"].lastInteractedAt = Date.now() - 14 * 86400000;
+
+    // Stored score unchanged, decay only affects ordering
+    expect(engine.getTopArtists()[0].score).toBe(rawScore);
+    expect(engine.getTopArtists()[0].score).toBeGreaterThan(0);
+  });
 });

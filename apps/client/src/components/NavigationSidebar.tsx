@@ -113,23 +113,26 @@ export function NavigationSidebar({
   const { getSidebarRecommendedTracks } = useTasteProfile();
   const likedTracks = useLibraryStore((s) => s.likedTracks);
 
-  // Determine which track list to render in the sidebar based on active filter
+  // Determine which track list to render in the sidebar based on active filter.
+  // Each tab shows ONLY its own content — recommendations appear exclusively
+  // under the "Recommended" tab.
   const displayedTracks: Track[] = React.useMemo(() => {
     if (sidebarFilter === "last_listening") {
-      if (historyTracks && historyTracks.length > 0) {
-        return historyTracks.slice(0, 15);
-      }
-      return getSidebarRecommendedTracks().slice().reverse();
+      return (historyTracks || []).slice(0, 15);
     }
     if (sidebarFilter === "recommended") {
       return getSidebarRecommendedTracks();
     }
-    // "my_playlist": show user's liked tracks or personalized recommendations
-    if (likedTracks && likedTracks.length > 0) {
-      return likedTracks.slice(0, 15);
-    }
-    return getSidebarRecommendedTracks();
+    // "my_playlist": the user's liked songs only
+    return (likedTracks || []).slice(0, 15);
   }, [sidebarFilter, historyTracks, likedTracks, getSidebarRecommendedTracks]);
+
+  const emptyStateCopy =
+    sidebarFilter === "my_playlist"
+      ? { title: "Nothing here yet", description: "Like a song and it will show up in this list." }
+      : sidebarFilter === "last_listening"
+        ? { title: "Nothing here yet", description: "Play something and it will show up in this list." }
+        : { title: "Nothing here yet", description: "Play a few songs and recommendations will appear here." };
 
   const handleTrackClick = (track: Track, idx: number) => {
     hapticLight();

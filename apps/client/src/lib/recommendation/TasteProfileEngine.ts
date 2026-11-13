@@ -38,6 +38,20 @@ export interface StoredTasteProfile {
 
 const STORAGE_KEY = "soundlounge_user_taste_v2";
 
+// Affinity scores decay over time so recent listening outweighs old habits
+// (an artist interacted with a week ago counts for half of one played today).
+const AFFINITY_HALF_LIFE_DAYS = 7;
+
+// How strongly recommendations favor what was heard recently, and how much
+// deterministic per-day rotation is mixed in so the list keeps evolving.
+const RECENT_WARMTH_WEIGHT = 4;
+const ROTATION_JITTER_WEIGHT = 3;
+
+// Diversity caps inside the sidebar recommendation list
+const MAX_TRACKS_PER_ARTIST = 2;
+const MAX_TRACKS_PER_GENRE = 4;
+const SIDEBAR_TRACK_LIMIT = 10;
+
 // Memory storage fallback for SSR or environments where window.localStorage is not present
 const memoryStorage = new Map<string, string>();
 
@@ -370,21 +384,36 @@ export class TasteProfileEngine {
   }
 
   /**
-   * Returns top artists ordered by affinity score.
+   * Returns top artists ordered by affinity score, with time decay so recent
+   * interactions dominate: score halves roughly every AFFINITY_HALF_LIFE_DAYS.
    */
   public getTopArtists(limit = 10): ArtistAffinity[] {
     return Object.values(this.profile.artistAffinities)
-      .sort((a, b) => b.score - a.score || b.lastInteractedAt - a.lastInteractedAt)
+      .sort(
+        (a, b) =>
+          TasteProfileEngine.effectiveAffinity(b) - TasteProfileEngine.effectiveAffinity(a) ||
+          b.lastInteractedAt - a.lastInteractedAt
+      )
       .slice(0, limit);
   }
 
   /**
-   * Returns top genres ordered by affinity score.
+   * Returns top genres ordered by affinity score with the same time decay.
    */
   public getTopGenres(limit = 5): GenreAffinity[] {
     return Object.values(this.profile.genreAffinities)
-      .sort((a, b) => b.score - a.score || b.lastInteractedAt - a.lastInteractedAt)
+      .sort(
+        (a, b) =>
+          TasteProfileEngine.effectiveAffinity(b) - TasteProfileEngine.effectiveAffinity(a) ||
+          b.lastInteractedAt - a.lastInteractedAt
+      )
       .slice(0, limit);
+  }
+
+  /** Exponential time decay applied at read time; raw stored scores stay intact. */
+  private static effectiveAffinity(entry: { score: number; lastInteractedAt: number }): number {
+    const days = Math.max(0, (Date.now() - entry.lastInteractedAt) / 86400000);
+    return entry.score * Math.pow(0.5, days / AFFINITY_HALF_LIFE_DAYS);
   }
 
   /**
@@ -529,123 +558,62 @@ export class TasteProfileEngine {
   }
 
   /**
-   * Generates a personalized hero spotlight matching the user's dominant taste.
-   * If the user loves Punjabi or Hip-Hop or Pop, this dynamically surfaces a hero slide for that!
+   * Generates the hero spotlight slides. Instead of one static lineup, slides
+   * are generated from the whole artist catalog and ranked by the user's
+   * time-decayed taste, with a small per-day rotation so the hero keeps
+   * evolving. The curated brand spotlights are kept at the tail.
    */
   public getPersonalizedSpotlights(): FeaturedSpotlight[] {
-    const dominantGenre = this.getDominantGenre();
-    const dominantArtist = this.getDominantArtist();
+    const topArtists = this.getTopArtists(10);
+    const topGenres = this.getTopGenres(3);
 
-    // Additional authentic spotlights for genres not in original default mockup
-    const PUNJABI_SPOTLIGHT: FeaturedSpotlight = {
-      id: "karan_aujla_winning_speech",
-      tagline: "Global Chart Sensation • 2026",
-      title: "Making Memories & Beyond",
-      subtitle: "Karan Aujla • 'Winning Speech'",
-      description:
-        "The record-breaking Punjabi powerhouse dominating global streaming charts with anthemic hooks and modern soundscapes.",
-      artistName: "Karan Aujla",
-      heroImageUrl: "/artists/karan-aujla.webp",
-      accentColor: "#f59e0b",
-      mainTrack: {
-        id: "yt_winning_speech_karan",
-        title: "Winning Speech",
-        artist: "Karan Aujla",
-        durationMs: 215000,
-        coverUrl: "/artists/karan-aujla.webp",
-        url: "/api/stream/youtube?title=Winning%20Speech&artist=Karan%20Aujla",
-        source: "youtube",
-        createdAt: 0,
-      },
+    const daySeed = Math.floor(Date.now() / 86400000);
+    const jitterFor = (id: string) => {
+      let h = daySeed;
+      for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+      return (h % 1000) / 1000;
     };
 
-    const SIDHU_SPOTLIGHT: FeaturedSpotlight = {
-      id: "sidhu_moose_wala_295",
-      tagline: "Iconic Global Masterwork • Moose Tape",
-      title: "Moose Tape: Sidhu Moose Wala",
-      subtitle: "The Timeless Voice • '295'",
-      description:
-        "Sidhu Moose Wala's historic global masterpiece that topped Billboard Canadian Albums and the Global YouTube charts.",
-      artistName: "Sidhu Moose Wala",
-      heroImageUrl: "/artists/sidhu-moose-wala.webp",
-      accentColor: "#ef4444",
-      mainTrack: {
-        id: "yt_295",
-        title: "295",
-        artist: "Sidhu Moose Wala",
-        durationMs: 270000,
-        coverUrl: "/artists/sidhu-moose-wala.webp",
-        url: "/api/stream/youtube?id=295",
-        source: "youtube",
-        createdAt: 0,
+    const artistScore = new Map<string, number>();
+    topArtists.forEach((t, idx) => {
+      artistScore.set(t.artistName.toLowerCase(), 1000 - idx * 10);
+    });
+    topGenres.forEach((g, gIdx) => {
+      for (const a of ARTISTS_CATALOG) {
+        if (a.region === g.genre) {
+          const key = a.name.toLowerCase();
+          if (!artistScore.has(key)) {
+            artistScore.set(key, 500 - gIdx * 50);
+          }
+        }
+      }
+    });
+
+    const accentPalette = ["#f59e0b", "#ef4444", "#00e5c9", "#a855f7", "#38bdf8", "#f43f5e", "#22c55e", "#eab308", "#818cf8", "#fb923c"];
+
+    const artistSpotlights = ARTISTS_CATALOG.filter(
+      (a) => a.topTracks.length > 0 && (a.bannerUrl || a.avatarUrl)
+    ).map((a, idx): { spotlight: FeaturedSpotlight; score: number } => ({
+      spotlight: {
+        id: `artist_${a.id || a.name.toLowerCase().replace(/\s+/g, "_")}`,
+        tagline: a.monthlyListeners ? `${a.monthlyListeners} monthly listeners` : a.regionLabel || a.genre,
+        title: a.name,
+        subtitle: a.genre,
+        description: a.bio,
+        artistName: a.name,
+        heroImageUrl: a.bannerUrl || a.avatarUrl || "",
+        accentColor: accentPalette[idx % accentPalette.length],
+        mainTrack: a.topTracks[0],
       },
-    };
+      score: artistScore.get(a.name.toLowerCase()) ?? 0,
+    }));
 
-    const BOLLYWOOD_SPOTLIGHT: FeaturedSpotlight = {
-      id: "the_train_beete_lamhein",
-      tagline: "Iconic Romantic Lounge • Mithoon & KK",
-      title: "The Train (2007)",
-      subtitle: "KK & Mithoon • 'Beete Lamhein'",
-      description:
-        "Mithoon's legendary cult soundtrack featuring KK's timeless, emotional vocals and atmospheric electronic textures.",
-      artistName: "KK & Mithoon",
-      heroImageUrl: "/albums/the-train-2007.webp",
-      accentColor: "#00e5c9",
-      mainTrack: {
-        id: "yt_d0oVZLquCMU",
-        title: "Beete Lamhein",
-        artist: "KK",
-        durationMs: 312000,
-        coverUrl: "/albums/the-train-2007.webp",
-        url: "/api/stream/youtube?id=d0oVZLquCMU",
-        source: "youtube",
-        createdAt: 0,
-      },
-    };
+    artistSpotlights.sort(
+      (a, b) => b.score - a.score || jitterFor(b.spotlight.id) - jitterFor(a.spotlight.id)
+    );
 
-    const list = [...FEATURED_SPOTLIGHTS];
-
-    // If dominant artist is Karan Aujla or Sidhu Moose Wala, place their spotlight right at index 0
-    if (dominantArtist) {
-      const daLower = dominantArtist.toLowerCase();
-      if (daLower.includes("karan aujla")) {
-        return [PUNJABI_SPOTLIGHT, ...list.filter((s) => s.id !== PUNJABI_SPOTLIGHT.id)];
-      }
-      if (daLower.includes("sidhu moose")) {
-        return [SIDHU_SPOTLIGHT, ...list.filter((s) => s.id !== SIDHU_SPOTLIGHT.id)];
-      }
-      if (daLower.includes("mithoon") || daLower.includes("kk") || daLower.includes("arijit")) {
-        return [BOLLYWOOD_SPOTLIGHT, ...list.filter((s) => s.id !== BOLLYWOOD_SPOTLIGHT.id)];
-      }
-    }
-
-    // If dominant genre is Punjabi, place Punjabi spotlight first
-    if (dominantGenre === "punjabi") {
-      return [PUNJABI_SPOTLIGHT, SIDHU_SPOTLIGHT, ...list];
-    }
-
-    // If dominant genre is Hip-Hop, prioritize Kendrick Lamar spotlight
-    if (dominantGenre === "hiphop") {
-      const kendrick = list.find((s) => s.id === "kendrick_sza_luther");
-      if (kendrick) {
-        return [kendrick, ...list.filter((s) => s.id !== "kendrick_sza_luther")];
-      }
-    }
-
-    // If dominant genre is Pop/Synthwave, prioritize The Weeknd
-    if (dominantGenre === "pop" || dominantGenre === "electronic") {
-      const weeknd = list.find((s) => s.id === "weeknd_timeless");
-      if (weeknd) {
-        return [weeknd, ...list.filter((s) => s.id !== "weeknd_timeless")];
-      }
-    }
-
-    // If dominant genre is Bollywood/Ghazal
-    if (dominantGenre === "bollywood" || dominantGenre === "ghazal") {
-      return [BOLLYWOOD_SPOTLIGHT, ...list];
-    }
-
-    return list;
+    // Fresh artist spotlights lead; the curated brand slides stay at the tail
+    return [...artistSpotlights.slice(0, 8).map((s) => s.spotlight), ...FEATURED_SPOTLIGHTS];
   }
 
   /**
@@ -756,20 +724,113 @@ export class TasteProfileEngine {
 
   /**
    * Generates dynamic sidebar recommended tracks matching user's taste.
+   *
+   * Works like a lightweight discovery feed: candidates come from the whole
+   * catalog, are scored against time-decayed artist/genre affinities plus
+   * "warm" artists from recent listening, skip tracks the user already played,
+   * and get a small deterministic per-day jitter so the list keeps rotating
+   * (more like what you heard this week, different every day).
    */
   public getSidebarRecommendedTracks(): Track[] {
-    const because = this.getBecauseYouListenedSection();
-    if (because && because.tracks.length > 0) {
-      return because.tracks.slice(0, 10);
+    const topArtists = this.getTopArtists(10);
+    const topGenres = this.getTopGenres(3);
+    const recentTracks = this.profile.recentTracks;
+
+    if (topArtists.length === 0 && topGenres.length === 0) {
+      // No taste signal yet: a diverse cross-genre starter set from the catalog
+      const starterTracks: Track[] = [];
+      for (const a of ARTISTS_CATALOG.slice(0, 8)) {
+        if (a.topTracks.length > 0) {
+          starterTracks.push(a.topTracks[0]);
+        }
+      }
+      return starterTracks;
     }
-    // If no explicit taste yet, return a diverse cross-genre set from catalog
-    const starterTracks: Track[] = [];
-    for (const a of ARTISTS_CATALOG.slice(0, 8)) {
-      if (a.topTracks.length > 0) {
-        starterTracks.push(a.topTracks[0]);
+
+    const maxArtistScore = TasteProfileEngine.effectiveAffinity(topArtists[0]) || 1;
+    const maxGenreScore = TasteProfileEngine.effectiveAffinity(topGenres[0]) || 1;
+    const recentArtistNames = new Set(recentTracks.map((t) => resolveEffectiveArtist(t).toLowerCase()));
+
+    const playedIds = new Set(recentTracks.map((t) => t.id));
+    const playedTitles = new Set(
+      recentTracks.map((t) => normalizeSongTitle(t.title, t.artist)).filter(Boolean)
+    );
+
+    const genreAffinityByGenre = new Map(topGenres.map((g) => [g.genre, g]));
+    const daySeed = Math.floor(Date.now() / 86400000);
+    const jitterFor = (id: string) => {
+      let h = daySeed;
+      for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+      return (h % 1000) / 1000;
+    };
+
+    interface ScoredCandidate {
+      track: Track;
+      artistName: string;
+      genre: MusicGenre | "other";
+      score: number;
+    }
+
+    const candidates: ScoredCandidate[] = [];
+    for (const artist of ARTISTS_CATALOG) {
+      for (const track of artist.topTracks) {
+        if (playedIds.has(track.id)) continue;
+        const norm = normalizeSongTitle(track.title, track.artist);
+        if (norm && playedTitles.has(norm)) continue;
+
+        // Artist affinity: exact catalog name first, then affinity entries
+        // whose name appears in the track's artist field (features etc.)
+        const trackArtistLower = artist.name.toLowerCase();
+        let artistScore = 0;
+        const directAffinity = this.profile.artistAffinities[artist.name];
+        if (directAffinity) {
+          artistScore = TasteProfileEngine.effectiveAffinity(directAffinity) / maxArtistScore;
+        } else {
+          for (const a of topArtists) {
+            if (trackArtistLower.includes(a.artistName.toLowerCase())) {
+              artistScore = Math.max(
+                artistScore,
+                (TasteProfileEngine.effectiveAffinity(a) / maxArtistScore) * 0.8
+              );
+            }
+          }
+        }
+
+        // Genre affinity from what's playing these days
+        const genre = classifyGenre({ title: track.title, artist: artist.name }).genre;
+        let genreScore = 0;
+        const genreAffinity = genreAffinityByGenre.get(genre);
+        if (genreAffinity) {
+          genreScore = TasteProfileEngine.effectiveAffinity(genreAffinity) / maxGenreScore;
+        }
+
+        // Warmth: artists heard recently (even without affinity entries) get a nudge
+        const warmth = recentArtistNames.has(trackArtistLower) ? 1 : 0;
+
+        const score =
+          artistScore * 40 + genreScore * 25 + warmth * RECENT_WARMTH_WEIGHT + jitterFor(track.id) * ROTATION_JITTER_WEIGHT;
+
+        candidates.push({ track, artistName: artist.name, genre, score });
       }
     }
-    return starterTracks;
+
+    candidates.sort((a, b) => b.score - a.score);
+
+    const picked: Track[] = [];
+    const perArtist = new Map<string, number>();
+    const perGenre = new Map<string, number>();
+    for (const candidate of candidates) {
+      if (picked.length >= SIDEBAR_TRACK_LIMIT) break;
+      const artistCount = perArtist.get(candidate.artistName) || 0;
+      if (artistCount >= MAX_TRACKS_PER_ARTIST) continue;
+      const genreCount = perGenre.get(candidate.genre) || 0;
+      if (genreCount >= MAX_TRACKS_PER_GENRE) continue;
+      perArtist.set(candidate.artistName, artistCount + 1);
+      perGenre.set(candidate.genre, genreCount + 1);
+      picked.push(candidate.track);
+    }
+
+    return picked;
   }
 
   /**
